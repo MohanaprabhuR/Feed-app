@@ -3,65 +3,118 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isAuthOnlyRoute, isPublicRoute } from "@/lib/auth";
 
 function copyCookies(from: NextResponse, to: NextResponse) {
-  from.cookies.getAll().forEach((cookie) => {
-    to.cookies.set(cookie);
+  from.cookies.getAll().forEach(({ name, value, ...options }) => {
+    to.cookies.set(name, value, options);
   });
 }
 
+function getSupabaseEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+
+  if (!url || !anonKey) return null;
+  if (url.includes("your-project") || anonKey.includes("your-anon-key")) {
+    return null;
+  }
+
+  try {
+    new URL(url);
+  } catch {
+    return null;
+  }
+
+  return { url, anonKey };
+}
+
+function redirectWithCookies(
+  request: NextRequest,
+  supabaseResponse: NextResponse,
+  pathname: string,
+  searchParams?: Record<string, string>
+) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
+    });
+  }
+  const response = NextResponse.redirect(url);
+  copyCookies(supabaseResponse, response);
+  return response;
+}
+
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl;
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  const env = getSupabaseEnv();
+  if (!env) {
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/splash", request.url));
+    }
+
+    if (!isPublicRoute(pathname)) {
+      return NextResponse.redirect(
+        new URL(`/login?next=${encodeURIComponent(pathname)}`, request.url)
+      );
+    }
+
+    return supabaseResponse;
+  }
+
+  try {
+    const supabase = createServerClient(env.url, env.anonKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
           supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            supabaseResponse.cookies.set(name, value, options);
+          });
         },
       },
+    });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (pathname === "/") {
+      return redirectWithCookies(
+        request,
+        supabaseResponse,
+        user ? "/feed" : "/splash"
+      );
     }
-  );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    if (!user && !isPublicRoute(pathname)) {
+      return redirectWithCookies(request, supabaseResponse, "/login", {
+        next: pathname,
+      });
+    }
 
-  const { pathname } = request.nextUrl;
+    if (user && isAuthOnlyRoute(pathname)) {
+      return redirectWithCookies(request, supabaseResponse, "/feed");
+    }
 
-  if (pathname === "/") {
-    const url = request.nextUrl.clone();
-    url.pathname = user ? "/feed" : "/splash";
-    const response = NextResponse.redirect(url);
-    copyCookies(supabaseResponse, response);
-    return response;
+    return supabaseResponse;
+  } catch {
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/splash", request.url));
+    }
+
+    if (!isPublicRoute(pathname)) {
+      return NextResponse.redirect(
+        new URL(`/login?next=${encodeURIComponent(pathname)}`, request.url)
+      );
+    }
+
+    return supabaseResponse;
   }
-
-  if (!user && !isPublicRoute(pathname)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", pathname);
-    const response = NextResponse.redirect(url);
-    copyCookies(supabaseResponse, response);
-    return response;
-  }
-
-  if (user && isAuthOnlyRoute(pathname)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/feed";
-    const response = NextResponse.redirect(url);
-    copyCookies(supabaseResponse, response);
-    return response;
-  }
-
-  return supabaseResponse;
 }

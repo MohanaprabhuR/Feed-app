@@ -5,6 +5,9 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   : null;
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "*": ["./node_modules/@swc/helpers/**/*"],
+  },
   images: {
     remotePatterns: [
       {
