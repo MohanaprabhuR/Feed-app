@@ -10,7 +10,7 @@ function isPlaceholder(value: string) {
 }
 
 export function getSupabaseUrl() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/$/, "");
   if (!url || isPlaceholder(url)) return null;
 
   try {
