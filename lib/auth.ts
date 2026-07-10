@@ -12,19 +12,19 @@ export const PUBLIC_ROUTES = [
   "/login",
   "/register",
   "/forgot-password",
+  "/otp",
+  "/verify-email",
   "/terms",
   "/about",
-  "/feed",
-  "/articles",
 ] as const;
 
 /** Auth screens — logged-in users are redirected away */
 export const AUTH_ONLY_ROUTES = [
-  "/splash",
-  "/welcome",
   "/login",
   "/register",
   "/forgot-password",
+  "/otp",
+  "/verify-email",
 ] as const;
 
 export function matchesRoute(pathname: string, routes: readonly string[]) {
