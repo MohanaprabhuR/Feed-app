@@ -19,11 +19,12 @@ import {
   validateSignUpInput,
 } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 async function trySignIn(
   supabase: SupabaseClient,
   emails: string[],
-  password: string
+  password: string,
 ) {
   for (const email of [...new Set(emails.filter(Boolean))]) {
     const { error } = await supabase.auth.signInWithPassword({
@@ -78,11 +79,16 @@ export default function RegisterPage() {
         const signIn = await trySignIn(
           supabase,
           [email, existingProfile.email],
-          input.password
+          input.password,
         );
 
         if (signIn.ok) {
-          toast.success("Welcome back!");
+          toast.custom((t) => (
+            <Alert variant="success">
+              <AlertTitle>Welcome back!</AlertTitle>
+              <AlertDescription>Welcome back to Feed App.</AlertDescription>
+            </Alert>
+          ));
           router.push("/feed");
           router.refresh();
           return;
@@ -90,13 +96,13 @@ export default function RegisterPage() {
 
         if (signIn.reason === "unconfirmed") {
           setError(
-            "Account exists but isn't confirmed. In Supabase → Authentication → Users, mark email as confirmed—or disable email confirmation under Providers → Email."
+            "Account exists but isn't confirmed. In Supabase → Authentication → Users, mark email as confirmed—or disable email confirmation under Providers → Email.",
           );
           return;
         }
 
         setError(
-          "Username or email already in use. Sign in with your username and password."
+          "Username or email already in use. Sign in with your username and password.",
         );
         return;
       }
@@ -120,7 +126,12 @@ export default function RegisterPage() {
           const signIn = await trySignIn(supabase, [email], input.password);
 
           if (signIn.ok) {
-            toast.success("Welcome back!");
+            toast.custom((t) => (
+              <Alert variant="success">
+                <AlertTitle>Welcome back!</AlertTitle>
+                <AlertDescription>Welcome back to Feed App.</AlertDescription>
+              </Alert>
+            ));
             router.push("/feed");
             router.refresh();
             return;
@@ -128,7 +139,7 @@ export default function RegisterPage() {
 
           if (signIn.reason === "unconfirmed") {
             setError(
-              "Account exists but isn't confirmed. In Supabase → Authentication → Users, mark email as confirmed—or disable email confirmation under Providers → Email."
+              "Account exists but isn't confirmed. In Supabase → Authentication → Users, mark email as confirmed—or disable email confirmation under Providers → Email.",
             );
             return;
           }
@@ -150,12 +161,17 @@ export default function RegisterPage() {
             email,
             avatar: getDefaultAvatar(username),
           },
-          { onConflict: "id" }
+          { onConflict: "id" },
         );
       }
 
       if (data.session) {
-        toast.success("Account created! Welcome to FeedApp.");
+        toast.custom((t) => (
+          <Alert variant="success">
+            <AlertTitle>Account created!</AlertTitle>
+            <AlertDescription>Welcome to Feed App.</AlertDescription>
+          </Alert>
+        ));
         router.push("/feed");
         router.refresh();
         return;
@@ -164,7 +180,12 @@ export default function RegisterPage() {
       const signIn = await trySignIn(supabase, [email], input.password);
 
       if (signIn.ok) {
-        toast.success("Account created! Welcome to FeedApp.");
+        toast.custom((t) => (
+          <Alert variant="success">
+            <AlertTitle>Account created!</AlertTitle>
+            <AlertDescription>Welcome to Feed App.</AlertDescription>
+          </Alert>
+        ));
         router.push("/feed");
         router.refresh();
         return;
@@ -172,7 +193,7 @@ export default function RegisterPage() {
 
       if (signIn.reason === "unconfirmed") {
         setError(
-          "Account created but email confirmation is still on. Disable it in Supabase → Authentication → Providers → Email, then sign in."
+          "Account created but email confirmation is still on. Disable it in Supabase → Authentication → Providers → Email, then sign in.",
         );
         return;
       }
@@ -254,7 +275,10 @@ export default function RegisterPage() {
       </form>
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-foreground hover:underline">
+        <Link
+          href="/login"
+          className="font-medium text-foreground hover:underline"
+        >
           Sign in
         </Link>
       </p>

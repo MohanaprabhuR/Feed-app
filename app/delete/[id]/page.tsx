@@ -20,6 +20,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { getPostById } from "@/lib/mock-data";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function DeletePostPage({
   params,
@@ -67,7 +68,14 @@ export default function DeletePostPage({
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
-                  toast.success("Post deleted");
+                  toast.custom((t) => (
+                    <Alert variant="success">
+                      <AlertTitle>Post deleted</AlertTitle>
+                      <AlertDescription>
+                        Your post has been deleted.
+                      </AlertDescription>
+                    </Alert>
+                  ));
                   router.push("/feed");
                 }}
               >

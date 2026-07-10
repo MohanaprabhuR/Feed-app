@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getPostById } from "@/lib/mock-data";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function ReportPostPage({
   params,
@@ -34,7 +35,8 @@ export default function ReportPostPage({
       <PageHeader title="Report Post" backHref="/feed" />
       <div className="space-y-6 p-4">
         <p className="text-sm text-muted-foreground">
-          Help us understand what&apos;s wrong with this post by @{post.author.username}.
+          Help us understand what&apos;s wrong with this post by @
+          {post.author.username}.
         </p>
 
         <div className="space-y-2">
@@ -47,7 +49,9 @@ export default function ReportPostPage({
               <SelectItem value="spam">Spam</SelectItem>
               <SelectItem value="harassment">Harassment</SelectItem>
               <SelectItem value="misinformation">Misinformation</SelectItem>
-              <SelectItem value="inappropriate">Inappropriate content</SelectItem>
+              <SelectItem value="inappropriate">
+                Inappropriate content
+              </SelectItem>
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
@@ -66,7 +70,12 @@ export default function ReportPostPage({
           className="w-full"
           variant="destructive"
           onClick={() => {
-            toast.success("Report submitted. Thank you.");
+            toast.custom((t) => (
+              <Alert variant="success">
+                <AlertTitle>Report submitted</AlertTitle>
+                <AlertDescription>Thank you for your report.</AlertDescription>
+              </Alert>
+            ));
             router.push("/feed");
           }}
         >

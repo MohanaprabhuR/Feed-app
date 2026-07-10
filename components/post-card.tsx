@@ -42,6 +42,7 @@ import {
   feedCardHeaderClass,
 } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
+import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 
 type PostCardProps = {
   post: Post;
@@ -80,7 +81,16 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
                 <Link href={`/edit/${post.id}`}>Edit post</Link>
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => toast.success("Post saved to bookmarks")}
+                onClick={() =>
+                  toast.custom((t) => (
+                    <Alert variant="success">
+                      <AlertTitle>Post saved to bookmarks</AlertTitle>
+                      <AlertDescription>
+                        You have saved the post to your bookmarks.
+                      </AlertDescription>
+                    </Alert>
+                  ))
+                }
               >
                 <Bookmark className="size-4" />
                 Save post
@@ -149,7 +159,16 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => toast.success("Link copied to clipboard")}
+            onClick={() =>
+              toast.custom((t) => (
+                <Alert variant="success">
+                  <AlertTitle>Link copied to clipboard</AlertTitle>
+                  <AlertDescription>
+                    You have copied the link to the post to your clipboard.
+                  </AlertDescription>
+                </Alert>
+              ))
+            }
           >
             <Share2 className="size-4" />
             {post.shares}
@@ -160,7 +179,14 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
           size="sm"
           iconOnly
           className={cn(post.isSaved && "text-primary")}
-          onClick={() => toast.success("Post saved")}
+          onClick={() =>
+            toast.custom((t) => (
+              <Alert variant="success">
+                <AlertTitle>Post saved</AlertTitle>
+                <AlertDescription>You have saved the post.</AlertDescription>
+              </Alert>
+            ))
+          }
         >
           <Bookmark className={cn("size-4", post.isSaved && "fill-current")} />
         </Button>

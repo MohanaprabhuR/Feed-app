@@ -23,7 +23,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import type { Post } from "@/lib/types";
 import {
   feedCardClass,
@@ -32,6 +37,7 @@ import {
   feedCardHeaderClass,
 } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 type ArticleCardProps = {
   post: Post;
@@ -73,7 +79,16 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
                 <Link href={`/articles/${post.id}`}>View article</Link>
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => toast.success("Article saved to bookmarks")}
+                onClick={() =>
+                  toast.custom((t) => (
+                    <Alert variant="success">
+                      <AlertTitle>Article saved to bookmarks</AlertTitle>
+                      <AlertDescription>
+                        You have saved the article to your bookmarks.
+                      </AlertDescription>
+                    </Alert>
+                  ))
+                }
               >
                 <Bookmark className="size-4" />
                 Save article
@@ -139,7 +154,16 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => toast.success("Link copied to clipboard")}
+            onClick={() =>
+              toast.custom((t) => (
+                <Alert variant="success">
+                  <AlertTitle>Link copied to clipboard</AlertTitle>
+                  <AlertDescription>
+                    You have copied the link to the article to your clipboard.
+                  </AlertDescription>
+                </Alert>
+              ))
+            }
           >
             <Share2 className="size-4" />
             {post.shares}

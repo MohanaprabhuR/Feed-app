@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatAuthError } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -19,14 +20,16 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError(null);
 
-    const email = String(new FormData(e.currentTarget).get("email") ?? "").trim();
+    const email = String(
+      new FormData(e.currentTarget).get("email") ?? "",
+    ).trim();
     setLoading(true);
 
     try {
       const supabase = createClient();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email,
-        { redirectTo: `${window.location.origin}/auth/callback?next=/feed` }
+        { redirectTo: `${window.location.origin}/auth/callback?next=/feed` },
       );
 
       if (resetError) {
@@ -35,7 +38,15 @@ export default function ForgotPasswordPage() {
       }
 
       setSent(true);
-      toast.success("Password reset email sent.");
+
+      toast.custom((t) => (
+        <Alert variant="success">
+          <AlertTitle>Password reset email sent</AlertTitle>
+          <AlertDescription>
+            Check your inbox for a reset link.
+          </AlertDescription>
+        </Alert>
+      ));
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -77,7 +88,10 @@ export default function ForgotPasswordPage() {
         </form>
       )}
       <p className="text-center text-sm text-muted-foreground">
-        <Link href="/login" className="font-medium text-foreground hover:underline">
+        <Link
+          href="/login"
+          className="font-medium text-foreground hover:underline"
+        >
           Back to sign in
         </Link>
       </p>

@@ -57,11 +57,27 @@ import type { Post } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
+import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 
 const feedActions = [
-  { label: "Video", icon: Video, iconClass: "text-green-600", kind: "video" as const },
-  { label: "Photo", icon: ImageIcon, iconClass: "text-blue-600", kind: "image" as const },
-  { label: "Write article", icon: Newspaper, iconClass: "text-amber-700", kind: "article" as const },
+  {
+    label: "Video",
+    icon: Video,
+    iconClass: "text-green-600",
+    kind: "video" as const,
+  },
+  {
+    label: "Photo",
+    icon: ImageIcon,
+    iconClass: "text-blue-600",
+    kind: "image" as const,
+  },
+  {
+    label: "Write article",
+    icon: Newspaper,
+    iconClass: "text-amber-700",
+    kind: "article" as const,
+  },
 ];
 
 type ComposerAttachment = {
@@ -111,7 +127,12 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
 
     const validationError = validatePostAttachment(file);
     if (validationError) {
-      toast.error(validationError);
+      toast.custom((t) => (
+        <Alert variant="error">
+          <AlertTitle>Invalid file.</AlertTitle>
+          <AlertDescription>You must select a valid file.</AlertDescription>
+        </Alert>
+      ));
       return;
     }
 
@@ -168,11 +189,22 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
         file,
       });
       await refresh();
-      toast.success("Post published!");
+
+      toast.custom((t) => (
+        <Alert variant="success">
+          <AlertTitle>Post published!</AlertTitle>
+          <AlertDescription>You have published the post.</AlertDescription>
+        </Alert>
+      ));
       resetComposer();
       onPosted?.(created);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Could not publish post."));
+      toast.custom((t) => (
+        <Alert variant="error">
+          <AlertTitle>Could not publish post.</AlertTitle>
+          <AlertDescription>You could not publish the post.</AlertDescription>
+        </Alert>
+      ));
     } finally {
       setLoading(false);
     }
@@ -269,7 +301,10 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
           <div className="flex items-start gap-3 px-4 pt-4 pr-12">
             <CurrentUserAvatar size="sm" />
             <div className="min-w-0 flex-1 space-y-1">
-              <Button variant="ghost" className="h-auto px-0 py-0 font-semibold">
+              <Button
+                variant="ghost"
+                className="h-auto px-0 py-0 font-semibold"
+              >
                 {user?.name ?? "Your profile"}
                 <ChevronDown className="size-4 text-muted-foreground" />
               </Button>
@@ -345,7 +380,16 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
               size="sm"
               iconOnly
               className="mb-2 self-start"
-              onClick={() => toast.info("Emoji picker coming soon")}
+              onClick={() =>
+                toast.custom((t) => (
+                  <Alert variant="information">
+                    <AlertTitle>Emoji picker coming soon</AlertTitle>
+                    <AlertDescription>
+                      You can add emojis to your post.
+                    </AlertDescription>
+                  </Alert>
+                ))
+              }
               aria-label="Add emoji"
             >
               <Smile />
@@ -358,7 +402,16 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
               variant="outline"
               size="sm"
               className="hidden sm:inline-flex"
-              onClick={() => toast.info("AI enhance coming soon")}
+              onClick={() =>
+                toast.custom((t) => (
+                  <Alert variant="information">
+                    <AlertTitle>AI enhance coming soon</AlertTitle>
+                    <AlertDescription>
+                      You can enhance your post with AI.
+                    </AlertDescription>
+                  </Alert>
+                ))
+              }
             >
               ✨ Enhance post
             </Button>
@@ -389,7 +442,16 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                 variant="ghost"
                 size="sm"
                 iconOnly
-                onClick={() => toast.info("Events coming soon")}
+                onClick={() =>
+                  toast.custom((t) => (
+                    <Alert variant="information">
+                      <AlertTitle>Events coming soon</AlertTitle>
+                      <AlertDescription>
+                        You can create events for your post.
+                      </AlertDescription>
+                    </Alert>
+                  ))
+                }
                 aria-label="Create event"
               >
                 <Calendar />
@@ -399,7 +461,16 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                 variant="ghost"
                 size="sm"
                 iconOnly
-                onClick={() => toast.info("Celebrate coming soon")}
+                onClick={() =>
+                  toast.custom((t) => (
+                    <Alert variant="information">
+                      <AlertTitle>Celebrate coming soon</AlertTitle>
+                      <AlertDescription>
+                        You can celebrate occasions for your post.
+                      </AlertDescription>
+                    </Alert>
+                  ))
+                }
                 aria-label="Celebrate an occasion"
               >
                 <Award />
@@ -421,11 +492,24 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                     <Paperclip className="size-4" />
                     Add a document
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => toast.info("Events coming soon")}>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      toast.custom((t) => (
+                        <Alert variant="information">
+                          <AlertTitle>Events coming soon</AlertTitle>
+                          <AlertDescription>
+                            You can create events for your post.
+                          </AlertDescription>
+                        </Alert>
+                      ))
+                    }
+                  >
                     <Calendar className="size-4" />
                     Create an event
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/articles/new")}>
+                  <DropdownMenuItem
+                    onClick={() => router.push("/articles/new")}
+                  >
                     <Newspaper className="size-4" />
                     Write article
                   </DropdownMenuItem>
@@ -440,7 +524,16 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
               variant="ghost"
               size="sm"
               iconOnly
-              onClick={() => toast.info("Scheduling coming soon")}
+              onClick={() =>
+                toast.custom((t) => (
+                  <Alert variant="information">
+                    <AlertTitle>Scheduling coming soon</AlertTitle>
+                    <AlertDescription>
+                      You can schedule your post.
+                    </AlertDescription>
+                  </Alert>
+                ))
+              }
               aria-label="Schedule post"
             >
               <Clock />

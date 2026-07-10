@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { UserListItem } from "@/components/user-list-item";
 import { Button } from "@/components/ui/button";
 import { blockedUsers } from "@/lib/mock-data";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function BlockedUsersPage() {
   return (
@@ -20,7 +21,16 @@ export default function BlockedUsersPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => toast.success(`Unblocked @${user.username}`)}
+                onClick={() =>
+                  toast.custom(() => (
+                    <Alert variant="success">
+                      <AlertTitle>{`Unblocked @${user.username}`}</AlertTitle>
+                      <AlertDescription>
+                        {`You have unblocked @${user.username}.`}
+                      </AlertDescription>
+                    </Alert>
+                  ))
+                }
               >
                 Unblock
               </Button>

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { normalizeUsername } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
+import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 
 type ProfileEditFormProps = {
   user: User;
@@ -17,7 +18,11 @@ type ProfileEditFormProps = {
   onSaved: () => void;
 };
 
-export function ProfileEditForm({ user, onCancel, onSaved }: ProfileEditFormProps) {
+export function ProfileEditForm({
+  user,
+  onCancel,
+  onSaved,
+}: ProfileEditFormProps) {
   const { refresh } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +44,9 @@ export function ProfileEditForm({ user, onCancel, onSaved }: ProfileEditFormProp
     }
 
     if (!/^[a-z0-9_]{3,20}$/.test(normalizedUsername)) {
-      setError("Username must be 3–20 characters (letters, numbers, underscore).");
+      setError(
+        "Username must be 3–20 characters (letters, numbers, underscore).",
+      );
       return;
     }
 
@@ -84,7 +91,13 @@ export function ProfileEditForm({ user, onCancel, onSaved }: ProfileEditFormProp
       });
 
       await refresh();
-      toast.success("Profile updated.");
+
+      toast.custom((t) => (
+        <Alert variant="success">
+          <AlertTitle>Profile updated.</AlertTitle>
+          <AlertDescription>You have updated your profile.</AlertDescription>
+        </Alert>
+      ));
       onSaved();
     } catch {
       setError("Could not save profile. Please try again.");
@@ -148,7 +161,12 @@ export function ProfileEditForm({ user, onCancel, onSaved }: ProfileEditFormProp
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={loading}
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>

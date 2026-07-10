@@ -15,6 +15,7 @@ import {
   validateLoginInput,
 } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 function LoginForm() {
   const router = useRouter();
@@ -63,7 +64,12 @@ function LoginForm() {
         return;
       }
 
-      toast.success("Welcome back!");
+      toast.custom((t) => (
+        <Alert variant="success">
+          <AlertTitle>Welcome back!</AlertTitle>
+          <AlertDescription>Welcome back to Feed App.</AlertDescription>
+        </Alert>
+      ));
       router.push(next);
       router.refresh();
     } catch {

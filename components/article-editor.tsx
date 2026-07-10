@@ -11,7 +11,12 @@ import { CurrentUserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Item, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +26,7 @@ import { createArticle } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
+import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 
 export function ArticleEditor() {
   const router = useRouter();
@@ -41,7 +47,14 @@ export function ArticleEditor() {
   function handleCoverSelect(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error("Cover must be an image.");
+      toast.custom((t) => (
+        <Alert variant="error">
+          <AlertTitle>Cover must be an image.</AlertTitle>
+          <AlertDescription>
+            You must select an image for the cover.
+          </AlertDescription>
+        </Alert>
+      ));
       return;
     }
     clearCover();
@@ -51,7 +64,14 @@ export function ArticleEditor() {
 
   async function handlePublish() {
     if (!user) {
-      toast.error("Sign in to publish an article.");
+      toast.custom((t) => (
+        <Alert variant="error">
+          <AlertTitle>Sign in to publish an article.</AlertTitle>
+          <AlertDescription>
+            You must be signed in to publish an article.
+          </AlertDescription>
+        </Alert>
+      ));
       return;
     }
 
@@ -75,20 +95,37 @@ export function ArticleEditor() {
         coverImage,
       });
 
-      toast.success("Article published!");
+      toast.custom((t) => (
+        <Alert variant="success">
+          <AlertTitle>Article published!</AlertTitle>
+          <AlertDescription>You have published the article.</AlertDescription>
+        </Alert>
+      ));
       router.push(`/articles/${article.id}`);
       router.refresh();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Could not publish article."));
+      toast.custom((t) => (
+        <Alert variant="error">
+          <AlertTitle>Could not publish article.</AlertTitle>
+          <AlertDescription>
+            You could not publish the article.
+          </AlertDescription>
+        </Alert>
+      ));
     } finally {
       setLoading(false);
     }
   }
 
-  const canPublish = Boolean(user && title.trim() && content.trim() && !loading);
+  const canPublish = Boolean(
+    user && title.trim() && content.trim() && !loading,
+  );
 
   return (
-    <Card padding="none" className={cn(feedCardClass, "mx-auto max-w-3xl border-0 shadow-none")}>
+    <Card
+      padding="none"
+      className={cn(feedCardClass, "mx-auto max-w-3xl border-0 shadow-none")}
+    >
       <CardContent className={cn(feedCardSectionClass, "space-y-6 pb-10")}>
         <Item size="sm" className="p-0">
           <CurrentUserAvatar size="sm" />
@@ -98,82 +135,82 @@ export function ArticleEditor() {
           </ItemContent>
         </Item>
 
-      <input
-        ref={coverInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          handleCoverSelect(e.target.files?.[0]);
-          e.target.value = "";
-        }}
-      />
-
-      <div className="space-y-2">
-        <Label htmlFor="article-title">Title</Label>
-        <Input
-          id="article-title"
-          placeholder="Article title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          disabled={loading}
-          className="text-lg font-semibold"
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            handleCoverSelect(e.target.files?.[0]);
+            e.target.value = "";
+          }}
         />
-      </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Cover image (optional)</Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => coverInputRef.current?.click()}
+        <div className="space-y-2">
+          <Label htmlFor="article-title">Title</Label>
+          <Input
+            id="article-title"
+            placeholder="Article title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             disabled={loading}
-          >
-            <ImageIcon className="size-4" />
-            Add cover
-          </Button>
+            className="text-lg font-semibold"
+          />
         </div>
 
-        {coverPreview && (
-          <div className="relative overflow-hidden rounded-xl border">
-            <div className="relative aspect-[2/1] w-full">
-              <Image
-                src={coverPreview}
-                alt="Cover preview"
-                fill
-                unoptimized
-                className="object-cover"
-              />
-            </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Cover image (optional)</Label>
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               size="sm"
-              iconOnly
-              className="absolute right-3 top-3 rounded-full"
-              onClick={clearCover}
+              onClick={() => coverInputRef.current?.click()}
               disabled={loading}
-              aria-label="Remove cover"
             >
-              <X className="size-4" />
+              <ImageIcon className="size-4" />
+              Add cover
             </Button>
           </div>
-        )}
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="article-body">Body</Label>
-        <Textarea
-          id="article-body"
-          placeholder="Write your article..."
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          disabled={loading}
-          className="min-h-[360px] resize-y text-[15px] leading-relaxed"
-        />
-      </div>
+          {coverPreview && (
+            <div className="relative overflow-hidden rounded-xl border">
+              <div className="relative aspect-[2/1] w-full">
+                <Image
+                  src={coverPreview}
+                  alt="Cover preview"
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                iconOnly
+                className="absolute right-3 top-3 rounded-full"
+                onClick={clearCover}
+                disabled={loading}
+                aria-label="Remove cover"
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="article-body">Body</Label>
+          <Textarea
+            id="article-body"
+            placeholder="Write your article..."
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            disabled={loading}
+            className="min-h-[360px] resize-y text-[15px] leading-relaxed"
+          />
+        </div>
 
         <Separator />
 
@@ -181,7 +218,11 @@ export function ArticleEditor() {
           <Button variant="ghost" asChild disabled={loading}>
             <Link href="/feed">Cancel</Link>
           </Button>
-          <Button onClick={handlePublish} disabled={!canPublish} loading={loading}>
+          <Button
+            onClick={handlePublish}
+            disabled={!canPublish}
+            loading={loading}
+          >
             Publish
           </Button>
         </div>
