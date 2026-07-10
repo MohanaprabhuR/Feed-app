@@ -1,15 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
+import { getServiceRoleKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 export function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const url = getSupabaseUrl();
+  const serviceRoleKey = getServiceRoleKey();
 
-  if (
-    !url ||
-    !serviceRoleKey ||
-    serviceRoleKey === "your-service-role-key" ||
-    serviceRoleKey.startsWith("your-")
-  ) {
+  if (!url || !serviceRoleKey) {
     return null;
   }
 
@@ -22,7 +18,7 @@ export function createAdminClient() {
   const admin = getAdminClient();
   if (!admin) {
     throw new Error(
-      "Replace SUPABASE_SERVICE_ROLE_KEY in .env.local with your real service_role key from Supabase → Settings → API. (Do not use the placeholder 'your-service-role-key'.)"
+      "Set SUPABASE_SERVICE_ROLE_KEY in .env.local (Supabase → Settings → API → service_role secret)."
     );
   }
   return admin;
