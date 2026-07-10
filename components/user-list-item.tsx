@@ -23,18 +23,24 @@ export function UserListItem({
   subtitle,
 }: UserListItemProps) {
   return (
-    <Item size="sm" className="p-0">
+    <Item size="sm" className="items-center gap-3 py-3">
       <UserAvatar src={user.avatar} name={user.name} userId={user.id} />
-      <ItemContent>
-        <ItemTitle>
+      <ItemContent className="min-w-0">
+        <ItemTitle className="truncate">
           <ProfileTrigger userId={user.id} className="hover:underline">
             {user.name}
           </ProfileTrigger>
         </ItemTitle>
-        <ItemDescription>{subtitle ?? `@${user.username}`}</ItemDescription>
+        <ItemDescription className="truncate">
+          {subtitle ?? `@${user.username}`}
+        </ItemDescription>
       </ItemContent>
       {action ?? (
-        <Button variant={user.isFollowing ? "outline" : "primary"} size="sm">
+        <Button
+          variant={user.isFollowing ? "outline" : "primary"}
+          size="sm"
+          className="shrink-0"
+        >
           {user.isFollowing ? "Following" : "Follow"}
         </Button>
       )}

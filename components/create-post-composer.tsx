@@ -55,6 +55,7 @@ import {
 import { createPost } from "@/lib/posts";
 import type { Post } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
+import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
 
 const feedActions = [
@@ -212,8 +213,8 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
         }}
       />
 
-      <Card>
-        <CardContent className="p-3">
+      <Card padding="none" className={feedCardClass}>
+        <CardContent className={feedCardSectionClass}>
           <div className="flex items-center gap-2">
             <CurrentUserAvatar size="sm" />
             <Button
@@ -227,7 +228,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
             </Button>
           </div>
 
-          <Separator className="my-2" />
+          <Separator className="my-3" />
 
           <div className="flex items-center justify-between">
             {feedActions.map(({ label, icon: Icon, iconClass, kind }) => (

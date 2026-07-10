@@ -35,6 +35,12 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import type { Post } from "@/lib/types";
+import {
+  feedCardClass,
+  feedCardContentClass,
+  feedCardFooterClass,
+  feedCardHeaderClass,
+} from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
 
 type PostCardProps = {
@@ -44,8 +50,8 @@ type PostCardProps = {
 
 export function PostCard({ post, showActions = true }: PostCardProps) {
   return (
-    <Card className="overflow-hidden border shadow-sm">
-      <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-3">
+    <Card padding="none" className={feedCardClass}>
+      <CardHeader className={feedCardHeaderClass}>
         <UserAvatar
           src={post.author.avatar}
           name={post.author.name}
@@ -87,7 +93,7 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
           </DropdownMenu>
         )}
       </CardHeader>
-      <CardContent className="space-y-3 pb-3">
+      <CardContent className={feedCardContentClass}>
         <p className="text-sm leading-relaxed">{post.content}</p>
         {post.video ? (
           <video
@@ -121,7 +127,7 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
           </div>
         ) : null}
       </CardContent>
-      <CardFooter className="flex items-center justify-between border-t px-4 py-2">
+      <CardFooter className={cn(feedCardFooterClass, "border-t")}>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"

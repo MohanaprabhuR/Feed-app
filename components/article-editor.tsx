@@ -19,6 +19,8 @@ import { getErrorMessage } from "@/lib/errors";
 import { uploadPostAttachment } from "@/lib/post-media";
 import { createArticle } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/client";
+import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
+import { cn } from "@/lib/utils";
 
 export function ArticleEditor() {
   const router = useRouter();
@@ -86,8 +88,8 @@ export function ArticleEditor() {
   const canPublish = Boolean(user && title.trim() && content.trim() && !loading);
 
   return (
-    <Card className="mx-auto max-w-3xl border-0 shadow-none">
-      <CardContent className="space-y-6 p-4 pb-10">
+    <Card padding="none" className={cn(feedCardClass, "mx-auto max-w-3xl border-0 shadow-none")}>
+      <CardContent className={cn(feedCardSectionClass, "space-y-6 pb-10")}>
         <Item size="sm" className="p-0">
           <CurrentUserAvatar size="sm" />
           <ItemContent>

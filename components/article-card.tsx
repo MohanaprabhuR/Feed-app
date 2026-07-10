@@ -25,6 +25,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import type { Post } from "@/lib/types";
+import {
+  feedCardClass,
+  feedCardContentClass,
+  feedCardFooterClass,
+  feedCardHeaderClass,
+} from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
 
 type ArticleCardProps = {
@@ -37,8 +43,8 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
   const excerpt = getArticleExcerpt(post.content);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-3">
+    <Card padding="none" className={feedCardClass}>
+      <CardHeader className={feedCardHeaderClass}>
         <UserAvatar
           src={post.author.avatar}
           name={post.author.name}
@@ -81,7 +87,7 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
         )}
       </CardHeader>
 
-      <CardContent className="space-y-3 pb-3">
+      <CardContent className={feedCardContentClass}>
         <Link href={`/articles/${post.id}`} className="group block space-y-3">
           {post.image && (
             <div className="relative aspect-[2/1] overflow-hidden rounded-lg bg-muted">
@@ -111,7 +117,7 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
         </Link>
       </CardContent>
 
-      <CardFooter className="flex items-center justify-between border-t px-4 py-2">
+      <CardFooter className={cn(feedCardFooterClass, "border-t")}>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"

@@ -21,6 +21,8 @@ import { fetchPosts } from "@/lib/posts";
 import { getErrorMessage } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
+import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
+import { cn } from "@/lib/utils";
 
 type FeedPostsProps = {
   initialPosts?: Post[];
@@ -91,12 +93,12 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
   }, [loadPosts]);
 
   return (
-    <div className="min-w-0 space-y-2">
+    <div className="min-w-0 space-y-3">
       {user ? (
         <CreatePostComposer onPosted={handlePosted} />
       ) : (
-        <Card>
-          <CardContent className="p-4 text-center">
+        <Card padding="none" className={feedCardClass}>
+          <CardContent className={cn(feedCardSectionClass, "text-center")}>
             <Empty>
               <EmptyContent>
                 <EmptyTitle>Join the conversation</EmptyTitle>

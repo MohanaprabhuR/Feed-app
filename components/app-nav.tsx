@@ -113,7 +113,8 @@ export function AppHeader() {
   }
 
   return (
-    <Header className="sticky top-0 z-40 h-[52px] max-w-[1128px] mx-auto border-b px-4">
+    <Header className="sticky top-0 z-40 h-[52px] w-full border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-4">
+      <div className="mx-auto flex h-full w-full max-w-[1128px] items-center gap-2">
       <Button asChild variant="ghost" size="sm" iconOnly className="shrink-0">
         <Link href="/feed">
           <Avatar size="2xl" className="rounded bg-primary">
@@ -154,6 +155,7 @@ export function AppHeader() {
           <Search />
         </Link>
       </Button>
+      </div>
     </Header>
   );
 }

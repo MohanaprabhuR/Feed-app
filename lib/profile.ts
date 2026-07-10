@@ -40,3 +40,47 @@ export async function fetchProfileById(
   if (error || !data) return null;
   return profileToUser(data);
 }
+
+export async function fetchSuggestedProfiles(
+  supabase: SupabaseClient,
+  options: { excludeUserId?: string; limit?: number } = {}
+): Promise<User[]> {
+  const { excludeUserId, limit = 3 } = options;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit + (excludeUserId ? 5 : 0));
+
+  if (error || !data) return [];
+
+  return data
+    .filter((row) => row.id !== excludeUserId)
+    .slice(0, limit)
+    .map(profileToUser);
+}
+
+export async function searchProfiles(
+  supabase: SupabaseClient,
+  query: string,
+  options: { excludeUserId?: string; limit?: number } = {}
+): Promise<User[]> {
+  const { excludeUserId, limit = 20 } = options;
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .or(`name.ilike.%${trimmed}%,username.ilike.%${trimmed}%`)
+    .order("name", { ascending: true })
+    .limit(limit + (excludeUserId ? 1 : 0));
+
+  if (error || !data) return [];
+
+  return data
+    .filter((row) => row.id !== excludeUserId)
+    .slice(0, limit)
+    .map(profileToUser);
+}

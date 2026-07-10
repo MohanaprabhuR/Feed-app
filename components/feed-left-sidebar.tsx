@@ -25,6 +25,11 @@ import {
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  feedCardClass,
+  feedCardSectionClass,
+  feedCardTitleClass,
+} from "@/lib/feed-layout";
 
 const quickLinks = [
   { href: "/saved", label: "Saved items", icon: Bookmark },
@@ -37,10 +42,10 @@ export function FeedLeftSidebar() {
   const { user, loading } = useCurrentUser();
 
   return (
-    <aside className="space-y-2">
-      <Card className="overflow-hidden border shadow-sm">
+    <aside className="space-y-3">
+      <Card padding="none" className={feedCardClass}>
         <div className="h-14 bg-gradient-to-r from-sky-700 to-sky-500" />
-        <CardContent className="px-4 pb-4">
+        <CardContent className={feedCardSectionClass}>
           <div className="-mt-8 flex flex-col items-center text-center">
             {loading || !user ? (
               <>
@@ -88,7 +93,7 @@ export function FeedLeftSidebar() {
         </CardContent>
       </Card>
 
-      <Card className="border shadow-sm">
+      <Card padding="none" className={feedCardClass}>
         <CardContent className="p-0">
           <ItemGroup>
             {quickLinks.map(({ href, label, icon: Icon }, index) => (

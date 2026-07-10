@@ -12,6 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Item, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import type { Post } from "@/lib/types";
+import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
+import { cn } from "@/lib/utils";
 
 type ArticleViewProps = {
   article: Post;
@@ -21,8 +23,8 @@ export function ArticleView({ article }: ArticleViewProps) {
   const readTime = getReadTimeMinutes(article.content);
 
   return (
-    <Card className="mx-auto max-w-3xl border-0 shadow-none">
-      <CardContent className="px-4 py-6">
+    <Card padding="none" className={cn(feedCardClass, "mx-auto max-w-3xl border-0 shadow-none")}>
+      <CardContent className={cn(feedCardSectionClass, "py-6")}>
         <Item size="sm" className="mb-6 p-0">
           <UserAvatar
             src={article.author.avatar}
