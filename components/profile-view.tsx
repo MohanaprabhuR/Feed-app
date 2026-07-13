@@ -113,7 +113,9 @@ export function ProfileView({
       setPostsLoading(true);
       try {
         const supabase = createClient();
-        const data = await fetchPostsByAuthor(supabase, userId);
+        const data = await fetchPostsByAuthor(supabase, userId, {
+          userId: currentUser?.id,
+        });
         if (!cancelled) setUserPosts(data);
       } catch {
         if (!cancelled) setUserPosts([]);
@@ -126,7 +128,7 @@ export function ProfileView({
     return () => {
       cancelled = true;
     };
-  }, [userId, mode]);
+  }, [userId, mode, currentUser?.id]);
 
   useEffect(() => {
     setProfileMode(initialMode);

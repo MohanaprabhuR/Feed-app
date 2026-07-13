@@ -6,7 +6,7 @@ import { ArticleCard } from "@/components/article-card";
 import { CreatePostComposer } from "@/components/create-post-composer";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { PostCard } from "@/components/post-card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -37,7 +37,7 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
   const loadPosts = useCallback(async () => {
     try {
       const supabase = createClient();
-      const data = await fetchPosts(supabase);
+      const data = await fetchPosts(supabase, { userId: user?.id });
       setPosts(data);
       setError(null);
     } catch (error) {
@@ -45,7 +45,7 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   const handlePosted = useCallback(
     (newPost?: Post) => {
@@ -59,7 +59,7 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
       }
       void loadPosts();
     },
-    [loadPosts]
+    [loadPosts],
   );
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
         { event: "*", schema: "public", table: "posts" },
         () => {
           void loadPosts();
-        }
+        },
       )
       .subscribe();
 
@@ -121,7 +121,9 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
 
       {error && (
         <Alert variant="error" className="w-full max-w-none">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertContent>
+            <AlertDescription>{error}</AlertDescription>
+          </AlertContent>
         </Alert>
       )}
 
@@ -149,7 +151,7 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
             post={post}
             showActions={user?.id === post.author.id}
           />
-        )
+        ),
       )}
     </div>
   );

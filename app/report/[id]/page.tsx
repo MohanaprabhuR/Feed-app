@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getPostById } from "@/lib/mock-data";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription, AlertContent } from "@/components/ui/alert";
 
 export default function ReportPostPage({
   params,
@@ -72,8 +72,12 @@ export default function ReportPostPage({
           onClick={() => {
             toast.custom((t) => (
               <Alert variant="success">
-                <AlertTitle>Report submitted</AlertTitle>
-                <AlertDescription>Thank you for your report.</AlertDescription>
+                <AlertContent>
+                  <AlertTitle>Report submitted</AlertTitle>
+                  <AlertDescription>
+                    Thank you for your report.
+                  </AlertDescription>
+                </AlertContent>
               </Alert>
             ));
             router.push("/feed");

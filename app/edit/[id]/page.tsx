@@ -10,7 +10,12 @@ import { CurrentUserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getPostById } from "@/lib/mock-data";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  AlertContent,
+} from "@/components/ui/alert";
 
 export default function EditPostPage({
   params,
@@ -43,10 +48,12 @@ export default function EditPostPage({
               onClick={() => {
                 toast.custom((t) => (
                   <Alert variant="success">
-                    <AlertTitle>Post updated</AlertTitle>
-                    <AlertDescription>
-                      Your post has been updated.
-                    </AlertDescription>
+                    <AlertContent>
+                      <AlertTitle>Post updated</AlertTitle>
+                      <AlertDescription>
+                        Your post has been updated.
+                      </AlertDescription>
+                    </AlertContent>
                   </Alert>
                 ));
                 router.push("/feed");

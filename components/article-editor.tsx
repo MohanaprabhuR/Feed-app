@@ -26,7 +26,7 @@ import { createArticle } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
-import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
+import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
 
 export function ArticleEditor() {
   const router = useRouter();
@@ -49,10 +49,12 @@ export function ArticleEditor() {
     if (!file.type.startsWith("image/")) {
       toast.custom((t) => (
         <Alert variant="error">
-          <AlertTitle>Cover must be an image.</AlertTitle>
-          <AlertDescription>
-            You must select an image for the cover.
-          </AlertDescription>
+          <AlertContent>
+            <AlertTitle>Cover must be an image.</AlertTitle>
+            <AlertDescription>
+              You must select an image for the cover.
+            </AlertDescription>
+          </AlertContent>
         </Alert>
       ));
       return;
@@ -66,10 +68,12 @@ export function ArticleEditor() {
     if (!user) {
       toast.custom((t) => (
         <Alert variant="error">
-          <AlertTitle>Sign in to publish an article.</AlertTitle>
-          <AlertDescription>
-            You must be signed in to publish an article.
-          </AlertDescription>
+          <AlertContent>
+            <AlertTitle>Sign in to publish an article.</AlertTitle>
+            <AlertDescription>
+              You must be signed in to publish an article.
+            </AlertDescription>
+          </AlertContent>
         </Alert>
       ));
       return;
@@ -97,8 +101,10 @@ export function ArticleEditor() {
 
       toast.custom((t) => (
         <Alert variant="success">
-          <AlertTitle>Article published!</AlertTitle>
-          <AlertDescription>You have published the article.</AlertDescription>
+          <AlertContent>
+            <AlertTitle>Article published!</AlertTitle>
+            <AlertDescription>You have published the article.</AlertDescription>
+          </AlertContent>
         </Alert>
       ));
       router.push(`/articles/${article.id}`);
@@ -106,10 +112,12 @@ export function ArticleEditor() {
     } catch (error) {
       toast.custom((t) => (
         <Alert variant="error">
-          <AlertTitle>Could not publish article.</AlertTitle>
-          <AlertDescription>
-            You could not publish the article.
-          </AlertDescription>
+          <AlertContent>
+            <AlertTitle>Could not publish article.</AlertTitle>
+            <AlertDescription>
+              You could not publish the article.
+            </AlertDescription>
+          </AlertContent>
         </Alert>
       ));
     } finally {

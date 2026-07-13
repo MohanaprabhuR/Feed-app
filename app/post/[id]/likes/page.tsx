@@ -1,9 +1,26 @@
-import { notFound } from "next/navigation";
-import { use } from "react";
+"use client";
+
+import { use, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { UserListItem } from "@/components/user-list-item";
-import { getPostById, users } from "@/lib/mock-data";
+import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { getErrorMessage } from "@/lib/errors";
+import { fetchLikers, getReactionMeta } from "@/lib/likes";
+import { fetchPostById } from "@/lib/posts";
+import { createClient } from "@/lib/supabase/client";
+import type { ReactionType, User } from "@/lib/types";
+
+type Liker = User & { reaction: ReactionType };
 
 export default function LikesPage({
   params,
@@ -11,17 +28,103 @@ export default function LikesPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const post = getPostById(id);
+  const [likers, setLikers] = useState<Liker[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [missingPost, setMissingPost] = useState(false);
 
-  if (!post) notFound();
+  const load = useCallback(async () => {
+    try {
+      const supabase = createClient();
+      const post = await fetchPostById(supabase, id);
+      if (!post) {
+        setMissingPost(true);
+        setLikers([]);
+        setError(null);
+        return;
+      }
+
+      const data = await fetchLikers(supabase, id);
+      setLikers(data);
+      setMissingPost(false);
+      setError(null);
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not load likes."));
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   return (
     <AppShell noPadding>
-      <PageHeader title="Likes" backHref="/feed" />
+      <PageHeader title="Reactions" backHref="/feed" />
       <div className="divide-y px-4">
-        {users.slice(1).map((user) => (
-          <UserListItem key={user.id} user={user} />
-        ))}
+        {loading &&
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 py-3">
+              <Skeleton className="size-10 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          ))}
+
+        {error && (
+          <Alert variant="error" className="my-4 w-full max-w-none">
+            <AlertContent>
+              <AlertDescription>{error}</AlertDescription>
+            </AlertContent>
+          </Alert>
+        )}
+
+        {!loading && missingPost && (
+          <Empty className="py-12">
+            <EmptyContent>
+              <EmptyTitle>Post not found</EmptyTitle>
+              <EmptyDescription>
+                This post may have been deleted.
+              </EmptyDescription>
+              <Button asChild size="sm">
+                <Link href="/feed">Back to feed</Link>
+              </Button>
+            </EmptyContent>
+          </Empty>
+        )}
+
+        {!loading && !error && !missingPost && likers.length === 0 && (
+          <Empty className="py-12">
+            <EmptyContent>
+              <EmptyTitle>No reactions yet</EmptyTitle>
+              <EmptyDescription>
+                Be the first to react to this post.
+              </EmptyDescription>
+            </EmptyContent>
+          </Empty>
+        )}
+
+        {likers.map((user) => {
+          const meta = getReactionMeta(user.reaction);
+          return (
+            <UserListItem
+              key={user.id}
+              user={user}
+              subtitle={`${meta.emoji} ${meta.label} · @${user.username}`}
+              action={
+                <span
+                  className={`flex size-9 items-center justify-center rounded-full text-lg ${meta.bg}`}
+                  title={meta.label}
+                >
+                  {meta.emoji}
+                </span>
+              }
+            />
+          );
+        })}
       </div>
     </AppShell>
   );

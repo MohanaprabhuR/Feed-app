@@ -1,17 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
   Bookmark,
   FileText,
-  Heart,
   MessageCircle,
   MoreHorizontal,
-  Share2,
+  Repeat2,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PostComments } from "@/components/post-comments";
+import { PostLikeButton } from "@/components/post-like-button";
 import { ProfileTrigger } from "@/components/profile-trigger";
+import { SharePostDialog } from "@/components/share-post-dialog";
 import { UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,13 +40,15 @@ import {
 } from "@/components/ui/item";
 import type { Post } from "@/lib/types";
 import {
+  feedCardActionsClass,
   feedCardClass,
   feedCardContentClass,
   feedCardFooterClass,
   feedCardHeaderClass,
+  feedCardStatsClass,
 } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
-import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
+import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
 
 type PostCardProps = {
   post: Post;
@@ -50,6 +56,12 @@ type PostCardProps = {
 };
 
 export function PostCard({ post, showActions = true }: PostCardProps) {
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(post.comments);
+  const [likesCount, setLikesCount] = useState(post.likes);
+  const [sharesCount, setSharesCount] = useState(post.shares);
+
   return (
     <Card padding="none" className={feedCardClass}>
       <CardHeader className={feedCardHeaderClass}>
@@ -84,10 +96,12 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
                 onClick={() =>
                   toast.custom((t) => (
                     <Alert variant="success">
-                      <AlertTitle>Post saved to bookmarks</AlertTitle>
-                      <AlertDescription>
-                        You have saved the post to your bookmarks.
-                      </AlertDescription>
+                      <AlertContent>
+                        <AlertTitle>Post saved to bookmarks</AlertTitle>
+                        <AlertDescription>
+                          You have saved the post to your bookmarks.
+                        </AlertDescription>
+                      </AlertContent>
                     </Alert>
                   ))
                 }
@@ -137,60 +151,101 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
           </div>
         ) : null}
       </CardContent>
-      <CardFooter className={cn(feedCardFooterClass, "border-t")}>
-        <div className="flex items-center gap-1">
+      <CardFooter className={feedCardFooterClass}>
+        {(likesCount > 0 || commentsCount > 0 || sharesCount > 0) && (
+          <div className={feedCardStatsClass}>
+            <Link
+              href={`/post/${post.id}/likes`}
+              className="hover:text-foreground hover:underline"
+            >
+              {likesCount > 0
+                ? `${likesCount} reaction${likesCount === 1 ? "" : "s"}`
+                : null}
+            </Link>
+            <div className="flex items-center gap-2">
+              {commentsCount > 0 && (
+                <button
+                  type="button"
+                  className="hover:text-foreground hover:underline"
+                  onClick={() => setCommentsOpen(true)}
+                >
+                  {commentsCount} comment{commentsCount === 1 ? "" : "s"}
+                </button>
+              )}
+              {sharesCount > 0 && <span>{sharesCount} shares</span>}
+            </div>
+          </div>
+        )}
+
+        <div className={feedCardActionsClass}>
+          <PostLikeButton
+            postId={post.id}
+            initialLiked={post.isLiked}
+            initialReaction={post.reaction}
+            initialCount={likesCount}
+            hideCount
+            className="justify-start"
+            onCountChange={setLikesCount}
+          />
           <Button
             variant="ghost"
             size="sm"
-            className={cn(post.isLiked && "text-destructive")}
-            asChild
+            iconOnly
+            className={cn("h-9 justify-start", commentsOpen && "bg-accent")}
+            aria-expanded={commentsOpen}
+            aria-label="Toggle comments"
+            onClick={() => setCommentsOpen((open) => !open)}
           >
-            <Link href={`/post/${post.id}/likes`}>
-              <Heart className={cn("size-4", post.isLiked && "fill-current")} />
-              {post.likes}
-            </Link>
-          </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/post/${post.id}/comments`}>
-              <MessageCircle className="size-4" />
-              {post.comments}
-            </Link>
+            <MessageCircle className="size-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            iconOnly
+            className="h-9 justify-start"
+            aria-label="Repost"
             onClick={() =>
-              toast.custom((t) => (
+              toast.custom(() => (
                 <Alert variant="success">
-                  <AlertTitle>Link copied to clipboard</AlertTitle>
-                  <AlertDescription>
-                    You have copied the link to the post to your clipboard.
-                  </AlertDescription>
+                  <AlertContent>
+                    <AlertTitle>Repost coming soon</AlertTitle>
+                    <AlertDescription>
+                      Repost will be available in a future update.
+                    </AlertDescription>
+                  </AlertContent>
                 </Alert>
               ))
             }
           >
-            <Share2 className="size-4" />
-            {post.shares}
+            <Repeat2 className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            className="h-9 justify-start"
+            aria-label="Share post"
+            onClick={() => setShareOpen(true)}
+          >
+            <Send className="size-4" />
           </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          className={cn(post.isSaved && "text-primary")}
-          onClick={() =>
-            toast.custom((t) => (
-              <Alert variant="success">
-                <AlertTitle>Post saved</AlertTitle>
-                <AlertDescription>You have saved the post.</AlertDescription>
-              </Alert>
-            ))
-          }
-        >
-          <Bookmark className={cn("size-4", post.isSaved && "fill-current")} />
-        </Button>
       </CardFooter>
+
+      <PostComments
+        postId={post.id}
+        open={commentsOpen}
+        initialCount={commentsCount}
+        onCountChange={setCommentsCount}
+      />
+
+      <SharePostDialog
+        postId={post.id}
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        sharePath={`/feed`}
+        onShared={setSharesCount}
+      />
     </Card>
   );
 }

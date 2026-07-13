@@ -12,6 +12,14 @@ export type User = {
 
 export type PostType = "post" | "article";
 
+export type ReactionType =
+  | "like"
+  | "celebrate"
+  | "support"
+  | "love"
+  | "insightful"
+  | "funny";
+
 export type Post = {
   id: string;
   author: User;
@@ -29,6 +37,7 @@ export type Post = {
   shares: number;
   createdAt: string;
   isLiked?: boolean;
+  reaction?: ReactionType | null;
   isSaved?: boolean;
 };
 
@@ -38,6 +47,9 @@ export type Comment = {
   content: string;
   createdAt: string;
   likes: number;
+  isLiked?: boolean;
+  reaction?: ReactionType | null;
+  parentId?: string | null;
   replies?: Comment[];
 };
 

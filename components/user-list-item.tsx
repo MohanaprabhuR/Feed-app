@@ -17,11 +17,7 @@ type UserListItemProps = {
   subtitle?: string;
 };
 
-export function UserListItem({
-  user,
-  action,
-  subtitle,
-}: UserListItemProps) {
+export function UserListItem({ user, action, subtitle }: UserListItemProps) {
   return (
     <Item size="sm" className="items-center gap-3 py-3">
       <UserAvatar src={user.avatar} name={user.name} userId={user.id} />

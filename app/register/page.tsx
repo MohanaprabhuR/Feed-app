@@ -19,7 +19,12 @@ import {
   validateSignUpInput,
 } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  AlertContent,
+} from "@/components/ui/alert";
 
 async function trySignIn(
   supabase: SupabaseClient,
@@ -85,8 +90,10 @@ export default function RegisterPage() {
         if (signIn.ok) {
           toast.custom((t) => (
             <Alert variant="success">
-              <AlertTitle>Welcome back!</AlertTitle>
-              <AlertDescription>Welcome back to Feed App.</AlertDescription>
+              <AlertContent>
+                <AlertTitle>Welcome back!</AlertTitle>
+                <AlertDescription>Welcome back to Feed App.</AlertDescription>
+              </AlertContent>
             </Alert>
           ));
           router.push("/feed");
@@ -128,8 +135,10 @@ export default function RegisterPage() {
           if (signIn.ok) {
             toast.custom((t) => (
               <Alert variant="success">
-                <AlertTitle>Welcome back!</AlertTitle>
-                <AlertDescription>Welcome back to Feed App.</AlertDescription>
+                <AlertContent>
+                  <AlertTitle>Welcome back!</AlertTitle>
+                  <AlertDescription>Welcome back to Feed App.</AlertDescription>
+                </AlertContent>
               </Alert>
             ));
             router.push("/feed");
@@ -168,8 +177,10 @@ export default function RegisterPage() {
       if (data.session) {
         toast.custom((t) => (
           <Alert variant="success">
-            <AlertTitle>Account created!</AlertTitle>
-            <AlertDescription>Welcome to Feed App.</AlertDescription>
+            <AlertContent>
+              <AlertTitle>Account created!</AlertTitle>
+              <AlertDescription>Welcome to Feed App.</AlertDescription>
+            </AlertContent>
           </Alert>
         ));
         router.push("/feed");
@@ -182,8 +193,10 @@ export default function RegisterPage() {
       if (signIn.ok) {
         toast.custom((t) => (
           <Alert variant="success">
-            <AlertTitle>Account created!</AlertTitle>
-            <AlertDescription>Welcome to Feed App.</AlertDescription>
+            <AlertContent>
+              <AlertTitle>Account created!</AlertTitle>
+              <AlertDescription>Welcome to Feed App.</AlertDescription>
+            </AlertContent>
           </Alert>
         ));
         router.push("/feed");

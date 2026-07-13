@@ -1,14 +1,212 @@
 "use client";
 
-import { notFound } from "next/navigation";
-import { use } from "react";
-import { Heart, Send } from "lucide-react";
+import { use, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { Send } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { useCurrentUser } from "@/components/current-user-provider";
 import { PageHeader } from "@/components/page-header";
+import { ProfileTrigger } from "@/components/profile-trigger";
+import { ReactionButton } from "@/components/reaction-button";
 import { UserAvatar } from "@/components/user-avatar";
+import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { comments, getPostById } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { appToast } from "@/lib/app-toast";
+import {
+  createComment,
+  fetchComments,
+  setCommentReaction,
+  toggleCommentLike,
+} from "@/lib/comments";
+import { getErrorMessage } from "@/lib/errors";
+import { fetchPostById } from "@/lib/posts";
+import { createClient } from "@/lib/supabase/client";
+import type { Comment, ReactionType, User } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+function updateCommentTree(
+  comments: Comment[],
+  commentId: string,
+  updater: (comment: Comment) => Comment,
+): Comment[] {
+  return comments.map((comment) => {
+    if (comment.id === commentId) return updater(comment);
+    if (!comment.replies?.length) return comment;
+    return {
+      ...comment,
+      replies: updateCommentTree(comment.replies, commentId, updater),
+    };
+  });
+}
+
+function CommentBlock({
+  comment,
+  postId,
+  user,
+  isReply = false,
+  replyToId,
+  onReplyTo,
+  onUpdated,
+}: {
+  comment: Comment;
+  postId: string;
+  user: User | null;
+  isReply?: boolean;
+  replyToId: string | null;
+  onReplyTo: (id: string | null) => void;
+  onUpdated: (commentId: string, updater: (c: Comment) => Comment) => void;
+}) {
+  const [replyContent, setReplyContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const isReplying = replyToId === comment.id;
+
+  async function handleReact(reaction: ReactionType | null) {
+    const supabase = createClient();
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    if (!authUser) throw new Error("Sign in to react.");
+
+    const result =
+      reaction === null
+        ? await toggleCommentLike(supabase, comment.id, authUser.id)
+        : await setCommentReaction(supabase, comment.id, authUser.id, reaction);
+
+    onUpdated(comment.id, (current) => ({
+      ...current,
+      reaction: result.reaction,
+      isLiked: result.reaction !== null,
+      likes: result.likesCount,
+    }));
+
+    return {
+      reaction: result.reaction,
+      likesCount: result.likesCount,
+    };
+  }
+
+  async function handleReply(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user || !replyContent.trim() || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const supabase = createClient();
+      const created = await createComment(
+        supabase,
+        postId,
+        user,
+        replyContent,
+        comment.id,
+      );
+      onUpdated(comment.id, (current) => ({
+        ...current,
+        replies: [...(current.replies ?? []), created],
+      }));
+      setReplyContent("");
+      onReplyTo(null);
+      appToast.success("Reply posted");
+    } catch (err) {
+      appToast.error(
+        "Could not post reply",
+        getErrorMessage(err, "Please try again."),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className={cn("space-y-3", isReply && "ml-10")}>
+      <div className="flex gap-3">
+        <UserAvatar
+          src={comment.author.avatar}
+          name={comment.author.name}
+          size="sm"
+          userId={comment.author.id}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="rounded-lg bg-muted p-3">
+            <ProfileTrigger
+              userId={comment.author.id}
+              className="text-sm font-medium hover:underline"
+            >
+              {comment.author.name}
+            </ProfileTrigger>
+            <p className="mt-1 text-sm whitespace-pre-wrap">
+              {comment.content}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {comment.createdAt}
+            </p>
+          </div>
+          <div className="mt-1 flex items-center gap-1">
+            <ReactionButton
+              compact
+              initialLiked={comment.isLiked}
+              initialReaction={comment.reaction}
+              initialCount={comment.likes}
+              loginNext={`/post/${postId}/comments`}
+              onReact={handleReact}
+            />
+            {!isReply && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => onReplyTo(isReplying ? null : comment.id)}
+              >
+                Reply
+              </Button>
+            )}
+          </div>
+
+          {isReplying && user && (
+            <form className="mt-2 flex gap-2" onSubmit={handleReply}>
+              <Input
+                placeholder={`Reply to ${comment.author.name}...`}
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                disabled={submitting}
+                autoFocus
+              />
+              <Button
+                type="submit"
+                size="sm"
+                disabled={submitting || !replyContent.trim()}
+                loading={submitting}
+              >
+                Reply
+              </Button>
+            </form>
+          )}
+        </div>
+      </div>
+
+      {comment.replies?.map((reply) => (
+        <CommentBlock
+          key={reply.id}
+          comment={reply}
+          postId={postId}
+          user={user}
+          isReply
+          replyToId={replyToId}
+          onReplyTo={onReplyTo}
+          onUpdated={onUpdated}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function CommentsPage({
   params,
@@ -16,65 +214,160 @@ export default function CommentsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const post = getPostById(id);
+  const { user, loading: userLoading } = useCurrentUser();
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [missingPost, setMissingPost] = useState(false);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
 
-  if (!post) notFound();
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const post = await fetchPostById(supabase, id);
+      if (!post) {
+        setMissingPost(true);
+        setComments([]);
+        setError(null);
+        return;
+      }
+
+      const data = await fetchComments(supabase, id, { userId: user?.id });
+      setComments(data);
+      setMissingPost(false);
+      setError(null);
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not load comments."));
+    } finally {
+      setLoading(false);
+    }
+  }, [id, user?.id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) {
+      appToast.error("Sign in required", "Sign in to post a comment.");
+      return;
+    }
+    if (!content.trim() || submitting || missingPost) return;
+
+    setSubmitting(true);
+    try {
+      const supabase = createClient();
+      const created = await createComment(supabase, id, user, content);
+      setComments((current) => [...current, created]);
+      setContent("");
+      appToast.success("Comment posted");
+    } catch (err) {
+      appToast.error(
+        "Could not post comment",
+        getErrorMessage(err, "Please try again."),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <AppShell noPadding className="flex flex-col">
       <PageHeader title="Comments" backHref="/feed" />
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        {comments.map((comment) => (
-          <div key={comment.id} className="space-y-3">
-            <div className="flex gap-3">
-              <UserAvatar
-                src={comment.author.avatar}
-                name={comment.author.name}
-                size="sm"
-                userId={comment.author.id}
-              />
-              <div className="flex-1 rounded-lg bg-muted p-3">
-                <p className="text-sm font-medium">{comment.author.name}</p>
-                <p className="mt-1 text-sm">{comment.content}</p>
-                <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span>{comment.createdAt}</span>
-                  <button type="button" className="hover:text-foreground">
-                    Reply
-                  </button>
-                  <button type="button" className="flex items-center gap-1 hover:text-foreground">
-                    <Heart className="size-3" />
-                    {comment.likes}
-                  </button>
-                </div>
-              </div>
+        {loading &&
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex gap-3">
+              <Skeleton className="size-8 rounded-full" />
+              <Skeleton className="h-20 flex-1 rounded-lg" />
             </div>
-            {comment.replies?.map((reply) => (
-              <div key={reply.id} className="ml-10 flex gap-3">
-                <UserAvatar
-                  src={reply.author.avatar}
-                  name={reply.author.name}
-                  size="sm"
-                  userId={reply.author.id}
-                />
-                <div className="flex-1 rounded-lg bg-muted p-3">
-                  <p className="text-sm font-medium">{reply.author.name}</p>
-                  <p className="mt-1 text-sm">{reply.content}</p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {reply.createdAt}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+          ))}
+
+        {error && (
+          <Alert variant="error" className="w-full max-w-none">
+            <AlertContent>
+              <AlertDescription>{error}</AlertDescription>
+            </AlertContent>
+          </Alert>
+        )}
+
+        {!loading && missingPost && (
+          <Empty>
+            <EmptyContent>
+              <EmptyTitle>Post not found</EmptyTitle>
+              <EmptyDescription>
+                This post may have been deleted.
+              </EmptyDescription>
+              <Button asChild size="sm">
+                <Link href="/feed">Back to feed</Link>
+              </Button>
+            </EmptyContent>
+          </Empty>
+        )}
+
+        {!loading && !error && !missingPost && comments.length === 0 && (
+          <Empty>
+            <EmptyContent>
+              <EmptyTitle>No comments yet</EmptyTitle>
+              <EmptyDescription>
+                Start the conversation with the first comment.
+              </EmptyDescription>
+            </EmptyContent>
+          </Empty>
+        )}
+
+        {comments.map((comment) => (
+          <CommentBlock
+            key={comment.id}
+            comment={comment}
+            postId={id}
+            user={user}
+            replyToId={replyToId}
+            onReplyTo={setReplyToId}
+            onUpdated={(commentId, updater) =>
+              setComments((current) =>
+                updateCommentTree(current, commentId, updater),
+              )
+            }
+          />
         ))}
       </div>
-      <div className="sticky bottom-16 border-t bg-background p-4 md:bottom-0">
-        <div className="flex gap-2">
-          <Input placeholder="Write a comment..." className="flex-1" />
-          <Button size="sm" iconOnly>
-            <Send />
+
+      <div className="sticky bottom-16 z-10 border-t bg-background p-4 md:bottom-0">
+        {userLoading ? (
+          <Skeleton className="h-10 w-full" />
+        ) : user ? (
+          <form className="flex gap-2" onSubmit={handleSubmit}>
+            <Input
+              placeholder="Write a comment..."
+              className="flex-1"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              disabled={submitting || missingPost}
+              autoComplete="off"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              disabled={submitting || !content.trim() || missingPost}
+              loading={submitting}
+              aria-label="Post comment"
+            >
+              <Send className="size-4" />
+              Post
+            </Button>
+          </form>
+        ) : (
+          <Button asChild className="w-full">
+            <Link href={`/login?next=/post/${id}/comments`}>
+              Sign in to comment
+            </Link>
           </Button>
-        </div>
+        )}
       </div>
     </AppShell>
   );

@@ -1,18 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
   Bookmark,
-  Heart,
   MessageCircle,
   MoreHorizontal,
   Newspaper,
-  Share2,
+  Repeat2,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getArticleExcerpt, getReadTimeMinutes } from "@/lib/articles";
+import { PostComments } from "@/components/post-comments";
+import { PostLikeButton } from "@/components/post-like-button";
 import { ProfileTrigger } from "@/components/profile-trigger";
+import { SharePostDialog } from "@/components/share-post-dialog";
 import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,13 +35,15 @@ import {
 } from "@/components/ui/card";
 import type { Post } from "@/lib/types";
 import {
+  feedCardActionsClass,
   feedCardClass,
   feedCardContentClass,
   feedCardFooterClass,
   feedCardHeaderClass,
+  feedCardStatsClass,
 } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { Alert, AlertContent, AlertDescription, AlertTitle } from "./ui/alert";
 
 type ArticleCardProps = {
   post: Post;
@@ -47,6 +53,11 @@ type ArticleCardProps = {
 export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
   const readTime = getReadTimeMinutes(post.content);
   const excerpt = getArticleExcerpt(post.content);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(post.comments);
+  const [likesCount, setLikesCount] = useState(post.likes);
+  const [sharesCount, setSharesCount] = useState(post.shares);
 
   return (
     <Card padding="none" className={feedCardClass}>
@@ -82,10 +93,12 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
                 onClick={() =>
                   toast.custom((t) => (
                     <Alert variant="success">
-                      <AlertTitle>Article saved to bookmarks</AlertTitle>
-                      <AlertDescription>
-                        You have saved the article to your bookmarks.
-                      </AlertDescription>
+                      <AlertContent>
+                        <AlertTitle>Article saved to bookmarks</AlertTitle>
+                        <AlertDescription>
+                          You have saved the article to your bookmarks.
+                        </AlertDescription>
+                      </AlertContent>
                     </Alert>
                   ))
                 }
@@ -132,47 +145,109 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
         </Link>
       </CardContent>
 
-      <CardFooter className={cn(feedCardFooterClass, "border-t")}>
-        <div className="flex items-center gap-1">
+      <CardFooter className={feedCardFooterClass}>
+        {(likesCount > 0 || commentsCount > 0 || sharesCount > 0) && (
+          <div className={feedCardStatsClass}>
+            <Link
+              href={`/post/${post.id}/likes`}
+              className="hover:text-foreground hover:underline"
+            >
+              {likesCount > 0
+                ? `${likesCount} reaction${likesCount === 1 ? "" : "s"}`
+                : null}
+            </Link>
+            <div className="flex items-center gap-2">
+              {commentsCount > 0 && (
+                <button
+                  type="button"
+                  className="hover:text-foreground hover:underline"
+                  onClick={() => setCommentsOpen(true)}
+                >
+                  {commentsCount} comment{commentsCount === 1 ? "" : "s"}
+                </button>
+              )}
+              {sharesCount > 0 && <span>{sharesCount} shares</span>}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-auto px-2 py-0.5 text-xs"
+                asChild
+              >
+                <Link href={`/articles/${post.id}`}>Read more</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <div className={feedCardActionsClass}>
+          <PostLikeButton
+            postId={post.id}
+            initialLiked={post.isLiked}
+            initialReaction={post.reaction}
+            initialCount={likesCount}
+            hideCount
+            className="justify-start"
+            onCountChange={setLikesCount}
+          />
           <Button
             variant="ghost"
             size="sm"
-            className={cn(post.isLiked && "text-destructive")}
-            asChild
+            iconOnly
+            className={cn("h-9 justify-start", commentsOpen && "bg-accent")}
+            aria-expanded={commentsOpen}
+            aria-label="Toggle comments"
+            onClick={() => setCommentsOpen((open) => !open)}
           >
-            <Link href={`/post/${post.id}/likes`}>
-              <Heart className={cn("size-4", post.isLiked && "fill-current")} />
-              {post.likes}
-            </Link>
-          </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/post/${post.id}/comments`}>
-              <MessageCircle className="size-4" />
-              {post.comments}
-            </Link>
+            <MessageCircle className="size-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            iconOnly
+            className="h-9 justify-start"
+            aria-label="Repost"
             onClick={() =>
-              toast.custom((t) => (
+              toast.custom(() => (
                 <Alert variant="success">
-                  <AlertTitle>Link copied to clipboard</AlertTitle>
-                  <AlertDescription>
-                    You have copied the link to the article to your clipboard.
-                  </AlertDescription>
+                  <AlertContent>
+                    <AlertTitle>Repost coming soon</AlertTitle>
+                    <AlertDescription>
+                      Repost will be available in a future update.
+                    </AlertDescription>
+                  </AlertContent>
                 </Alert>
               ))
             }
           >
-            <Share2 className="size-4" />
-            {post.shares}
+            <Repeat2 className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            className="h-9 justify-start"
+            aria-label="Share post"
+            onClick={() => setShareOpen(true)}
+          >
+            <Send className="size-4" />
           </Button>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/articles/${post.id}`}>Read more</Link>
-        </Button>
       </CardFooter>
+
+      <PostComments
+        postId={post.id}
+        open={commentsOpen}
+        initialCount={commentsCount}
+        onCountChange={setCommentsCount}
+      />
+
+      <SharePostDialog
+        postId={post.id}
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        sharePath={`/articles/${post.id}`}
+        onShared={setSharesCount}
+      />
     </Card>
   );
 }

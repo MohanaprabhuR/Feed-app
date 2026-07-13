@@ -8,7 +8,13 @@ export const feedCardHeaderClass =
 export const feedCardContentClass = "space-y-3 px-4 pb-4";
 
 export const feedCardFooterClass =
-  "flex items-center justify-between border-t px-4 py-2.5";
+  "flex flex-col items-stretch gap-0 border-t px-1 pb-1 pt-0";
+
+export const feedCardStatsClass =
+  "flex w-full items-center justify-between gap-2 px-3 py-2 text-xs text-muted-foreground";
+
+export const feedCardActionsClass =
+  "flex w-full items-center justify-start gap-1 px-2 py-0.5";
 
 export const feedCardSectionClass = "p-4";
 

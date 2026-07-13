@@ -24,7 +24,9 @@ export default function MyPostsPage() {
 
     try {
       const supabase = createClient();
-      const data = await fetchPostsByAuthor(supabase, user.id);
+      const data = await fetchPostsByAuthor(supabase, user.id, {
+        userId: user.id,
+      });
       setPosts(data);
     } catch {
       setPosts([]);

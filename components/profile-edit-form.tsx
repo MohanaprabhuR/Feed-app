@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { normalizeUsername } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
-import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
+import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
 
 type ProfileEditFormProps = {
   user: User;
@@ -94,8 +94,10 @@ export function ProfileEditForm({
 
       toast.custom((t) => (
         <Alert variant="success">
-          <AlertTitle>Profile updated.</AlertTitle>
-          <AlertDescription>You have updated your profile.</AlertDescription>
+          <AlertContent>
+            <AlertTitle>Profile updated.</AlertTitle>
+            <AlertDescription>You have updated your profile.</AlertDescription>
+          </AlertContent>
         </Alert>
       ));
       onSaved();

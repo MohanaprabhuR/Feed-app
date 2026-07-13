@@ -21,10 +21,10 @@ export function FeedRightSidebar({
 }: FeedRightSidebarProps) {
   const { user } = useCurrentUser();
   const [suggestedUsers, setSuggestedUsers] = useState<User[]>(
-    initialSuggestedUsers
+    initialSuggestedUsers,
   );
   const [loadingUsers, setLoadingUsers] = useState(
-    initialSuggestedUsers.length === 0
+    initialSuggestedUsers.length === 0,
   );
 
   useEffect(() => {
@@ -89,7 +89,6 @@ export function FeedRightSidebar({
           </Button>
         </CardContent>
       </Card>
-
     </aside>
   );
 }

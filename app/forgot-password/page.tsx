@@ -9,7 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatAuthError } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  AlertContent,
+} from "@/components/ui/alert";
 
 export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -41,10 +46,12 @@ export default function ForgotPasswordPage() {
 
       toast.custom((t) => (
         <Alert variant="success">
-          <AlertTitle>Password reset email sent</AlertTitle>
-          <AlertDescription>
-            Check your inbox for a reset link.
-          </AlertDescription>
+          <AlertContent>
+            <AlertTitle>Password reset email sent</AlertTitle>
+            <AlertDescription>
+              Check your inbox for a reset link.
+            </AlertDescription>
+          </AlertContent>
         </Alert>
       ));
     } catch {

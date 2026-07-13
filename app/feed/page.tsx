@@ -18,7 +18,7 @@ export default async function FeedPage() {
     } = await supabase.auth.getUser();
 
     const [posts, suggestedUsers] = await Promise.all([
-      fetchPosts(supabase),
+      fetchPosts(supabase, { userId: user?.id }),
       fetchSuggestedProfiles(supabase, {
         excludeUserId: user?.id,
         limit: 3,

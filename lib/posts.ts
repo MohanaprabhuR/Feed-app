@@ -153,12 +153,16 @@ export function formatRelativeTime(dateString: string): string {
   return new Date(dateString).toLocaleDateString();
 }
 
-export function postRowToPost(row: PostRow): Post | null {
+export function postRowToPost(
+  row: PostRow,
+  options: { likedPostIds?: Set<string> } = {}
+): Post | null {
   const normalized = normalizePostRow(row);
   if (!normalized?.id) return null;
 
   const postType = normalized.post_type ?? "post";
   const author = normalized.author ?? getFallbackAuthor();
+  const isLiked = options.likedPostIds?.has(normalized.id) ?? false;
 
   if (postType === "article") {
     return {
@@ -172,7 +176,7 @@ export function postRowToPost(row: PostRow): Post | null {
       comments: normalized.comments_count ?? 0,
       shares: normalized.shares_count ?? 0,
       createdAt: formatRelativeTime(normalized.created_at),
-      isLiked: false,
+      isLiked,
       isSaved: false,
     };
   }
@@ -191,34 +195,72 @@ export function postRowToPost(row: PostRow): Post | null {
     comments: normalized.comments_count ?? 0,
     shares: normalized.shares_count ?? 0,
     createdAt: formatRelativeTime(normalized.created_at),
-    isLiked: false,
+    isLiked,
     isSaved: false,
   };
 }
 
-export async function fetchPosts(supabase: SupabaseClient) {
+async function withLikedState(
+  supabase: SupabaseClient,
+  posts: Post[],
+  userId?: string | null
+) {
+  if (!userId || posts.length === 0) return posts;
+
+  const { fetchUserReactions } = await import("@/lib/likes");
+  const reactions = await fetchUserReactions(
+    supabase,
+    userId,
+    posts.map((post) => post.id)
+  );
+
+  return posts.map((post) => {
+    const reaction = reactions.get(post.id) ?? null;
+    return {
+      ...post,
+      isLiked: reaction !== null,
+      reaction,
+    };
+  });
+}
+
+export async function fetchPosts(
+  supabase: SupabaseClient,
+  options: { userId?: string | null } = {}
+) {
   const rows = await queryPosts(supabase, (select) =>
     supabase.from("posts").select(select).order("created_at", { ascending: false })
   );
 
-  return rows
+  const posts = rows
     .map((row) => postRowToPost(row))
     .filter((post): post is Post => post !== null);
+
+  return withLikedState(supabase, posts, options.userId);
 }
 
-export async function fetchPostById(supabase: SupabaseClient, id: string) {
+export async function fetchPostById(
+  supabase: SupabaseClient,
+  id: string,
+  options: { userId?: string | null } = {}
+) {
   const rows = await queryPosts(supabase, (select) =>
     supabase.from("posts").select(select).eq("id", id).maybeSingle()
   );
 
   const row = rows[0];
   if (!row) return null;
-  return postRowToPost(row);
+  const post = postRowToPost(row);
+  if (!post) return null;
+
+  const [enriched] = await withLikedState(supabase, [post], options.userId);
+  return enriched ?? post;
 }
 
 export async function fetchPostsByAuthor(
   supabase: SupabaseClient,
-  authorId: string
+  authorId: string,
+  options: { userId?: string | null } = {}
 ) {
   const rows = await queryPosts(supabase, (select) =>
     supabase
@@ -228,9 +270,11 @@ export async function fetchPostsByAuthor(
       .order("created_at", { ascending: false })
   );
 
-  return rows
+  const posts = rows
     .map((row) => postRowToPost(row))
     .filter((post): post is Post => post !== null);
+
+  return withLikedState(supabase, posts, options.userId);
 }
 
 export async function createPost(

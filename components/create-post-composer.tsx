@@ -57,7 +57,7 @@ import type { Post } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
-import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
+import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
 
 const feedActions = [
   {
@@ -129,8 +129,10 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
     if (validationError) {
       toast.custom((t) => (
         <Alert variant="error">
-          <AlertTitle>Invalid file.</AlertTitle>
-          <AlertDescription>You must select a valid file.</AlertDescription>
+          <AlertContent>
+            <AlertTitle>Invalid file.</AlertTitle>
+            <AlertDescription>You must select a valid file.</AlertDescription>
+          </AlertContent>
         </Alert>
       ));
       return;
@@ -192,8 +194,10 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
 
       toast.custom((t) => (
         <Alert variant="success">
-          <AlertTitle>Post published!</AlertTitle>
-          <AlertDescription>You have published the post.</AlertDescription>
+          <AlertContent>
+            <AlertTitle>Post published!</AlertTitle>
+            <AlertDescription>You have published the post.</AlertDescription>
+          </AlertContent>
         </Alert>
       ));
       resetComposer();
@@ -201,8 +205,10 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
     } catch (error) {
       toast.custom((t) => (
         <Alert variant="error">
-          <AlertTitle>Could not publish post.</AlertTitle>
-          <AlertDescription>You could not publish the post.</AlertDescription>
+          <AlertContent>
+            <AlertTitle>Could not publish post.</AlertTitle>
+            <AlertDescription>You could not publish the post.</AlertDescription>
+          </AlertContent>
         </Alert>
       ));
     } finally {
@@ -383,10 +389,12 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
               onClick={() =>
                 toast.custom((t) => (
                   <Alert variant="information">
-                    <AlertTitle>Emoji picker coming soon</AlertTitle>
-                    <AlertDescription>
-                      You can add emojis to your post.
-                    </AlertDescription>
+                    <AlertContent>
+                      <AlertTitle>Emoji picker coming soon</AlertTitle>
+                      <AlertDescription>
+                        You can add emojis to your post.
+                      </AlertDescription>
+                    </AlertContent>
                   </Alert>
                 ))
               }
@@ -405,10 +413,12 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
               onClick={() =>
                 toast.custom((t) => (
                   <Alert variant="information">
-                    <AlertTitle>AI enhance coming soon</AlertTitle>
-                    <AlertDescription>
-                      You can enhance your post with AI.
-                    </AlertDescription>
+                    <AlertContent>
+                      <AlertTitle>AI enhance coming soon</AlertTitle>
+                      <AlertDescription>
+                        You can enhance your post with AI.
+                      </AlertDescription>
+                    </AlertContent>
                   </Alert>
                 ))
               }
@@ -445,10 +455,12 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                 onClick={() =>
                   toast.custom((t) => (
                     <Alert variant="information">
-                      <AlertTitle>Events coming soon</AlertTitle>
-                      <AlertDescription>
-                        You can create events for your post.
-                      </AlertDescription>
+                      <AlertContent>
+                        <AlertTitle>Events coming soon</AlertTitle>
+                        <AlertDescription>
+                          You can create events for your post.
+                        </AlertDescription>
+                      </AlertContent>
                     </Alert>
                   ))
                 }
@@ -464,10 +476,12 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                 onClick={() =>
                   toast.custom((t) => (
                     <Alert variant="information">
-                      <AlertTitle>Celebrate coming soon</AlertTitle>
-                      <AlertDescription>
-                        You can celebrate occasions for your post.
-                      </AlertDescription>
+                      <AlertContent>
+                        <AlertTitle>Celebrate coming soon</AlertTitle>
+                        <AlertDescription>
+                          You can celebrate occasions for your post.
+                        </AlertDescription>
+                      </AlertContent>
                     </Alert>
                   ))
                 }
@@ -496,10 +510,12 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                     onClick={() =>
                       toast.custom((t) => (
                         <Alert variant="information">
-                          <AlertTitle>Events coming soon</AlertTitle>
-                          <AlertDescription>
-                            You can create events for your post.
-                          </AlertDescription>
+                          <AlertContent>
+                            <AlertTitle>Events coming soon</AlertTitle>
+                            <AlertDescription>
+                              You can create events for your post.
+                            </AlertDescription>
+                          </AlertContent>
                         </Alert>
                       ))
                     }
@@ -527,10 +543,12 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
               onClick={() =>
                 toast.custom((t) => (
                   <Alert variant="information">
-                    <AlertTitle>Scheduling coming soon</AlertTitle>
-                    <AlertDescription>
-                      You can schedule your post.
-                    </AlertDescription>
+                    <AlertContent>
+                      <AlertTitle>Scheduling coming soon</AlertTitle>
+                      <AlertDescription>
+                        You can schedule your post.
+                      </AlertDescription>
+                    </AlertContent>
                   </Alert>
                 ))
               }
