@@ -3,7 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { FeedLeftSidebar } from "@/components/feed-left-sidebar";
 import { FeedRightSidebar } from "@/components/feed-right-sidebar";
 import { FeedPosts } from "@/components/feed-posts";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FeedListSkeleton } from "@/components/skeletons";
 import { fetchPosts } from "@/lib/posts";
 import { fetchSuggestedProfiles } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -43,15 +43,7 @@ export default async function FeedPage() {
           </div>
         </div>
 
-        <Suspense
-          fallback={
-            <div className="min-w-0 space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-40 w-full rounded-xl" />
-              ))}
-            </div>
-          }
-        >
+        <Suspense fallback={<FeedListSkeleton count={3} withComposer />}>
           <FeedPosts initialPosts={initialPosts} />
         </Suspense>
 

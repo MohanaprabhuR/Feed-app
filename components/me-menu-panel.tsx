@@ -129,6 +129,11 @@ export function MeMenuPanel({ user, onClose }: MeMenuPanelProps) {
         <p className="mb-1 text-sm font-semibold">Manage</p>
         <ItemGroup>
           <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link href="/following" onClick={onClose}>
+              Following
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
             <Link href="/my-posts" onClick={onClose}>
               Posts &amp; Activity
             </Link>

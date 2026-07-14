@@ -14,7 +14,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FeedListSkeleton } from "@/components/skeletons";
 import { isArticle } from "@/lib/articles";
 import { getErrorMessage } from "@/lib/errors";
 import { fetchPostsByAuthor } from "@/lib/posts";
@@ -61,10 +61,7 @@ export default function MyPostsPage() {
     <AppShell noPadding>
       <PageHeader title="My Posts" backHref="/profile" />
       <div className="mx-auto max-w-2xl space-y-4 px-4 py-5 sm:px-5">
-        {showLoading &&
-          Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-40 w-full rounded-xl" />
-          ))}
+        {showLoading && <FeedListSkeleton count={3} />}
 
         {!showLoading && error && (
           <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-6 text-center">

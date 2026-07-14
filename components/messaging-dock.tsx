@@ -21,6 +21,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ConversationListSkeleton,
+  MessageThreadSkeleton,
+} from "@/components/skeletons";
 import { appToast } from "@/lib/app-toast";
 import { getErrorMessage } from "@/lib/errors";
 import {
@@ -518,9 +522,7 @@ export function MessagingDock() {
                 }}
               >
                 {loadingThread && chatMessages.length === 0 && (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    Loading messages…
-                  </p>
+                  <MessageThreadSkeleton className="px-1" />
                 )}
                 {chatMessages.map((msg, index) => {
                   const isMe =
@@ -647,8 +649,8 @@ export function MessagingDock() {
               </div>
             </div>
           ) : conversationId ? (
-            <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
-              Loading chat…
+            <div className="flex min-h-0 flex-1 flex-col p-3">
+              <MessageThreadSkeleton />
             </div>
           ) : composeOpen ? (
             <div className="flex min-h-0 flex-1 flex-col">
@@ -776,11 +778,7 @@ function ConversationList({
   onSelect: (id: string) => void;
 }) {
   if (loading) {
-    return (
-      <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-        Loading conversations…
-      </p>
-    );
+    return <ConversationListSkeleton count={5} />;
   }
 
   if (items.length === 0) {

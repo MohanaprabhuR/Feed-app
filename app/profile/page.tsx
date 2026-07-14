@@ -4,7 +4,7 @@ import { useCurrentUser } from "@/components/current-user-provider";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { ProfileView } from "@/components/profile-view";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ProfileSkeleton } from "@/components/skeletons";
 
 export default function ProfilePage() {
   const { user, loading } = useCurrentUser();
@@ -17,10 +17,7 @@ export default function ProfilePage() {
       />
       <div className="mx-auto max-w-2xl px-4 py-5 sm:px-5 sm:py-6">
         {loading || !user ? (
-          <div className="space-y-4">
-            <Skeleton className="h-24 w-full rounded-xl" />
-            <Skeleton className="h-40 w-full rounded-xl" />
-          </div>
+          <ProfileSkeleton />
         ) : (
           <ProfileView userId={user.id} initialMode="view" />
         )}

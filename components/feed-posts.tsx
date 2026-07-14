@@ -17,7 +17,7 @@ import {
   EmptyDescription,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FeedListSkeleton } from "@/components/skeletons";
 import { isArticle } from "@/lib/articles";
 import { getErrorMessage } from "@/lib/errors";
 import type { Post } from "@/lib/types";
@@ -134,10 +134,7 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
         </Card>
       )}
 
-      {loading &&
-        Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-40 w-full rounded-xl" />
-        ))}
+      {loading && <FeedListSkeleton count={3} />}
 
       {error && (
         <Alert variant="error" className="w-full max-w-none">

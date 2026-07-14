@@ -12,6 +12,7 @@ import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CommentListSkeleton } from "@/components/skeletons";
 import { appToast } from "@/lib/app-toast";
 import {
   createComment,
@@ -375,16 +376,9 @@ export function PostComments({
       )}
 
       {loading && (
-        <div className="space-y-3">
-          {Array.from({ length: Math.min(initialCount || 2, 3) }).map(
-            (_, i) => (
-              <div key={i} className="flex gap-2">
-                <Skeleton className="size-8 rounded-full" />
-                <Skeleton className="h-16 flex-1 rounded-lg" />
-              </div>
-            ),
-          )}
-        </div>
+        <CommentListSkeleton
+          count={Math.min(initialCount || 2, 3)}
+        />
       )}
 
       {error && (

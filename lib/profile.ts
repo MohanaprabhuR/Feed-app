@@ -54,7 +54,7 @@ export async function fetchProfileById(
 
 export async function fetchSuggestedProfiles(
   supabase: SupabaseClient,
-  options: { excludeUserId?: string; limit?: number } = {}
+  options: { excludeUserId?: string; limit?: number } = {},
 ): Promise<User[]> {
   const { excludeUserId, limit = 3 } = options;
 
@@ -62,14 +62,30 @@ export async function fetchSuggestedProfiles(
     .from("profiles")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(limit + (excludeUserId ? 5 : 0));
+    .limit(Math.max(limit * 4, 12));
 
   if (error || !data) return [];
 
+  let followingIds = new Set<string>();
+  if (excludeUserId) {
+    const { data: follows } = await supabase
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", excludeUserId);
+    followingIds = new Set(
+      (follows ?? []).map((row) => row.following_id as string),
+    );
+  }
+
   return data
-    .filter((row) => row.id !== excludeUserId)
+    .filter(
+      (row) => row.id !== excludeUserId && !followingIds.has(row.id as string),
+    )
     .slice(0, limit)
-    .map(profileToUser);
+    .map((row) => ({
+      ...profileToUser(row),
+      isFollowing: false,
+    }));
 }
 
 export async function searchProfiles(

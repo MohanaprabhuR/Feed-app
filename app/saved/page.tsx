@@ -15,7 +15,7 @@ import {
   EmptyDescription,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FeedListSkeleton } from "@/components/skeletons";
 import { isArticle } from "@/lib/articles";
 import { getErrorMessage } from "@/lib/errors";
 import { fetchSavedPosts } from "@/lib/saves";
@@ -60,10 +60,7 @@ export default function SavedPostsPage() {
     <AppShell noPadding>
       <PageHeader title="Saved Posts" backHref="/feed" />
       <div className="mx-auto max-w-2xl space-y-4 px-4 py-5 sm:px-5">
-        {showLoading &&
-          Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-40 w-full rounded-xl" />
-          ))}
+        {showLoading && <FeedListSkeleton count={3} />}
 
         {!showLoading && !user && (
           <Empty className="border py-16">

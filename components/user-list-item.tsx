@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCurrentUser } from "@/components/current-user-provider";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProfileTrigger } from "@/components/profile-trigger";
 import { Button } from "@/components/ui/button";
@@ -9,15 +12,72 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@/components/ui/item";
+import { appToast } from "@/lib/app-toast";
+import { getErrorMessage } from "@/lib/errors";
+import { toggleFollow } from "@/lib/follows";
+import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
 
 type UserListItemProps = {
   user: User;
   action?: React.ReactNode;
   subtitle?: string;
+  onFollowChange?: (userId: string, isFollowing: boolean) => void;
 };
 
-export function UserListItem({ user, action, subtitle }: UserListItemProps) {
+export function UserListItem({
+  user,
+  action,
+  subtitle,
+  onFollowChange,
+}: UserListItemProps) {
+  const router = useRouter();
+  const { user: currentUser } = useCurrentUser();
+  const [following, setFollowing] = useState(Boolean(user.isFollowing));
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    setFollowing(Boolean(user.isFollowing));
+  }, [user.id, user.isFollowing]);
+
+  async function handleToggleFollow() {
+    if (!currentUser) {
+      router.push("/login?next=/feed");
+      return;
+    }
+
+    if (currentUser.id === user.id || pending) return;
+
+    const previous = following;
+    setFollowing(!previous);
+    setPending(true);
+
+    try {
+      const supabase = createClient();
+      const next = await toggleFollow(
+        supabase,
+        currentUser.id,
+        user.id,
+        previous,
+      );
+      setFollowing(next);
+      onFollowChange?.(user.id, next);
+      if (next) {
+        appToast.success("Following", `You are now following ${user.name}.`);
+      } else {
+        appToast.success("Unfollowed", `You unfollowed ${user.name}.`);
+      }
+    } catch (err) {
+      setFollowing(previous);
+      appToast.error(
+        "Could not update follow",
+        getErrorMessage(err, "Please try again."),
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <Item size="sm" className="items-center gap-3 py-3">
       <UserAvatar src={user.avatar} name={user.name} userId={user.id} />
@@ -33,11 +93,15 @@ export function UserListItem({ user, action, subtitle }: UserListItemProps) {
       </ItemContent>
       {action ?? (
         <Button
-          variant={user.isFollowing ? "outline" : "primary"}
+          type="button"
+          variant={following ? "outline" : "primary"}
           size="sm"
           className="shrink-0"
+          disabled={pending || currentUser?.id === user.id}
+          aria-pressed={following}
+          onClick={() => void handleToggleFollow()}
         >
-          {user.isFollowing ? "Following" : "Follow"}
+          {following ? "Following" : "Follow"}
         </Button>
       )}
     </Item>

@@ -21,8 +21,10 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@/components/ui/item";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getUserById } from "@/lib/mock-data";
+import { ProfileSkeleton } from "@/components/skeletons";
+import { appToast } from "@/lib/app-toast";
+import { getErrorMessage } from "@/lib/errors";
+import { isFollowingUser, toggleFollow } from "@/lib/follows";
 import { fetchProfileById } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
@@ -48,6 +50,7 @@ export function ProfileView({
   const [mode, setMode] = useState<ProfileMode>(initialMode);
   const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [followPending, setFollowPending] = useState(false);
 
   function setProfileMode(next: ProfileMode) {
     setMode(next);
@@ -69,22 +72,21 @@ export function ProfileView({
         return;
       }
 
-      const mockUser = getUserById(userId);
-      if (mockUser) {
-        if (!cancelled) {
-          setUser(mockUser);
-          onUserLoaded?.(mockUser);
-          setUserLoading(false);
-        }
-        return;
-      }
-
       try {
         const supabase = createClient();
         const profile = await fetchProfileById(supabase, userId);
+        let nextUser = profile;
+        if (profile && currentUser?.id) {
+          const following = await isFollowingUser(
+            supabase,
+            currentUser.id,
+            profile.id,
+          );
+          nextUser = { ...profile, isFollowing: following };
+        }
         if (!cancelled) {
-          setUser(profile);
-          onUserLoaded?.(profile);
+          setUser(nextUser);
+          onUserLoaded?.(nextUser);
         }
       } catch {
         if (!cancelled) {
@@ -107,12 +109,7 @@ export function ProfileView({
   }, [userId, initialMode]);
 
   if (userLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-32 w-full" />
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (!user) {
@@ -129,6 +126,60 @@ export function ProfileView({
   }
 
   const isMe = currentUser?.id === user.id;
+  const profileUser = user;
+
+  async function handleToggleFollow() {
+    if (!currentUser) {
+      router.push(`/login?next=/user/${profileUser.id}`);
+      return;
+    }
+    if (followPending || isMe) return;
+
+    const previousFollowing = Boolean(profileUser.isFollowing);
+    const previousFollowers = profileUser.followers;
+
+    setUser({
+      ...profileUser,
+      isFollowing: !previousFollowing,
+      followers: Math.max(0, previousFollowers + (previousFollowing ? -1 : 1)),
+    });
+    setFollowPending(true);
+
+    try {
+      const supabase = createClient();
+      const next = await toggleFollow(
+        supabase,
+        currentUser.id,
+        profileUser.id,
+        previousFollowing,
+      );
+      setUser((current) =>
+        current
+          ? {
+              ...current,
+              isFollowing: next,
+              followers: Math.max(0, previousFollowers + (next ? 1 : -1)),
+            }
+          : current,
+      );
+    } catch (err) {
+      setUser((current) =>
+        current
+          ? {
+              ...current,
+              isFollowing: previousFollowing,
+              followers: previousFollowers,
+            }
+          : current,
+      );
+      appToast.error(
+        "Could not update follow",
+        getErrorMessage(err, "Please try again."),
+      );
+    } finally {
+      setFollowPending(false);
+    }
+  }
 
   if (isMe && mode === "edit") {
     return (
@@ -157,7 +208,14 @@ export function ProfileView({
           </ItemDescription>
         </ItemContent>
         {!isMe && (
-          <Button variant={user.isFollowing ? "outline" : "primary"} size="sm">
+          <Button
+            type="button"
+            variant={user.isFollowing ? "outline" : "primary"}
+            size="sm"
+            disabled={followPending}
+            aria-pressed={Boolean(user.isFollowing)}
+            onClick={() => void handleToggleFollow()}
+          >
             {user.isFollowing ? "Following" : "Follow"}
           </Button>
         )}

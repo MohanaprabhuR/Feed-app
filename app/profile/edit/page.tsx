@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { AppShell } from "@/components/app-shell";
 import { ProfileEditForm } from "@/components/profile-edit-form";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ProfileEditSkeleton } from "@/components/skeletons";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -17,15 +17,7 @@ export default function ProfileEditPage() {
       className="max-w-5xl px-4 py-8 sm:px-8 sm:py-10"
     >
       {loading || !user ? (
-        <div className="grid gap-10 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <div className="space-y-5">
-            <Skeleton className="h-9 w-44" />
-            <Skeleton className="size-32 rounded-full" />
-            <Skeleton className="h-7 w-36" />
-            <Skeleton className="h-5 w-48" />
-          </div>
-          <Skeleton className="h-[540px] w-full rounded-2xl" />
-        </div>
+        <ProfileEditSkeleton />
       ) : (
         <ProfileEditForm
           user={user}

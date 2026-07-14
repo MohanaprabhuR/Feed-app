@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
-  Briefcase,
   Home,
   MessageCircle,
   Search,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { MeMenu } from "@/components/me-menu";
 import { useMessaging } from "@/components/messaging-provider";
+import { useNotifications } from "@/components/notifications-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,8 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/feed", label: "Home", icon: Home },
-  { href: "/search", label: "My Network", icon: Users },
-  { href: "/trending", label: "Jobs", icon: Briefcase },
-  { href: "/notifications", label: "Notifications", icon: Bell, badge: 3 },
+  { href: "/following", label: "Following", icon: Users },
+  { href: "/notifications", label: "Notifications", icon: Bell },
 ] as const;
 
 const hiddenOnRoutes = [
@@ -66,7 +65,7 @@ function NavItem({
             size="sm"
             className="absolute right-1.5 top-0 size-4 p-0 text-2xs"
           >
-            {badge}
+            {badge > 9 ? "9+" : badge}
           </Badge>
         ) : null}
         <span className="max-w-[72px] truncate">{label}</span>
@@ -101,6 +100,26 @@ function MessagingNavItem() {
   );
 }
 
+function NotificationsNavItem({ active }: { active: boolean }) {
+  const { unreadCount } = useNotifications();
+
+  return (
+    <NavItem
+      href="/notifications"
+      label="Notifications"
+      icon={Bell}
+      active={active}
+      badge={unreadCount > 0 ? unreadCount : undefined}
+    />
+  );
+}
+
+function isNavActive(pathname: string, href: string) {
+  return (
+    pathname === href || (href !== "/feed" && pathname.startsWith(href))
+  );
+}
+
 export function BottomNav() {
   const pathname = usePathname();
 
@@ -111,17 +130,18 @@ export function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-background md:hidden">
       <div className="mx-auto flex h-14 max-w-lg items-center justify-around px-2">
-        {navItems.slice(0, 3).map((item) => (
-          <NavItem
-            key={item.href}
-            {...item}
-            active={
-              pathname === item.href ||
-              (item.href !== "/feed" && pathname.startsWith(item.href))
-            }
-          />
-        ))}
+        <NavItem
+          {...navItems[0]}
+          active={isNavActive(pathname, navItems[0].href)}
+        />
+        <NavItem
+          {...navItems[1]}
+          active={isNavActive(pathname, navItems[1].href)}
+        />
         <MessagingNavItem />
+        <NotificationsNavItem
+          active={isNavActive(pathname, "/notifications")}
+        />
         <MeMenu side="top" align="center" />
       </div>
     </nav>
@@ -161,27 +181,18 @@ export function AppHeader() {
       />
 
       <nav className="mx-auto hidden flex-1 items-center justify-center md:flex">
-        {navItems.slice(0, 3).map((item) => (
-          <NavItem
-            key={item.href}
-            {...item}
-            active={
-              pathname === item.href ||
-              (item.href !== "/feed" && pathname.startsWith(item.href))
-            }
-          />
-        ))}
+        <NavItem
+          {...navItems[0]}
+          active={isNavActive(pathname, navItems[0].href)}
+        />
+        <NavItem
+          {...navItems[1]}
+          active={isNavActive(pathname, navItems[1].href)}
+        />
         <MessagingNavItem />
-        {navItems.slice(3).map((item) => (
-          <NavItem
-            key={item.href}
-            {...item}
-            active={
-              pathname === item.href ||
-              (item.href !== "/feed" && pathname.startsWith(item.href))
-            }
-          />
-        ))}
+        <NotificationsNavItem
+          active={isNavActive(pathname, "/notifications")}
+        />
         <MeMenu />
       </nav>
 

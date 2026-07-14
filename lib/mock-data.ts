@@ -196,10 +196,10 @@ export const notifications: Notification[] = [
   },
   {
     id: "n4",
-    type: "mention",
-    message: "mentioned you in a post",
+    type: "message",
+    message: "sent you a message: Hey there!",
     user: users[3],
-    postId: "p3",
+    conversationId: "conv1",
     createdAt: "5h ago",
     read: true,
   },

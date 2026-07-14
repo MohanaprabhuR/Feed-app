@@ -26,7 +26,7 @@ import {
   EmptyDescription,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageBlockSkeleton } from "@/components/skeletons";
 import { appToast } from "@/lib/app-toast";
 import { getErrorMessage } from "@/lib/errors";
 import { deletePost, fetchPostById } from "@/lib/posts";
@@ -117,7 +117,7 @@ export default function DeletePostPage({
       <AppShell noPadding>
         <PageHeader title="Delete Post" backHref="/feed" />
         <div className="p-8">
-          <Skeleton className="mx-auto h-48 max-w-md rounded-xl" />
+          <PageBlockSkeleton />
         </div>
       </AppShell>
     );

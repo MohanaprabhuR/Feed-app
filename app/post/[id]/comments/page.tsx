@@ -13,6 +13,7 @@ import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CommentListSkeleton } from "@/components/skeletons";
 import {
   Empty,
   EmptyContent,
@@ -281,13 +282,7 @@ export default function CommentsPage({
     <AppShell noPadding className="flex flex-col">
       <PageHeader title="Comments" backHref="/feed" />
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        {loading &&
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex gap-3">
-              <Skeleton className="size-8 rounded-full" />
-              <Skeleton className="h-20 flex-1 rounded-lg" />
-            </div>
-          ))}
+        {loading && <CommentListSkeleton count={3} />}
 
         {error && (
           <Alert variant="error" className="w-full max-w-none">

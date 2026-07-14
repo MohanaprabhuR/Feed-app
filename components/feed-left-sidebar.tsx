@@ -24,7 +24,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SidebarProfileSkeleton } from "@/components/skeletons";
 import {
   feedCardClass,
   feedCardSectionClass,
@@ -33,9 +33,9 @@ import {
 
 const quickLinks = [
   { href: "/saved", label: "Saved items", icon: Bookmark },
-  { href: "/followers", label: "Groups", icon: Users },
+  { href: "/following", label: "Following", icon: Users },
+  { href: "/followers", label: "Followers", icon: Users },
   { href: "/trending", label: "Newsletters", icon: Calendar },
-  { href: "/search", label: "Events", icon: Calendar },
 ];
 
 export function FeedLeftSidebar() {
@@ -48,11 +48,7 @@ export function FeedLeftSidebar() {
         <CardContent className={feedCardSectionClass}>
           <div className="-mt-9 flex flex-col items-center text-center">
             {loading || !user ? (
-              <>
-                <Skeleton className="size-16 rounded-full" />
-                <Skeleton className="mt-2 h-5 w-32" />
-                <Skeleton className="mt-2 h-4 w-full" />
-              </>
+              <SidebarProfileSkeleton />
             ) : (
               <>
                 <UserAvatar

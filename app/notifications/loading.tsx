@@ -1,14 +1,12 @@
-"use client";
-
 import { AppShell } from "@/components/app-shell";
-import { NotificationsList } from "@/components/notifications-list";
 import { PageHeader } from "@/components/page-header";
+import { NotificationListSkeleton } from "@/components/skeletons";
 
-export default function NotificationsPage() {
+export default function NotificationsLoading() {
   return (
     <AppShell noPadding>
       <PageHeader title="Notifications" backHref="/feed" />
-      <NotificationsList />
+      <NotificationListSkeleton count={6} />
     </AppShell>
   );
 }

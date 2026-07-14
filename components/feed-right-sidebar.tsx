@@ -6,7 +6,7 @@ import { useCurrentUser } from "@/components/current-user-provider";
 import { UserListItem } from "@/components/user-list-item";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { UserListSkeleton } from "@/components/skeletons";
 import { feedCardClass, feedCardTitleClass } from "@/lib/feed-layout";
 import { fetchSuggestedProfiles } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
@@ -62,22 +62,21 @@ export function FeedRightSidebar({
         </CardHeader>
         <CardContent className="pt-0">
           {loadingUsers ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 py-2">
-                  <Skeleton className="size-10 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                  <Skeleton className="h-8 w-20 rounded-lg" />
-                </div>
-              ))}
-            </div>
+            <UserListSkeleton count={3} />
           ) : suggestedUsers.length > 0 ? (
             <div className="divide-y">
               {suggestedUsers.map((suggestedUser) => (
-                <UserListItem key={suggestedUser.id} user={suggestedUser} />
+                <UserListItem
+                  key={suggestedUser.id}
+                  user={suggestedUser}
+                  onFollowChange={(followedId, isFollowing) => {
+                    if (isFollowing) {
+                      setSuggestedUsers((current) =>
+                        current.filter((item) => item.id !== followedId),
+                      );
+                    }
+                  }}
+                />
               ))}
             </div>
           ) : (

@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { UserListItem } from "@/components/user-list-item";
 import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { UserListSkeleton } from "@/components/skeletons";
 import {
   Empty,
   EmptyContent,
@@ -64,16 +64,7 @@ export default function LikesPage({
     <AppShell noPadding>
       <PageHeader title="Reactions" backHref="/feed" />
       <div className="divide-y px-4">
-        {loading &&
-          Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 py-3">
-              <Skeleton className="size-10 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-20" />
-              </div>
-            </div>
-          ))}
+        {loading && <UserListSkeleton count={4} className="px-0" />}
 
         {error && (
           <Alert variant="error" className="my-4 w-full max-w-none">
