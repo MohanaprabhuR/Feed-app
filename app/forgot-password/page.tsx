@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Mail } from "lucide-react";
 import { toast } from "sonner";
 import { AuthLayout } from "@/components/auth-layout";
 import { Button } from "@/components/ui/button";
@@ -71,25 +72,33 @@ export default function ForgotPasswordPage() {
           Check your inbox for a password reset link.
         </p>
       ) : (
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={handleSubmit}>
           {error && (
             <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {error}
             </p>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email Address</Label>
             <Input
               id="email"
               name="email"
               type="email"
-              placeholder="you@example.com"
+              size="lg"
+              variant="outline"
+              placeholder="Enter email"
               autoComplete="email"
               required
               disabled={loading}
+              prefix={<Mail className="size-4 text-muted-foreground" />}
             />
           </div>
-          <Button type="submit" className="w-full" size="lg" disabled={loading}>
+          <Button
+            type="submit"
+            className="h-11 w-full rounded-xl bg-foreground text-background hover:bg-foreground/90"
+            size="lg"
+            disabled={loading}
+          >
             {loading ? "Sending…" : "Send reset link"}
           </Button>
         </form>
@@ -97,9 +106,9 @@ export default function ForgotPasswordPage() {
       <p className="text-center text-sm text-muted-foreground">
         <Link
           href="/login"
-          className="font-medium text-foreground hover:underline"
+          className="font-medium text-foreground underline underline-offset-2"
         >
-          Back to sign in
+          Back to Log In
         </Link>
       </p>
     </AuthLayout>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { Lock, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { AuthLayout } from "@/components/auth-layout";
 import { Button } from "@/components/ui/button";
@@ -83,10 +84,10 @@ function LoginForm() {
 
   return (
     <AuthLayout
-      title="Sign in"
-      subtitle="Welcome back! Enter your username and password."
+      title="Log In"
+      subtitle="Enter your details to access your account."
     >
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit}>
         {error && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
@@ -97,10 +98,13 @@ function LoginForm() {
           <Input
             id="username"
             name="username"
-            placeholder="alexmorgan"
+            size="lg"
+            variant="outline"
+            placeholder="Enter username"
             autoComplete="username"
             required
             disabled={loading}
+            prefix={<UserRound className="size-4 text-muted-foreground" />}
           />
         </div>
         <div className="space-y-2">
@@ -108,7 +112,7 @@ function LoginForm() {
             <Label htmlFor="password">Password</Label>
             <Link
               href="/forgot-password"
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
             >
               Forgot password?
             </Link>
@@ -117,23 +121,31 @@ function LoginForm() {
             id="password"
             name="password"
             type="password"
-            placeholder="••••••••"
+            size="lg"
+            variant="outline"
+            placeholder="Enter password"
             autoComplete="current-password"
             required
             disabled={loading}
+            prefix={<Lock className="size-4 text-muted-foreground" />}
           />
         </div>
-        <Button type="submit" className="w-full" size="lg" disabled={loading}>
-          {loading ? "Signing in…" : "Sign in"}
+        <Button
+          type="submit"
+          className="mt-1 h-11 w-full rounded-xl bg-foreground text-background hover:bg-foreground/90"
+          size="lg"
+          disabled={loading}
+        >
+          {loading ? "Signing in…" : "Log In"}
         </Button>
       </form>
       <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
+        Not registered yet?{" "}
         <Link
           href="/register"
-          className="font-medium text-foreground hover:underline"
+          className="font-medium text-foreground underline underline-offset-2"
         >
-          Sign up
+          Create Account
         </Link>
       </p>
     </AuthLayout>
@@ -144,7 +156,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <AuthLayout title="Sign in" subtitle="Loading…">
+        <AuthLayout title="Log In" subtitle="Loading…">
           <div className="h-32 animate-pulse rounded-lg bg-muted" />
         </AuthLayout>
       }

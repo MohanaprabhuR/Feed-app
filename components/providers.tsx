@@ -13,7 +13,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <CurrentUserProvider>
         <MessagingProvider>
           <NotificationsProvider>
-            {children}
+            <div className="flex min-h-dvh w-full flex-1 flex-col">
+              {children}
+            </div>
             <MessagingDock />
             <Toaster richColors position="top-center" />
           </NotificationsProvider>

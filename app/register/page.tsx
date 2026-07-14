@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Lock, Mail, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AuthLayout } from "@/components/auth-layout";
@@ -220,7 +221,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthLayout title="Create account" subtitle="Join the community today.">
+    <AuthLayout
+      title="Create Your Account"
+      subtitle="Enter your details to join Feed and start sharing."
+    >
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error && (
           <div className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -230,20 +234,23 @@ export default function RegisterPage() {
                 href="/login"
                 className="block font-medium underline underline-offset-2"
               >
-                Go to sign in
+                Go to log in
               </Link>
             )}
           </div>
         )}
         <div className="space-y-2">
-          <Label htmlFor="name">Full name</Label>
+          <Label htmlFor="name">Full Name</Label>
           <Input
             id="name"
             name="name"
-            placeholder="Alex Morgan"
+            size="lg"
+            variant="outline"
+            placeholder="Enter name"
             autoComplete="name"
             required
             disabled={loading}
+            prefix={<UserRound className="size-4 text-muted-foreground" />}
           />
         </div>
         <div className="space-y-2">
@@ -251,22 +258,28 @@ export default function RegisterPage() {
           <Input
             id="username"
             name="username"
-            placeholder="alexmorgan"
+            size="lg"
+            variant="outline"
+            placeholder="Enter username"
             autoComplete="username"
             required
             disabled={loading}
+            prefix={<UserRound className="size-4 text-muted-foreground" />}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">Email Address</Label>
           <Input
             id="email"
             name="email"
             type="email"
-            placeholder="you@example.com"
+            size="lg"
+            variant="outline"
+            placeholder="Enter email"
             autoComplete="email"
             required
             disabled={loading}
+            prefix={<Mail className="size-4 text-muted-foreground" />}
           />
         </div>
         <div className="space-y-2">
@@ -275,24 +288,39 @@ export default function RegisterPage() {
             id="password"
             name="password"
             type="password"
-            placeholder="••••••••"
+            size="lg"
+            variant="outline"
+            placeholder="Enter password"
             autoComplete="new-password"
             minLength={6}
             required
             disabled={loading}
+            prefix={<Lock className="size-4 text-muted-foreground" />}
           />
         </div>
-        <Button type="submit" className="w-full" size="lg" disabled={loading}>
-          {loading ? "Creating account…" : "Create account"}
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          By creating an account you agree to our{" "}
+          <Link href="/terms" className="underline underline-offset-2 hover:text-foreground">
+            Terms and Privacy Policy
+          </Link>
+          .
+        </p>
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-xl bg-foreground text-background hover:bg-foreground/90"
+          size="lg"
+          disabled={loading}
+        >
+          {loading ? "Creating account…" : "Create Account"}
         </Button>
       </form>
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
           href="/login"
-          className="font-medium text-foreground hover:underline"
+          className="font-medium text-foreground underline underline-offset-2"
         >
-          Sign in
+          Login
         </Link>
       </p>
     </AuthLayout>

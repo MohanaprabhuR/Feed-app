@@ -5,15 +5,24 @@ import { AuthLayout } from "@/components/auth-layout";
 export default function WelcomePage() {
   return (
     <AuthLayout
-      title="Welcome to FeedApp"
-      subtitle="Your social space to share moments and connect with others."
+      title="Welcome to Feed"
+      subtitle="Your space to share posts, follow people, and stay in the conversation."
     >
       <div className="space-y-3">
-        <Button className="w-full" size="lg" asChild>
-          <Link href="/register">Create account</Link>
+        <Button
+          className="h-11 w-full rounded-xl bg-foreground text-background hover:bg-foreground/90"
+          size="lg"
+          asChild
+        >
+          <Link href="/register">Create Account</Link>
         </Button>
-        <Button variant="outline" className="w-full" size="lg" asChild>
-          <Link href="/login">Sign in</Link>
+        <Button
+          variant="outline"
+          className="h-11 w-full rounded-xl"
+          size="lg"
+          asChild
+        >
+          <Link href="/login">Log In</Link>
         </Button>
       </div>
       <p className="text-center text-xs text-muted-foreground">
