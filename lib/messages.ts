@@ -43,7 +43,7 @@ function asProfile(value: ProfileRow | ProfileRow[] | null): ProfileRow | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-function messageRowToMessage(row: MessageRow): Message {
+export function messageRowToMessage(row: MessageRow): Message {
   return {
     id: row.id,
     senderId: row.sender_id,
@@ -51,6 +51,8 @@ function messageRowToMessage(row: MessageRow): Message {
     createdAt: formatRelativeTime(row.created_at),
   };
 }
+
+export type DirectMessageRow = MessageRow;
 
 export async function fetchConversations(
   supabase: SupabaseClient,
@@ -211,4 +213,60 @@ export async function getOrCreateDirectConversation(
   }
 
   return data as string;
+}
+
+/** Live INSERT events for a conversation thread (own + peer messages). */
+export function subscribeToConversationMessages(
+  supabase: SupabaseClient,
+  conversationId: string,
+  onMessage: (message: Message, row: MessageRow) => void,
+) {
+  const channel = supabase
+    .channel(`direct-messages:${conversationId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "direct_messages",
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        const row = payload.new as MessageRow;
+        if (!row?.id || !row.content) return;
+        onMessage(messageRowToMessage(row), row);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
+/** Inbox updates when any visible DM is inserted. */
+export function subscribeToInboxMessages(
+  supabase: SupabaseClient,
+  onInsert: (row: MessageRow) => void,
+) {
+  const channel = supabase
+    .channel("direct-messages-inbox")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "direct_messages",
+      },
+      (payload) => {
+        const row = payload.new as MessageRow;
+        if (!row?.id || !row.conversation_id) return;
+        onInsert(row);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 }

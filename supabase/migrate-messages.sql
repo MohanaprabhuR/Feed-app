@@ -162,3 +162,13 @@ drop trigger if exists on_direct_message_created on public.direct_messages;
 create trigger on_direct_message_created
   after insert on public.direct_messages
   for each row execute function public.touch_conversation_on_message();
+
+-- Realtime: live message delivery to open chats
+alter table public.direct_messages replica identity full;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.direct_messages;
+exception
+  when duplicate_object then null;
+end $$;

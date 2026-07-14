@@ -27,7 +27,11 @@ import {
   fetchConversations,
   fetchMessages,
   getOrCreateDirectConversation,
+  messageRowToMessage,
   sendMessage,
+  subscribeToConversationMessages,
+  subscribeToInboxMessages,
+  type DirectMessageRow,
 } from "@/lib/messages";
 import { fetchSuggestedProfiles } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
@@ -102,11 +106,12 @@ export function MessagingDock() {
     router.replace("/feed");
   }, [pathname, openMessaging, router]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- refresh inbox/thread when dock opens */
   useEffect(() => {
     if (!expanded || !userId) return;
     void loadConversations();
   }, [expanded, userId, loadConversations]);
-
+  /* eslint-enable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!expanded || !userId || !pendingPeerUserId) return;
 
@@ -173,10 +178,102 @@ export function MessagingDock() {
     }
 
     void loadThread();
+
+    const supabase = createClient();
+    const unsubscribe = subscribeToConversationMessages(
+      supabase,
+      conversationId,
+      (message) => {
+        setThreadMessages((current) => {
+          const existing = current[conversationId] ?? [];
+          if (existing.some((item) => item.id === message.id)) {
+            return current;
+          }
+          return {
+            ...current,
+            [conversationId]: [...existing, message],
+          };
+        });
+        setConversationList((current) => {
+          const next = current.map((conv) =>
+            conv.id === conversationId
+              ? {
+                  ...conv,
+                  lastMessage: message.content,
+                  lastMessageAt: message.createdAt,
+                  unread: 0,
+                }
+              : conv,
+          );
+          const active = next.find((conv) => conv.id === conversationId);
+          if (!active) return next;
+          return [active, ...next.filter((conv) => conv.id !== conversationId)];
+        });
+      },
+    );
+
+    const poll = window.setInterval(() => {
+      void (async () => {
+        try {
+          const latest = await fetchMessages(supabase, conversationId);
+          setThreadMessages((current) => {
+            const existing = current[conversationId] ?? [];
+            if (
+              existing.length === latest.length &&
+              existing.every((msg, i) => msg.id === latest[i]?.id)
+            ) {
+              return current;
+            }
+            return { ...current, [conversationId]: latest };
+          });
+        } catch {
+          // Keep chat usable if polling fails (realtime may still work).
+        }
+      })();
+    }, 4000);
+
     return () => {
       cancelled = true;
+      unsubscribe();
+      window.clearInterval(poll);
     };
   }, [conversationId, userId]);
+
+  useEffect(() => {
+    if (!expanded || !userId) return;
+
+    const supabase = createClient();
+    const unsubscribe = subscribeToInboxMessages(
+      supabase,
+      (row: DirectMessageRow) => {
+        const message = messageRowToMessage(row);
+        setConversationList((current) => {
+          const existing = current.find((conv) => conv.id === row.conversation_id);
+          if (!existing) {
+            void loadConversations();
+            return current;
+          }
+          const updated = {
+            ...existing,
+            lastMessage: message.content,
+            lastMessageAt: message.createdAt,
+            unread:
+              row.sender_id === userId || row.conversation_id === conversationId
+                ? 0
+                : existing.unread + 1,
+          };
+          return [
+            updated,
+            ...current.filter((conv) => conv.id !== row.conversation_id),
+          ];
+        });
+      },
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [expanded, userId, conversationId, loadConversations]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
