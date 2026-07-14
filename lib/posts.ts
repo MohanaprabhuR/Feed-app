@@ -211,14 +211,22 @@ async function withLikedState(
   posts: Post[],
   userId?: string | null
 ) {
-  if (!userId || posts.length === 0) return posts;
+  if (posts.length === 0) return posts;
 
-  const { fetchUserReactions } = await import("@/lib/likes");
+  const { fetchReactionSummaries, fetchUserReactions } = await import(
+    "@/lib/likes"
+  );
   const { fetchSavedPostIds } = await import("@/lib/saves");
   const postIds = posts.map((post) => post.id);
-  const [reactions, savedIds] = await Promise.all([
-    fetchUserReactions(supabase, userId, postIds),
-    fetchSavedPostIds(supabase, userId, postIds),
+
+  const [summaries, reactions, savedIds] = await Promise.all([
+    fetchReactionSummaries(supabase, postIds),
+    userId
+      ? fetchUserReactions(supabase, userId, postIds)
+      : Promise.resolve(new Map()),
+    userId
+      ? fetchSavedPostIds(supabase, userId, postIds)
+      : Promise.resolve(new Set<string>()),
   ]);
 
   return posts.map((post) => {
@@ -227,6 +235,7 @@ async function withLikedState(
       ...post,
       isLiked: reaction !== null,
       reaction,
+      reactionSummary: summaries.get(post.id) ?? [],
       isSaved: savedIds.has(post.id),
     };
   });

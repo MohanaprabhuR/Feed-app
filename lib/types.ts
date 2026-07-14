@@ -44,6 +44,8 @@ export type Post = {
   createdAt: string;
   isLiked?: boolean;
   reaction?: ReactionType | null;
+  /** Top reaction types on this post (LinkedIn-style summary icons). */
+  reactionSummary?: ReactionType[];
   isSaved?: boolean;
 };
 

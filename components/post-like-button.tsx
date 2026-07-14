@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactionButton } from "@/components/reaction-button";
-import { setReaction, toggleLike } from "@/lib/likes";
+import { clearReaction, setReaction } from "@/lib/likes";
 import { createClient } from "@/lib/supabase/client";
 import type { ReactionType } from "@/lib/types";
 
@@ -13,6 +13,7 @@ type PostLikeButtonProps = {
   hideCount?: boolean;
   className?: string;
   onCountChange?: (count: number) => void;
+  onReactionChange?: (reaction: ReactionType | null) => void;
 };
 
 export function PostLikeButton({
@@ -23,6 +24,7 @@ export function PostLikeButton({
   hideCount = false,
   className,
   onCountChange,
+  onReactionChange,
 }: PostLikeButtonProps) {
   return (
     <ReactionButton
@@ -31,7 +33,7 @@ export function PostLikeButton({
       initialLiked={initialLiked}
       initialReaction={initialReaction}
       initialCount={initialCount}
-      loginNext={`/post/${postId}/likes`}
+      loginNext={`/feed`}
       countHref={hideCount ? undefined : `/post/${postId}/likes`}
       onReact={async (reaction) => {
         const supabase = createClient();
@@ -40,14 +42,13 @@ export function PostLikeButton({
         } = await supabase.auth.getUser();
         if (!user) throw new Error("Sign in to react.");
 
-        if (reaction === null) {
-          const result = await toggleLike(supabase, postId, user.id);
-          onCountChange?.(result.likesCount);
-          return { reaction: result.reaction, likesCount: result.likesCount };
-        }
+        const result =
+          reaction === null
+            ? await clearReaction(supabase, postId, user.id)
+            : await setReaction(supabase, postId, user.id, reaction);
 
-        const result = await setReaction(supabase, postId, user.id, reaction);
         onCountChange?.(result.likesCount);
+        onReactionChange?.(result.reaction);
         return { reaction: result.reaction, likesCount: result.likesCount };
       }}
     />

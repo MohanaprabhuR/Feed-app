@@ -57,10 +57,12 @@ export function ReactionButton({
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ignoreClick = useRef(false);
 
+  // Keep button in sync after refresh / feed reload (skip while a save is in flight).
   useEffect(() => {
+    if (pending) return;
     setReactionState(initialReaction ?? (initialLiked ? "like" : null));
     setCount(initialCount);
-  }, [initialCount, initialLiked, initialReaction]);
+  }, [initialCount, initialLiked, initialReaction, pending]);
 
   useEffect(() => {
     return () => {
@@ -188,7 +190,6 @@ export function ReactionButton({
 
   const meta = getReactionMeta(reaction ?? "like");
   const isReacted = reaction !== null;
-  const showDefaultLikeIcon = !isReacted || reaction === "like";
 
   return (
     <div
@@ -261,20 +262,15 @@ export function ReactionButton({
         aria-haspopup="menu"
         aria-expanded={pickerOpen}
       >
-        {showDefaultLikeIcon ? (
-          <ThumbsUp
-            className={cn(
-              compact ? "size-3.5" : "size-4",
-              isReacted && reaction === "like" && "fill-current",
-            )}
-          />
-        ) : (
+        {isReacted ? (
           <span
             className={cn("leading-none", compact ? "text-sm" : "text-base")}
             aria-hidden
           >
             {meta.emoji}
           </span>
+        ) : (
+          <ThumbsUp className={cn(compact ? "size-3.5" : "size-4")} />
         )}
       </Button>
 

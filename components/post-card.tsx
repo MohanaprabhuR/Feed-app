@@ -1,20 +1,22 @@
 "use client";
 
-import { useState } from "react";
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
   Bookmark,
   BookmarkCheck,
   FileText,
-  MessageCircle,
   MoreHorizontal,
-  Repeat2,
-  Send,
 } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { PostComments } from "@/components/post-comments";
 import { PostLikeButton } from "@/components/post-like-button";
+import {
+  mergeReactionSummary,
+  PostEngagementBar,
+} from "@/components/post-reaction-summary";
 import { ProfileTrigger } from "@/components/profile-trigger";
 import { SharePostDialog } from "@/components/share-post-dialog";
 import { EditPostDialog } from "@/components/edit-post-dialog";
@@ -44,14 +46,12 @@ import { appToast } from "@/lib/app-toast";
 import { getErrorMessage } from "@/lib/errors";
 import { toggleSavePost } from "@/lib/saves";
 import { createClient } from "@/lib/supabase/client";
-import type { Post } from "@/lib/types";
+import type { Post, ReactionType } from "@/lib/types";
 import {
-  feedCardActionsClass,
   feedCardClass,
   feedCardContentClass,
   feedCardFooterClass,
   feedCardHeaderClass,
-  feedCardStatsClass,
 } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
 
@@ -84,9 +84,22 @@ export function PostCard({
   const [content, setContent] = useState(post.content);
   const [commentsCount, setCommentsCount] = useState(post.comments);
   const [likesCount, setLikesCount] = useState(post.likes);
+  const [reactionSummary, setReactionSummary] = useState<ReactionType[]>(
+    post.reactionSummary ?? [],
+  );
+  const [myReaction, setMyReaction] = useState<ReactionType | null>(
+    post.reaction ?? null,
+  );
   const [sharesCount, setSharesCount] = useState(post.shares);
   const [isSaved, setIsSaved] = useState(Boolean(post.isSaved));
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setLikesCount(post.likes);
+    setReactionSummary(post.reactionSummary ?? []);
+    setMyReaction(post.reaction ?? null);
+    setIsSaved(Boolean(post.isSaved));
+  }, [post.id, post.likes, post.isSaved, post.reaction, post.reactionSummary]);
 
   async function handleToggleSave() {
     if (!user) {
@@ -208,94 +221,57 @@ export function PostCard({
         ) : null}
       </CardContent>
       <CardFooter className={feedCardFooterClass}>
-        {(likesCount > 0 || commentsCount > 0 || sharesCount > 0) && (
-          <div className={feedCardStatsClass}>
-            <Link
-              href={`/post/${post.id}/likes`}
-              className="hover:text-foreground hover:underline"
+        <PostEngagementBar
+          postId={post.id}
+          likesCount={likesCount}
+          commentsCount={commentsCount}
+          sharesCount={sharesCount}
+          types={reactionSummary}
+          commentsOpen={commentsOpen}
+          onOpenComments={() => setCommentsOpen((open) => !open)}
+          onRepost={() =>
+            appToast.info("Repost coming soon", "Repost will be available in a future update.")
+          }
+          onShare={() => setShareOpen(true)}
+          likeControl={
+            <PostLikeButton
+              key={`${post.id}:${myReaction ?? "none"}`}
+              postId={post.id}
+              initialLiked={Boolean(myReaction)}
+              initialReaction={myReaction}
+              initialCount={likesCount}
+              hideCount
+              className="justify-start"
+              onCountChange={setLikesCount}
+              onReactionChange={(next) => {
+                setMyReaction((prev) => {
+                  setReactionSummary((current) =>
+                    mergeReactionSummary(current, prev, next),
+                  );
+                  return next;
+                });
+              }}
+            />
+          }
+          trailing={
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              className={cn("h-9 justify-start", isSaved && "text-foreground")}
+              aria-label={isSaved ? "Unsave post" : "Save post"}
+              aria-pressed={isSaved}
+              disabled={saving}
+              onClick={() => void handleToggleSave()}
             >
-              {likesCount > 0
-                ? `${likesCount} reaction${likesCount === 1 ? "" : "s"}`
-                : null}
-            </Link>
-            <div className="flex items-center gap-2">
-              {commentsCount > 0 && (
-                <button
-                  type="button"
-                  className="hover:text-foreground hover:underline"
-                  onClick={() => setCommentsOpen(true)}
-                >
-                  {commentsCount} comment{commentsCount === 1 ? "" : "s"}
-                </button>
+              {isSaved ? (
+                <BookmarkCheck className="size-4 fill-current" />
+              ) : (
+                <Bookmark className="size-4" />
               )}
-              {sharesCount > 0 && <span>{sharesCount} shares</span>}
-            </div>
-          </div>
-        )}
-
-        <div className={feedCardActionsClass}>
-          <PostLikeButton
-            postId={post.id}
-            initialLiked={post.isLiked}
-            initialReaction={post.reaction}
-            initialCount={likesCount}
-            hideCount
-            className="justify-start"
-            onCountChange={setLikesCount}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            className={cn("h-9 justify-start", commentsOpen && "bg-accent")}
-            aria-expanded={commentsOpen}
-            aria-label="Toggle comments"
-            onClick={() => setCommentsOpen((open) => !open)}
-          >
-            <MessageCircle className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            className="h-9 justify-start"
-            aria-label="Repost"
-            onClick={() =>
-              appToast.info("Repost coming soon", "Repost will be available in a future update.")
-            }
-          >
-            <Repeat2 className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            className="h-9 justify-start"
-            aria-label="Share post"
-            onClick={() => setShareOpen(true)}
-          >
-            <Send className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            className={cn(
-              "ml-auto h-9 justify-start",
-              isSaved && "text-foreground",
-            )}
-            aria-label={isSaved ? "Unsave post" : "Save post"}
-            aria-pressed={isSaved}
-            disabled={saving}
-            onClick={() => void handleToggleSave()}
-          >
-            {isSaved ? (
-              <BookmarkCheck className="size-4 fill-current" />
-            ) : (
-              <Bookmark className="size-4" />
-            )}
-          </Button>
-        </div>
+            </Button>
+          }
+        />
       </CardFooter>
 
       <PostComments

@@ -83,6 +83,51 @@ function normalizeReaction(value: unknown): ReactionType {
   return match?.type ?? "like";
 }
 
+/** Top reaction types per post for LinkedIn-style feed stats. */
+export async function fetchReactionSummaries(
+  supabase: SupabaseClient,
+  postIds: string[],
+  limitPerPost = 3,
+): Promise<Map<string, ReactionType[]>> {
+  const map = new Map<string, ReactionType[]>();
+  if (postIds.length === 0) return map;
+
+  const withReaction = await supabase
+    .from("post_likes")
+    .select("post_id, reaction")
+    .in("post_id", postIds);
+
+  if (withReaction.error) {
+    if (isMissingLikesTableError(withReaction.error.message)) return map;
+    if (!isMissingReactionColumnError(withReaction.error.message)) {
+      throw withReaction.error;
+    }
+
+    // Legacy rows: treat every like as "like".
+    for (const id of postIds) map.set(id, ["like"]);
+    return map;
+  }
+
+  const counts = new Map<string, Map<ReactionType, number>>();
+  for (const row of withReaction.data ?? []) {
+    const postId = row.post_id as string;
+    const type = normalizeReaction(row.reaction);
+    if (!counts.has(postId)) counts.set(postId, new Map());
+    const byType = counts.get(postId)!;
+    byType.set(type, (byType.get(type) ?? 0) + 1);
+  }
+
+  for (const [postId, byType] of counts) {
+    const ranked = [...byType.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limitPerPost)
+      .map(([type]) => type);
+    map.set(postId, ranked);
+  }
+
+  return map;
+}
+
 export async function fetchUserReactions(
   supabase: SupabaseClient,
   userId: string,
@@ -179,58 +224,67 @@ export async function setReaction(
     throw existingError;
   }
 
+  // Clicking the same reaction again removes it.
   if (existing && normalizeReaction(existing.reaction) === reaction) {
-    const { error } = await supabase
-      .from("post_likes")
-      .delete()
-      .eq("post_id", postId)
-      .eq("user_id", userId);
-
-    if (error) throw error;
-    return {
-      reaction: null,
-      likesCount: await getLikesCount(supabase, postId),
-    };
+    return clearReaction(supabase, postId, userId);
   }
 
-  if (existing) {
-    const { error } = await supabase
-      .from("post_likes")
-      .update({ reaction })
-      .eq("post_id", postId)
-      .eq("user_id", userId);
-
-    if (error) {
-      if (isMissingReactionColumnError(error.message)) {
-        throw new Error(
-          "Reactions need database setup. Run supabase/migrate-reactions.sql in Supabase → SQL Editor.",
-        );
-      }
-      throw error;
-    }
-
-    return { reaction, likesCount: await getLikesCount(supabase, postId) };
-  }
-
-  const { error } = await supabase.from("post_likes").insert({
-    post_id: postId,
-    user_id: userId,
-    reaction,
-  });
+  // Prefer upsert so create + change reaction both persist the type.
+  const { error } = await supabase.from("post_likes").upsert(
+    {
+      post_id: postId,
+      user_id: userId,
+      reaction,
+    },
+    { onConflict: "post_id,user_id" },
+  );
 
   if (error) {
     if (isMissingReactionColumnError(error.message)) {
-      const { error: legacyError } = await supabase.from("post_likes").insert({
-        post_id: postId,
-        user_id: userId,
-      });
-      if (legacyError) throw legacyError;
-      return {
-        reaction: "like",
-        likesCount: await getLikesCount(supabase, postId),
-      };
+      throw new Error(
+        "Reactions need database setup. Run supabase/migrate-reactions.sql in Supabase → SQL Editor.",
+      );
     }
 
+    if (isMissingLikesTableError(error.message)) {
+      throw new Error(
+        "Likes need database setup. Run supabase/migrate-likes-comments.sql in Supabase → SQL Editor.",
+      );
+    }
+
+    // Fall back to update/insert if upsert isn't available.
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from("post_likes")
+        .update({ reaction })
+        .eq("post_id", postId)
+        .eq("user_id", userId);
+      if (updateError) throw updateError;
+    } else {
+      const { error: insertError } = await supabase.from("post_likes").insert({
+        post_id: postId,
+        user_id: userId,
+        reaction,
+      });
+      if (insertError) throw insertError;
+    }
+  }
+
+  return { reaction, likesCount: await getLikesCount(supabase, postId) };
+}
+
+export async function clearReaction(
+  supabase: SupabaseClient,
+  postId: string,
+  userId: string,
+): Promise<{ reaction: null; likesCount: number }> {
+  const { error } = await supabase
+    .from("post_likes")
+    .delete()
+    .eq("post_id", postId)
+    .eq("user_id", userId);
+
+  if (error) {
     if (isMissingLikesTableError(error.message)) {
       throw new Error(
         "Likes need database setup. Run supabase/migrate-likes-comments.sql in Supabase → SQL Editor.",
@@ -239,7 +293,10 @@ export async function setReaction(
     throw error;
   }
 
-  return { reaction, likesCount: await getLikesCount(supabase, postId) };
+  return {
+    reaction: null,
+    likesCount: await getLikesCount(supabase, postId),
+  };
 }
 
 export async function toggleLike(
