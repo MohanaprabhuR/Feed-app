@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { MeMenu } from "@/components/me-menu";
+import { useMessaging } from "@/components/messaging-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,6 @@ const navItems = [
   { href: "/feed", label: "Home", icon: Home },
   { href: "/search", label: "My Network", icon: Users },
   { href: "/trending", label: "Jobs", icon: Briefcase },
-  { href: "/messages", label: "Messaging", icon: MessageCircle },
   { href: "/notifications", label: "Notifications", icon: Bell, badge: 3 },
 ] as const;
 
@@ -78,6 +78,29 @@ function NavItem({
   );
 }
 
+function MessagingNavItem() {
+  const { expanded, toggleMessaging } = useMessaging();
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      onClick={toggleMessaging}
+      aria-pressed={expanded}
+      className={cn(
+        "relative flex min-w-[72px] h-auto flex-col items-center gap-1 px-1.5 py-1.5 text-2xs font-medium",
+        expanded ? "text-foreground" : "text-muted-foreground"
+      )}
+    >
+      <MessageCircle className="size-5" />
+      <span className="max-w-[72px] truncate">Messaging</span>
+      {expanded && (
+        <Separator className="h-0.5 w-full max-w-14 bg-foreground" />
+      )}
+    </Button>
+  );
+}
+
 export function BottomNav() {
   const pathname = usePathname();
 
@@ -88,7 +111,7 @@ export function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-background md:hidden">
       <div className="mx-auto flex h-14 max-w-lg items-center justify-around px-2">
-        {navItems.slice(0, 4).map((item) => (
+        {navItems.slice(0, 3).map((item) => (
           <NavItem
             key={item.href}
             {...item}
@@ -98,6 +121,7 @@ export function BottomNav() {
             }
           />
         ))}
+        <MessagingNavItem />
         <MeMenu side="top" align="center" />
       </div>
     </nav>
@@ -137,7 +161,18 @@ export function AppHeader() {
       />
 
       <nav className="mx-auto hidden flex-1 items-center justify-center md:flex">
-        {navItems.map((item) => (
+        {navItems.slice(0, 3).map((item) => (
+          <NavItem
+            key={item.href}
+            {...item}
+            active={
+              pathname === item.href ||
+              (item.href !== "/feed" && pathname.startsWith(item.href))
+            }
+          />
+        ))}
+        <MessagingNavItem />
+        {navItems.slice(3).map((item) => (
           <NavItem
             key={item.href}
             {...item}

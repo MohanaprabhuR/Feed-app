@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/components/current-user-provider";
+import { useMessaging } from "@/components/messaging-provider";
 import { ProfileEditForm } from "@/components/profile-edit-form";
 import { ProfileGeneralSettings } from "@/components/profile-general-settings";
 import { UserAvatar } from "@/components/user-avatar";
@@ -43,6 +44,7 @@ export function ProfileView({
 }: ProfileViewProps) {
   const router = useRouter();
   const { user: currentUser } = useCurrentUser();
+  const { openMessagingWithPeer } = useMessaging();
   const [mode, setMode] = useState<ProfileMode>(initialMode);
   const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
@@ -207,8 +209,14 @@ export function ProfileView({
           </Button>
         </div>
       ) : (
-        <Button variant="outline" className="w-full" size="sm" asChild>
-          <Link href="/messages">Message</Link>
+        <Button
+          variant="outline"
+          className="w-full"
+          size="sm"
+          type="button"
+          onClick={() => openMessagingWithPeer(user.id)}
+        >
+          Message
         </Button>
       )}
     </div>
