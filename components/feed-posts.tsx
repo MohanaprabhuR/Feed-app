@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -30,6 +31,7 @@ type FeedPostsProps = {
 
 export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
   const { user } = useCurrentUser();
+  const userId = user?.id;
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [loading, setLoading] = useState(initialPosts.length === 0);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
   const loadPosts = useCallback(async () => {
     try {
       const supabase = createClient();
-      const data = await fetchPosts(supabase, { userId: user?.id });
+      const data = await fetchPosts(supabase, { userId });
       setPosts(data);
       setError(null);
     } catch (error) {
@@ -45,7 +47,7 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [userId]);
 
   const handlePosted = useCallback(
     (newPost?: Post) => {

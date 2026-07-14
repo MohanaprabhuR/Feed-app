@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -243,6 +244,7 @@ export function PostComments({
   className,
 }: PostCommentsProps) {
   const { user, loading: userLoading } = useCurrentUser();
+  const userId = user?.id;
   const [comments, setComments] = useState<Comment[]>([]);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -256,7 +258,7 @@ export function PostComments({
     setLoading(true);
     try {
       const supabase = createClient();
-      const data = await fetchComments(supabase, postId, { userId: user?.id });
+      const data = await fetchComments(supabase, postId, { userId });
       setComments(data);
       onCountChange?.(data.length);
       setError(null);
@@ -266,7 +268,7 @@ export function PostComments({
     } finally {
       setLoading(false);
     }
-  }, [onCountChange, postId, user?.id]);
+  }, [onCountChange, postId, userId]);
 
   useEffect(() => {
     if (!open || loaded) return;

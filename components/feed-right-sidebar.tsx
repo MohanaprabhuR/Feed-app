@@ -20,6 +20,7 @@ export function FeedRightSidebar({
   initialSuggestedUsers = [],
 }: FeedRightSidebarProps) {
   const { user } = useCurrentUser();
+  const userId = user?.id;
   const [suggestedUsers, setSuggestedUsers] = useState<User[]>(
     initialSuggestedUsers,
   );
@@ -35,7 +36,7 @@ export function FeedRightSidebar({
       try {
         const supabase = createClient();
         const profiles = await fetchSuggestedProfiles(supabase, {
-          excludeUserId: user?.id,
+          excludeUserId: userId,
           limit: 3,
         });
         if (!cancelled) setSuggestedUsers(profiles);
@@ -51,7 +52,7 @@ export function FeedRightSidebar({
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [userId]);
 
   return (
     <aside className="space-y-3">

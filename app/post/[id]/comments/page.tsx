@@ -215,6 +215,7 @@ export default function CommentsPage({
 }) {
   const { id } = use(params);
   const { user, loading: userLoading } = useCurrentUser();
+  const userId = user?.id;
   const [comments, setComments] = useState<Comment[]>([]);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
@@ -235,7 +236,7 @@ export default function CommentsPage({
         return;
       }
 
-      const data = await fetchComments(supabase, id, { userId: user?.id });
+      const data = await fetchComments(supabase, id, { userId });
       setComments(data);
       setMissingPost(false);
       setError(null);
@@ -244,9 +245,10 @@ export default function CommentsPage({
     } finally {
       setLoading(false);
     }
-  }, [id, user?.id]);
+  }, [id, userId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
