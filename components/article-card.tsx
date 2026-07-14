@@ -135,10 +135,10 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
               <Newspaper className="size-3.5" />
               Article · {readTime} min read
             </Badge>
-            <h3 className="text-lg font-bold leading-snug group-hover:underline">
+            <h3 className="text-xl font-bold leading-snug group-hover:underline">
               {post.title || "Untitled article"}
             </h3>
-            <p className="text-sm leading-relaxed text-muted-foreground">
+            <p className="text-base leading-relaxed text-muted-foreground">
               {excerpt}
             </p>
           </div>

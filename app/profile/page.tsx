@@ -15,7 +15,7 @@ export default function ProfilePage() {
         title={user?.name ?? "Profile"}
         backHref="/feed"
       />
-      <div className="mx-auto max-w-2xl p-4">
+      <div className="mx-auto max-w-2xl px-4 py-5 sm:px-5 sm:py-6">
         {loading || !user ? (
           <div className="space-y-4">
             <Skeleton className="h-24 w-full rounded-xl" />

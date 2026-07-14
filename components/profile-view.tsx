@@ -174,12 +174,14 @@ export function ProfileView({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <Item size="sm" className="items-start p-0">
         <UserAvatar src={user.avatar} name={user.name} size="lg" />
         <ItemContent>
-          <ItemTitle className="text-xl">{user.name}</ItemTitle>
-          <ItemDescription>@{user.username}</ItemDescription>
+          <ItemTitle className="text-2xl font-semibold tracking-tight">
+            {user.name}
+          </ItemTitle>
+          <ItemDescription className="text-base">@{user.username}</ItemDescription>
         </ItemContent>
         <ItemActions>
           {isMe ? (
@@ -196,9 +198,9 @@ export function ProfileView({
         </ItemActions>
       </Item>
 
-      <p className="text-sm">{user.bio || "No bio yet."}</p>
+      <p className="text-base leading-relaxed">{user.bio || "No bio yet."}</p>
 
-      <div className="flex gap-6 text-sm">
+      <div className="flex gap-6 text-base">
         <Button variant="ghost" size="sm" className="h-auto px-0" asChild>
           <Link href="/followers">
             <span className="font-semibold">{user.followers}</span>{" "}
@@ -238,8 +240,8 @@ export function ProfileView({
         </Button>
       )}
 
-      <div className="space-y-4 border-t pt-4">
-        <h3 className="text-sm font-medium text-muted-foreground">Posts</h3>
+      <div className="space-y-4 border-t pt-5">
+        <h3 className="text-base font-semibold">Posts</h3>
         {postsLoading ? (
           <div className="space-y-3">
             <Skeleton className="h-32 w-full rounded-xl" />

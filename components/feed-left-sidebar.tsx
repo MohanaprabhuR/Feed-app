@@ -42,11 +42,11 @@ export function FeedLeftSidebar() {
   const { user, loading } = useCurrentUser();
 
   return (
-    <aside className="space-y-3">
+    <aside className="space-y-4">
       <Card padding="none" className={feedCardClass}>
-        <div className="h-14 bg-gradient-to-r from-sky-700 to-sky-500" />
+        <div className="h-16 bg-gradient-to-r from-sky-700 to-sky-500" />
         <CardContent className={feedCardSectionClass}>
-          <div className="-mt-8 flex flex-col items-center text-center">
+          <div className="-mt-9 flex flex-col items-center text-center">
             {loading || !user ? (
               <>
                 <Skeleton className="size-16 rounded-full" />
@@ -64,20 +64,20 @@ export function FeedLeftSidebar() {
                 />
                 <ProfileTrigger
                   userId={user.id}
-                  className="mt-2 font-semibold hover:underline"
+                  className="mt-2 text-base font-semibold hover:underline"
                 >
                   {user.name}
                 </ProfileTrigger>
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                   {user.bio || `@${user.username}`}
                 </p>
               </>
             )}
           </div>
 
-          <Separator className="my-3" />
+          <Separator className="my-4" />
 
-          <ItemGroup className="text-xs">
+          <ItemGroup className="gap-1 text-sm">
             <Item size="sm" className="justify-between p-0">
               <ItemDescription>Profile viewers</ItemDescription>
               <ItemTitle>128</ItemTitle>
@@ -86,7 +86,7 @@ export function FeedLeftSidebar() {
               <ItemDescription>Post impressions</ItemDescription>
               <ItemTitle>1,240</ItemTitle>
             </Item>
-            <Button variant="ghost" size="sm" className="h-auto px-0 text-xs" asChild>
+            <Button variant="ghost" size="sm" className="h-auto px-0 text-sm" asChild>
               <Link href="/followers">View all analytics</Link>
             </Button>
           </ItemGroup>

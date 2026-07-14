@@ -34,9 +34,9 @@ export default async function FeedPage() {
 
   return (
     <AppShell feedLayout>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)_300px] lg:gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[240px_minmax(0,1fr)_300px] lg:gap-6">
         <div className="hidden lg:block">
-          <div className="sticky top-[60px]">
+          <div className="sticky top-[72px]">
             <FeedLeftSidebar />
           </div>
         </div>
@@ -44,13 +44,13 @@ export default async function FeedPage() {
         <FeedPosts initialPosts={initialPosts} />
 
         <div className="hidden lg:block">
-          <div className="sticky top-[60px]">
+          <div className="sticky top-[72px]">
             <FeedRightSidebar initialSuggestedUsers={initialSuggestedUsers} />
           </div>
         </div>
       </div>
 
-      <div className="mt-6 space-y-3 lg:hidden">
+      <div className="mt-8 space-y-4 lg:hidden">
         <FeedLeftSidebar />
         <FeedRightSidebar initialSuggestedUsers={initialSuggestedUsers} />
       </div>

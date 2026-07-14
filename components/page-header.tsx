@@ -20,7 +20,7 @@ export function PageHeader({
   return (
     <Header
       className={cn(
-        "sticky top-0 z-40 h-14 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        "sticky top-0 z-40 h-14 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-5",
         className
       )}
     >
@@ -31,12 +31,12 @@ export function PageHeader({
           </Link>
         </Button>
       ) : (
-        <div className="w-8" />
+        <div className="w-9" />
       )}
-      <h1 className="flex-1 truncate text-center text-base font-semibold">
+      <h1 className="flex-1 truncate text-center text-lg font-semibold tracking-tight">
         {title}
       </h1>
-      <div className="flex w-8 items-center justify-end">{action}</div>
+      <div className="flex w-9 items-center justify-end">{action}</div>
     </Header>
   );
 }

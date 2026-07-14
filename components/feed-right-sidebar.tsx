@@ -55,10 +55,10 @@ export function FeedRightSidebar({
   }, [userId]);
 
   return (
-    <aside className="space-y-3">
+    <aside className="space-y-4">
       <Card padding="none" className={feedCardClass}>
         <CardHeader className={feedCardTitleClass}>
-          <CardTitle className="text-base">Add to your feed</CardTitle>
+          <CardTitle className="text-lg">Add to your feed</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {loadingUsers ? (

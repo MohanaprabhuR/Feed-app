@@ -118,7 +118,7 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
         )}
       </CardHeader>
       <CardContent className={feedCardContentClass}>
-        <p className="text-sm leading-relaxed">{post.content}</p>
+        <p className="text-base leading-relaxed">{post.content}</p>
         {post.video ? (
           <video
             src={post.video}

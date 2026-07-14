@@ -47,21 +47,21 @@ export default function SettingsPage() {
   return (
     <AppShell noPadding>
       <PageHeader title="Settings" backHref="/feed" />
-      <div className="p-4">
+      <div className="px-4 py-5 sm:px-5 sm:py-6">
         {settingsGroups.map((group, i) => (
-          <div key={group.title} className="mb-6">
-            <h2 className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <div key={group.title} className="mb-7">
+            <h2 className="mb-2.5 px-1 text-sm font-medium uppercase tracking-wider text-muted-foreground">
               {group.title}
             </h2>
-            <div className="rounded-lg border">
+            <div className="rounded-xl border">
               {group.items.map((item, j) => (
                 <div key={item.href + item.label}>
                   <Link
                     href={item.href}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+                    className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50"
                   >
                     <item.icon className="size-4 text-muted-foreground" />
-                    <span className="flex-1 text-sm">{item.label}</span>
+                    <span className="flex-1 text-base">{item.label}</span>
                     <ChevronRight className="size-4 text-muted-foreground" />
                   </Link>
                   {j < group.items.length - 1 && <Separator />}
@@ -74,10 +74,10 @@ export default function SettingsPage() {
 
         <Link
           href="/logout"
-          className="flex items-center gap-3 rounded-lg border border-destructive/20 px-4 py-3 text-destructive transition-colors hover:bg-destructive/10"
+          className="flex items-center gap-3 rounded-xl border border-destructive/20 px-4 py-3.5 text-destructive transition-colors hover:bg-destructive/10"
         >
           <LogOut className="size-4" />
-          <span className="text-sm font-medium">Sign out</span>
+          <span className="text-base font-medium">Sign out</span>
         </Link>
       </div>
     </AppShell>

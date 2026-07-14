@@ -36,7 +36,7 @@ export default function ChatPage({
           />
         }
       />
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4 sm:p-5">
         {chatMessages.map((msg) => {
           const isMe = msg.senderId === currentUser.id;
           return (
@@ -46,7 +46,7 @@ export default function ChatPage({
             >
               <div
                 className={cn(
-                  "max-w-[75%] rounded-2xl px-4 py-2 text-sm",
+                  "max-w-[80%] rounded-2xl px-4 py-2.5 text-base leading-relaxed",
                   isMe
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted"
@@ -55,7 +55,7 @@ export default function ChatPage({
                 <p>{msg.content}</p>
                 <p
                   className={cn(
-                    "mt-1 text-xs",
+                    "mt-1.5 text-sm",
                     isMe ? "text-primary-foreground/70" : "text-muted-foreground"
                   )}
                 >
@@ -66,10 +66,10 @@ export default function ChatPage({
           );
         })}
       </div>
-      <div className="sticky bottom-16 border-t bg-background p-4 md:bottom-0">
+      <div className="sticky bottom-16 border-t bg-background p-4 sm:px-5 md:bottom-0">
         <div className="flex gap-2">
-          <Input placeholder="Type a message..." className="flex-1" />
-          <Button size="sm" iconOnly>
+          <Input placeholder="Type a message..." className="flex-1" size="md" />
+          <Button size="md" iconOnly>
             <Send />
           </Button>
         </div>

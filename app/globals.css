@@ -597,7 +597,7 @@
 }
 
 @theme inline {
-  --tw-leading: 1rem;
+  --tw-leading: 1.5;
   /* Fonts — uses Inter from next/font in layout.tsx */
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
@@ -737,31 +737,32 @@
   /* Font Variation Settings */
   --font-variation-420: "wght" 420;
 
-  /* Font Size */
+  /* Font Size — readable LinkedIn-style scale */
   --text-2xs: 0.6875rem; /*11px*/
   --text-xs: 0.75rem; /*12px*/
-  --text-sm: 0.8125rem; /*13px*/
-  --text-base: 0.875rem; /*14px*/
-  --text-lg: 1rem; /*16px*/
-  --text-xl: 1.125rem; /*18px*/
-  --text-2xl: 1.25rem; /*20px*/
-  --text-3xl: 1.5rem; /*24px*/
-  --text-4xl: 1.625rem; /*26px*/
-  --text-5xl: 1.75rem; /*28px*/
-  --text-6xl: 2rem; /*32px*/
-  --text-7xl: 2.5rem; /*40px*/
-  --text-8xl: 2.75rem; /*44px*/
-  --text-9xl: 3rem; /*48px*/
-  --text-10xl: 3.25rem; /*52px*/
-  --text-11xl: 3.5rem; /*56px*/
-  --text-12xl: 4rem; /*64px*/
-  --text-13xl: 4.5rem; /*72px*/
-  --text-14xl: 5rem; /*80px*/
-  --text-15xl: 5.5rem; /*88px*/
+  --text-sm: 0.875rem; /*14px*/
+  --text-base: 0.9375rem; /*15px*/
+  --text-lg: 1.0625rem; /*17px*/
+  --text-xl: 1.25rem; /*20px*/
+  --text-2xl: 1.5rem; /*24px*/
+  --text-3xl: 1.75rem; /*28px*/
+  --text-4xl: 2rem; /*32px*/
+  --text-5xl: 2.25rem; /*36px*/
+  --text-6xl: 2.5rem; /*40px*/
+  --text-7xl: 2.75rem; /*44px*/
+  --text-8xl: 3rem; /*48px*/
+  --text-9xl: 3.5rem; /*56px*/
+  --text-10xl: 4rem; /*64px*/
+  --text-11xl: 4.5rem; /*72px*/
+  --text-12xl: 5rem; /*80px*/
+  --text-13xl: 5.5rem; /*88px*/
+  --text-14xl: 6rem; /*96px*/
+  --text-15xl: 6.5rem; /*104px*/
 
   /* Line Height */
-  --leading-tight: 1.15; /*115%*/
+  --leading-tight: 1.25; /*125%*/
   --leading-normal: 1.5; /*150%*/
+  --leading-relaxed: 1.65; /*165%*/
 
   /* Letter Spacing */
   --tracking-0: 0em;
@@ -844,7 +845,7 @@
     letter-spacing: var(--tracking-4);
   }
   body {
-    @apply bg-background text-foreground  font-sans;
+    @apply bg-background text-foreground font-sans text-base leading-normal;
   }
 
   svg {

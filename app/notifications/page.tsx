@@ -26,7 +26,7 @@ export default function NotificationsPage() {
               key={notification.id}
               href={notification.postId ? `/post/${notification.postId}/comments` : "/feed"}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50",
+                "flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-muted/50 sm:px-5",
                 !notification.read && "bg-primary/5"
               )}
             >
@@ -41,13 +41,13 @@ export default function NotificationsPage() {
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-sm">
+                <p className="text-base leading-relaxed">
                   {notification.user && (
-                    <span className="font-medium">{notification.user.name} </span>
+                    <span className="font-semibold">{notification.user.name} </span>
                   )}
                   {notification.message}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   {notification.createdAt}
                 </p>
               </div>

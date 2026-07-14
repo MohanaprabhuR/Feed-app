@@ -54,7 +54,7 @@ function NavItem({
       asChild
       variant="ghost"
       className={cn(
-        "relative flex min-w-[64px] h-auto flex-col items-center gap-0.5 px-1 py-1 text-[11px]",
+        "relative flex min-w-[72px] h-auto flex-col items-center gap-1 px-1.5 py-1.5 text-2xs font-medium",
         active ? "text-foreground" : "text-muted-foreground"
       )}
     >
@@ -64,7 +64,7 @@ function NavItem({
           <Badge
             variant="destructive"
             size="sm"
-            className="absolute right-2 top-0 size-4 p-0 text-[10px]"
+            className="absolute right-1.5 top-0 size-4 p-0 text-2xs"
           >
             {badge}
           </Badge>
@@ -87,7 +87,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-background md:hidden">
-      <div className="mx-auto flex h-14 max-w-lg items-center justify-around px-1">
+      <div className="mx-auto flex h-14 max-w-lg items-center justify-around px-2">
         {navItems.slice(0, 4).map((item) => (
           <NavItem
             key={item.href}
@@ -113,8 +113,8 @@ export function AppHeader() {
   }
 
   return (
-    <Header className="sticky top-0 z-40 h-[52px] w-full border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-4">
-      <div className="mx-auto flex h-full w-full max-w-[1128px] items-center gap-2">
+    <Header className="sticky top-0 z-40 h-14 w-full border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-5">
+      <div className="mx-auto flex h-full w-full max-w-[1128px] items-center gap-3">
       <Button asChild variant="ghost" size="sm" iconOnly className="shrink-0">
         <Link href="/feed">
           <Avatar size="2xl" className="rounded bg-primary">
