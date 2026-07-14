@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArticleCard } from "@/components/article-card";
 import { CreatePostComposer } from "@/components/create-post-composer";
 import { useCurrentUser } from "@/components/current-user-provider";
@@ -47,9 +48,21 @@ async function loadFeedPosts(): Promise<Post[]> {
 export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
   const { user } = useCurrentUser();
   const userId = user?.id;
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const editPostId = searchParams.get("edit");
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [loading, setLoading] = useState(initialPosts.length === 0);
   const [error, setError] = useState<string | null>(null);
+
+  const clearEditParam = useCallback(() => {
+    if (!searchParams.has("edit")) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("edit");
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  }, [pathname, router, searchParams]);
 
   const loadPosts = useCallback(async () => {
     try {
@@ -147,6 +160,14 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
 
       {posts.map((post) => {
         const isOwnPost = Boolean(user?.id && user.id === post.author.id);
+        const removePost = (postId: string) => {
+          setPosts((current) => current.filter((p) => p.id !== postId));
+        };
+        const updatePostInList = (updated: Post) => {
+          setPosts((current) =>
+            current.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)),
+          );
+        };
 
         return isArticle(post) ? (
           <ArticleCard
@@ -154,6 +175,13 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
             post={post}
             showActions
             canManage={isOwnPost}
+            initialEditOpen={isOwnPost && editPostId === post.id}
+            onEditClose={clearEditParam}
+            onUpdated={updatePostInList}
+            onDeleted={(postId) => {
+              removePost(postId);
+              clearEditParam();
+            }}
           />
         ) : (
           <PostCard
@@ -161,6 +189,13 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
             post={post}
             showActions
             canManage={isOwnPost}
+            initialEditOpen={isOwnPost && editPostId === post.id}
+            onEditClose={clearEditParam}
+            onUpdated={updatePostInList}
+            onDeleted={(postId) => {
+              removePost(postId);
+              clearEditParam();
+            }}
           />
         );
       })}

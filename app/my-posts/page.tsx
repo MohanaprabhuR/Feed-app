@@ -91,13 +91,38 @@ export default function MyPostsPage() {
 
         {!showLoading &&
           !error &&
-          posts.map((post) =>
-            isArticle(post) ? (
-              <ArticleCard key={post.id} post={post} showActions />
+          posts.map((post) => {
+            const removePost = (postId: string) => {
+              setPosts((current) => current.filter((p) => p.id !== postId));
+            };
+            const updatePostInList = (updated: Post) => {
+              setPosts((current) =>
+                current.map((p) =>
+                  p.id === updated.id ? { ...p, ...updated } : p,
+                ),
+              );
+            };
+
+            return isArticle(post) ? (
+              <ArticleCard
+                key={post.id}
+                post={post}
+                showActions
+                canManage
+                onUpdated={updatePostInList}
+                onDeleted={removePost}
+              />
             ) : (
-              <PostCard key={post.id} post={post} showActions canManage />
-            ),
-          )}
+              <PostCard
+                key={post.id}
+                post={post}
+                showActions
+                canManage
+                onUpdated={updatePostInList}
+                onDeleted={removePost}
+              />
+            );
+          })}
       </div>
     </AppShell>
   );

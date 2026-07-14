@@ -18,6 +18,7 @@ import { PostComments } from "@/components/post-comments";
 import { PostLikeButton } from "@/components/post-like-button";
 import { ProfileTrigger } from "@/components/profile-trigger";
 import { SharePostDialog } from "@/components/share-post-dialog";
+import { EditPostDialog } from "@/components/edit-post-dialog";
 import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,26 +54,36 @@ type ArticleCardProps = {
   post: Post;
   showActions?: boolean;
   canManage?: boolean;
+  initialEditOpen?: boolean;
   onUnsaved?: (postId: string) => void;
+  onUpdated?: (post: Post) => void;
+  onDeleted?: (postId: string) => void;
+  onEditClose?: () => void;
 };
 
 export function ArticleCard({
   post,
   showActions = true,
   canManage,
+  initialEditOpen = false,
   onUnsaved,
+  onUpdated,
+  onDeleted,
+  onEditClose,
 }: ArticleCardProps) {
   const { user } = useCurrentUser();
   const isOwnPost = canManage ?? Boolean(user?.id && user.id === post.author.id);
-  const readTime = getReadTimeMinutes(post.content);
-  const excerpt = getArticleExcerpt(post.content);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(initialEditOpen);
+  const [content, setContent] = useState(post.content);
   const [commentsCount, setCommentsCount] = useState(post.comments);
   const [likesCount, setLikesCount] = useState(post.likes);
   const [sharesCount, setSharesCount] = useState(post.shares);
   const [isSaved, setIsSaved] = useState(Boolean(post.isSaved));
   const [saving, setSaving] = useState(false);
+  const readTime = getReadTimeMinutes(content);
+  const excerpt = getArticleExcerpt(content);
 
   async function handleToggleSave() {
     if (!user) {
@@ -130,8 +141,8 @@ export function ArticleCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {isOwnPost ? (
-                <DropdownMenuItem asChild>
-                  <Link href={`/edit/${post.id}`}>Edit article</Link>
+                <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                  Edit article
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem asChild>
@@ -305,6 +316,24 @@ export function ArticleCard({
         sharePath={`/articles/${post.id}`}
         onShared={setSharesCount}
       />
+
+      {isOwnPost && editOpen && (
+        <EditPostDialog
+          post={{ ...post, content }}
+          open={editOpen}
+          onOpenChange={(open) => {
+            setEditOpen(open);
+            if (!open) onEditClose?.();
+          }}
+          onUpdated={(updated) => {
+            setContent(updated.content);
+            onUpdated?.(updated);
+          }}
+          onDeleted={(postId) => {
+            onDeleted?.(postId);
+          }}
+        />
+      )}
     </Card>
   );
 }

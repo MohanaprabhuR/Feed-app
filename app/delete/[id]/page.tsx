@@ -1,13 +1,13 @@
 "use client";
 
-import { notFound } from "next/navigation";
-import { use } from "react";
+import Link from "next/link";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
+import { useCurrentUser } from "@/components/current-user-provider";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,8 +19,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { getPostById } from "@/lib/mock-data";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
+import { appToast } from "@/lib/app-toast";
+import { getErrorMessage } from "@/lib/errors";
+import { deletePost, fetchPostById } from "@/lib/posts";
+import { createClient } from "@/lib/supabase/client";
+import type { Post } from "@/lib/types";
 
 export default function DeletePostPage({
   params,
@@ -28,15 +39,139 @@ export default function DeletePostPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const post = getPostById(id);
   const router = useRouter();
+  const { user, loading: userLoading } = useCurrentUser();
+  const [post, setPost] = useState<Post | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const [missing, setMissing] = useState(false);
 
-  if (!post) notFound();
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      if (userLoading) return;
+
+      if (!user) {
+        if (!cancelled) {
+          setLoading(false);
+          setForbidden(true);
+        }
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const supabase = createClient();
+        const data = await fetchPostById(supabase, id, { userId: user.id });
+
+        if (!cancelled) {
+          if (!data) {
+            setMissing(true);
+            return;
+          }
+          if (data.author.id !== user.id) {
+            setForbidden(true);
+            return;
+          }
+          setPost(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(getErrorMessage(err, "Could not load post."));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, user, userLoading]);
+
+  async function handleDelete() {
+    if (!user || !post || deleting) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      await deletePost(supabase, post.id, user.id);
+      appToast.success("Post deleted", "Your post has been removed.");
+      router.push("/feed");
+      router.refresh();
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not delete post."));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (userLoading || loading) {
+    return (
+      <AppShell noPadding>
+        <PageHeader title="Delete Post" backHref="/feed" />
+        <div className="p-8">
+          <Skeleton className="mx-auto h-48 max-w-md rounded-xl" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (forbidden) {
+    return (
+      <AppShell noPadding>
+        <PageHeader title="Delete Post" backHref="/feed" />
+        <Empty className="border-0 py-16">
+          <EmptyContent>
+            <EmptyTitle>You can&apos;t delete this post</EmptyTitle>
+            <EmptyDescription>
+              Only the author can delete a post.
+            </EmptyDescription>
+            <Button size="sm" asChild>
+              <Link href="/feed">Back to feed</Link>
+            </Button>
+          </EmptyContent>
+        </Empty>
+      </AppShell>
+    );
+  }
+
+  if (missing || !post) {
+    return (
+      <AppShell noPadding>
+        <PageHeader title="Delete Post" backHref="/feed" />
+        <Empty className="border-0 py-16">
+          <EmptyContent>
+            <EmptyTitle>Post not found</EmptyTitle>
+            <EmptyDescription>
+              This post may already have been deleted.
+            </EmptyDescription>
+            <Button size="sm" asChild>
+              <Link href="/feed">Back to feed</Link>
+            </Button>
+          </EmptyContent>
+        </Empty>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell noPadding>
-      <PageHeader title="Delete Post" backHref={`/edit/${id}`} />
+      <PageHeader title="Delete Post" backHref="/feed" />
       <div className="flex flex-col items-center gap-6 p-8 text-center">
+        {error && (
+          <Alert variant="error" className="w-full max-w-md">
+            <AlertContent>
+              <AlertDescription>{error}</AlertDescription>
+            </AlertContent>
+          </Alert>
+        )}
         <div className="flex size-16 items-center justify-center rounded-full bg-destructive/10">
           <Trash2 className="size-8 text-destructive" />
         </div>
@@ -47,13 +182,18 @@ export default function DeletePostPage({
             from your profile and the feed.
           </p>
         </div>
-        <blockquote className="w-full rounded-lg border bg-muted/50 p-4 text-left text-sm">
+        <blockquote className="w-full max-w-md rounded-lg border bg-muted/50 p-4 text-left text-sm">
           {post.content}
         </blockquote>
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" className="w-full max-w-xs">
+            <Button
+              variant="destructive"
+              className="w-full max-w-xs"
+              disabled={deleting}
+              loading={deleting}
+            >
               Delete post
             </Button>
           </AlertDialogTrigger>
@@ -65,19 +205,10 @@ export default function DeletePostPage({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => {
-                  toast.custom((t) => (
-                    <Alert variant="success">
-                      <AlertTitle>Post deleted</AlertTitle>
-                      <AlertDescription>
-                        Your post has been deleted.
-                      </AlertDescription>
-                    </Alert>
-                  ));
-                  router.push("/feed");
-                }}
+                disabled={deleting}
+                onClick={() => void handleDelete()}
               >
                 Delete
               </AlertDialogAction>
@@ -85,7 +216,7 @@ export default function DeletePostPage({
           </AlertDialogContent>
         </AlertDialog>
 
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button variant="outline" onClick={() => router.back()} disabled={deleting}>
           Cancel
         </Button>
       </div>

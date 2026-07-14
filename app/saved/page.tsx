@@ -110,28 +110,41 @@ export default function SavedPostsPage() {
         {!showLoading &&
           user &&
           !error &&
-          posts.map((post) =>
-            isArticle(post) ? (
+          posts.map((post) => {
+            const isOwnPost = user.id === post.author.id;
+            const removePost = (postId: string) => {
+              setPosts((current) => current.filter((p) => p.id !== postId));
+            };
+            const updatePostInList = (updated: Post) => {
+              setPosts((current) =>
+                current.map((p) =>
+                  p.id === updated.id ? { ...p, ...updated } : p,
+                ),
+              );
+            };
+
+            return isArticle(post) ? (
               <ArticleCard
                 key={post.id}
                 post={post}
                 showActions
-                onUnsaved={(postId) =>
-                  setPosts((current) => current.filter((p) => p.id !== postId))
-                }
+                canManage={isOwnPost}
+                onUpdated={updatePostInList}
+                onDeleted={removePost}
+                onUnsaved={removePost}
               />
             ) : (
               <PostCard
                 key={post.id}
                 post={post}
                 showActions
-                canManage={user.id === post.author.id}
-                onUnsaved={(postId) =>
-                  setPosts((current) => current.filter((p) => p.id !== postId))
-                }
+                canManage={isOwnPost}
+                onUpdated={updatePostInList}
+                onDeleted={removePost}
+                onUnsaved={removePost}
               />
-            ),
-          )}
+            );
+          })}
       </div>
     </AppShell>
   );

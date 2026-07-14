@@ -441,3 +441,66 @@ export async function createArticle(
 
   return postRowToPost(data as PostRow)!;
 }
+
+export async function updatePost(
+  supabase: SupabaseClient,
+  postId: string,
+  authorId: string,
+  content: string,
+  media?: { image?: string; video?: string; file?: string } | null,
+) {
+  const trimmed = content.trim();
+  const replacingMedia = media !== undefined;
+  const hasNewMedia = Boolean(media?.image || media?.video || media?.file);
+
+  if (replacingMedia && !trimmed && !hasNewMedia) {
+    throw new Error("Post must include text or an attachment.");
+  }
+
+  const mode = await resolveSchemaMode(supabase);
+  const select = activeSelect(mode);
+
+  const payload: { content: string; image?: string | null } = {
+    content: trimmed,
+  };
+
+  if (media === null) {
+    payload.image = null;
+  } else if (media) {
+    payload.image = media.video ?? media.image ?? media.file ?? null;
+  }
+
+  const { data, error } = await supabase
+    .from("posts")
+    .update(payload)
+    .eq("id", postId)
+    .eq("author_id", authorId)
+    .select(select)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) {
+    throw new Error("You can only edit your own posts.");
+  }
+
+  return postRowToPost(withLegacyDefaults(data as unknown as PostRow))!;
+}
+
+export async function deletePost(
+  supabase: SupabaseClient,
+  postId: string,
+  authorId: string,
+) {
+  const { data, error } = await supabase
+    .from("posts")
+    .delete()
+    .eq("id", postId)
+    .eq("author_id", authorId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) {
+    throw new Error("You can only delete your own posts.");
+  }
+}
