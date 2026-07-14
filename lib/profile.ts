@@ -9,6 +9,11 @@ export type ProfileRow = {
   email?: string | null;
   bio?: string | null;
   avatar?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip_code?: string | null;
   followers_count?: number | null;
   following_count?: number | null;
   posts_count?: number | null;
@@ -19,8 +24,14 @@ export function profileToUser(row: ProfileRow): User {
     id: row.id,
     name: row.name,
     username: row.username,
+    email: row.email || undefined,
     avatar: row.avatar || getDefaultAvatar(row.username),
     bio: row.bio || "",
+    phone: row.phone || undefined,
+    address: row.address || undefined,
+    city: row.city || undefined,
+    state: row.state || undefined,
+    zipCode: row.zip_code || undefined,
     followers: row.followers_count ?? 0,
     following: row.following_count ?? 0,
     posts: row.posts_count ?? 0,

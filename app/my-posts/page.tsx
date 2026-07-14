@@ -1,19 +1,31 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { AppShell } from "@/components/app-shell";
+import { ArticleCard } from "@/components/article-card";
 import { PageHeader } from "@/components/page-header";
 import { PostCard } from "@/components/post-card";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isArticle } from "@/lib/articles";
+import { getErrorMessage } from "@/lib/errors";
 import { fetchPostsByAuthor } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
 
 export default function MyPostsPage() {
-  const { user } = useCurrentUser();
+  const { user, loading: userLoading } = useCurrentUser();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadPosts = useCallback(async () => {
     if (!user) {
@@ -22,41 +34,70 @@ export default function MyPostsPage() {
       return;
     }
 
+    setLoading(true);
+    setError(null);
+
     try {
       const supabase = createClient();
       const data = await fetchPostsByAuthor(supabase, user.id, {
         userId: user.id,
       });
       setPosts(data);
-    } catch {
+    } catch (err) {
       setPosts([]);
+      setError(getErrorMessage(err, "Could not load your posts."));
     } finally {
       setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    loadPosts();
+    void loadPosts();
   }, [loadPosts]);
+
+  const showLoading = userLoading || loading;
 
   return (
     <AppShell noPadding>
-      <PageHeader title="My Posts" backHref="/feed" />
-      <div className="space-y-4 p-4">
-        {loading &&
-          Array.from({ length: 2 }).map((_, i) => (
+      <PageHeader title="My Posts" backHref="/profile" />
+      <div className="mx-auto max-w-2xl space-y-4 px-4 py-5 sm:px-5">
+        {showLoading &&
+          Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-40 w-full rounded-xl" />
           ))}
 
-        {!loading && posts.length === 0 && (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            You haven&apos;t posted anything yet.
-          </p>
+        {!showLoading && error && (
+          <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-6 text-center">
+            <p className="text-sm text-destructive">{error}</p>
+            <Button type="button" size="sm" variant="outline" onClick={() => void loadPosts()}>
+              Try again
+            </Button>
+          </div>
         )}
 
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} showActions />
-        ))}
+        {!showLoading && !error && posts.length === 0 && (
+          <Empty className="border py-16">
+            <EmptyContent>
+              <EmptyTitle>No posts yet</EmptyTitle>
+              <EmptyDescription>
+                Everything you share on the feed will show up here.
+              </EmptyDescription>
+              <Button size="sm" asChild>
+                <Link href="/feed">Create a post</Link>
+              </Button>
+            </EmptyContent>
+          </Empty>
+        )}
+
+        {!showLoading &&
+          !error &&
+          posts.map((post) =>
+            isArticle(post) ? (
+              <ArticleCard key={post.id} post={post} showActions />
+            ) : (
+              <PostCard key={post.id} post={post} showActions canManage />
+            ),
+          )}
       </div>
     </AppShell>
   );

@@ -5,14 +5,15 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Bookmark,
+  BookmarkCheck,
   MessageCircle,
   MoreHorizontal,
   Newspaper,
   Repeat2,
   Send,
 } from "lucide-react";
-import { toast } from "sonner";
 import { getArticleExcerpt, getReadTimeMinutes } from "@/lib/articles";
+import { useCurrentUser } from "@/components/current-user-provider";
 import { PostComments } from "@/components/post-comments";
 import { PostLikeButton } from "@/components/post-like-button";
 import { ProfileTrigger } from "@/components/profile-trigger";
@@ -33,6 +34,10 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
+import { appToast } from "@/lib/app-toast";
+import { getErrorMessage } from "@/lib/errors";
+import { toggleSavePost } from "@/lib/saves";
+import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
 import {
   feedCardActionsClass,
@@ -43,14 +48,22 @@ import {
   feedCardStatsClass,
 } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
-import { Alert, AlertContent, AlertDescription, AlertTitle } from "./ui/alert";
 
 type ArticleCardProps = {
   post: Post;
   showActions?: boolean;
+  canManage?: boolean;
+  onUnsaved?: (postId: string) => void;
 };
 
-export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
+export function ArticleCard({
+  post,
+  showActions = true,
+  canManage,
+  onUnsaved,
+}: ArticleCardProps) {
+  const { user } = useCurrentUser();
+  const isOwnPost = canManage ?? Boolean(user?.id && user.id === post.author.id);
   const readTime = getReadTimeMinutes(post.content);
   const excerpt = getArticleExcerpt(post.content);
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -58,6 +71,36 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
   const [commentsCount, setCommentsCount] = useState(post.comments);
   const [likesCount, setLikesCount] = useState(post.likes);
   const [sharesCount, setSharesCount] = useState(post.shares);
+  const [isSaved, setIsSaved] = useState(Boolean(post.isSaved));
+  const [saving, setSaving] = useState(false);
+
+  async function handleToggleSave() {
+    if (!user) {
+      appToast.error("Sign in required", "Sign in to save posts.");
+      return;
+    }
+    if (saving) return;
+
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      const next = await toggleSavePost(supabase, user.id, post.id, isSaved);
+      setIsSaved(next);
+      if (next) {
+        appToast.success("Article saved", "Find it anytime on Saved Posts.");
+      } else {
+        appToast.success("Article removed", "Removed from your saved posts.");
+        onUnsaved?.(post.id);
+      }
+    } catch (err) {
+      appToast.error(
+        "Could not update saved article",
+        getErrorMessage(err, "Please try again."),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Card padding="none" className={feedCardClass}>
@@ -86,30 +129,34 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`/articles/${post.id}`}>View article</Link>
-              </DropdownMenuItem>
+              {isOwnPost ? (
+                <DropdownMenuItem asChild>
+                  <Link href={`/edit/${post.id}`}>Edit article</Link>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem asChild>
+                  <Link href={`/articles/${post.id}`}>View article</Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
-                onClick={() =>
-                  toast.custom((t) => (
-                    <Alert variant="success">
-                      <AlertContent>
-                        <AlertTitle>Article saved to bookmarks</AlertTitle>
-                        <AlertDescription>
-                          You have saved the article to your bookmarks.
-                        </AlertDescription>
-                      </AlertContent>
-                    </Alert>
-                  ))
-                }
+                disabled={saving}
+                onClick={() => void handleToggleSave()}
               >
-                <Bookmark className="size-4" />
-                Save article
+                {isSaved ? (
+                  <BookmarkCheck className="size-4" />
+                ) : (
+                  <Bookmark className="size-4" />
+                )}
+                {isSaved ? "Unsave article" : "Save article"}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" asChild>
-                <Link href={`/report/${post.id}`}>Report</Link>
-              </DropdownMenuItem>
+              {!isOwnPost && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" asChild>
+                    <Link href={`/report/${post.id}`}>Report</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -207,16 +254,7 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
             className="h-9 justify-start"
             aria-label="Repost"
             onClick={() =>
-              toast.custom(() => (
-                <Alert variant="success">
-                  <AlertContent>
-                    <AlertTitle>Repost coming soon</AlertTitle>
-                    <AlertDescription>
-                      Repost will be available in a future update.
-                    </AlertDescription>
-                  </AlertContent>
-                </Alert>
-              ))
+              appToast.info("Repost coming soon", "Repost will be available in a future update.")
             }
           >
             <Repeat2 className="size-4" />
@@ -230,6 +268,25 @@ export function ArticleCard({ post, showActions = true }: ArticleCardProps) {
             onClick={() => setShareOpen(true)}
           >
             <Send className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            className={cn(
+              "ml-auto h-9 justify-start",
+              isSaved && "text-foreground",
+            )}
+            aria-label={isSaved ? "Unsave article" : "Save article"}
+            aria-pressed={isSaved}
+            disabled={saving}
+            onClick={() => void handleToggleSave()}
+          >
+            {isSaved ? (
+              <BookmarkCheck className="size-4 fill-current" />
+            ) : (
+              <Bookmark className="size-4" />
+            )}
           </Button>
         </div>
       </CardFooter>

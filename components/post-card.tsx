@@ -5,13 +5,14 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Bookmark,
+  BookmarkCheck,
   FileText,
   MessageCircle,
   MoreHorizontal,
   Repeat2,
   Send,
 } from "lucide-react";
-import { toast } from "sonner";
+import { useCurrentUser } from "@/components/current-user-provider";
 import { PostComments } from "@/components/post-comments";
 import { PostLikeButton } from "@/components/post-like-button";
 import { ProfileTrigger } from "@/components/profile-trigger";
@@ -38,6 +39,10 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
+import { appToast } from "@/lib/app-toast";
+import { getErrorMessage } from "@/lib/errors";
+import { toggleSavePost } from "@/lib/saves";
+import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
 import {
   feedCardActionsClass,
@@ -48,19 +53,57 @@ import {
   feedCardStatsClass,
 } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
-import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
 
 type PostCardProps = {
   post: Post;
   showActions?: boolean;
+  canManage?: boolean;
+  onUnsaved?: (postId: string) => void;
 };
 
-export function PostCard({ post, showActions = true }: PostCardProps) {
+export function PostCard({
+  post,
+  showActions = true,
+  canManage,
+  onUnsaved,
+}: PostCardProps) {
+  const { user } = useCurrentUser();
+  const isOwnPost = canManage ?? Boolean(user?.id && user.id === post.author.id);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [commentsCount, setCommentsCount] = useState(post.comments);
   const [likesCount, setLikesCount] = useState(post.likes);
   const [sharesCount, setSharesCount] = useState(post.shares);
+  const [isSaved, setIsSaved] = useState(Boolean(post.isSaved));
+  const [saving, setSaving] = useState(false);
+
+  async function handleToggleSave() {
+    if (!user) {
+      appToast.error("Sign in required", "Sign in to save posts.");
+      return;
+    }
+    if (saving) return;
+
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      const next = await toggleSavePost(supabase, user.id, post.id, isSaved);
+      setIsSaved(next);
+      if (next) {
+        appToast.success("Post saved", "Find it anytime on Saved Posts.");
+      } else {
+        appToast.success("Post removed", "Removed from your saved posts.");
+        onUnsaved?.(post.id);
+      }
+    } catch (err) {
+      appToast.error(
+        "Could not update saved post",
+        getErrorMessage(err, "Please try again."),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Card padding="none" className={feedCardClass}>
@@ -89,30 +132,30 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`/edit/${post.id}`}>Edit post</Link>
-              </DropdownMenuItem>
+              {isOwnPost && (
+                <DropdownMenuItem asChild>
+                  <Link href={`/edit/${post.id}`}>Edit post</Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
-                onClick={() =>
-                  toast.custom((t) => (
-                    <Alert variant="success">
-                      <AlertContent>
-                        <AlertTitle>Post saved to bookmarks</AlertTitle>
-                        <AlertDescription>
-                          You have saved the post to your bookmarks.
-                        </AlertDescription>
-                      </AlertContent>
-                    </Alert>
-                  ))
-                }
+                disabled={saving}
+                onClick={() => void handleToggleSave()}
               >
-                <Bookmark className="size-4" />
-                Save post
+                {isSaved ? (
+                  <BookmarkCheck className="size-4" />
+                ) : (
+                  <Bookmark className="size-4" />
+                )}
+                {isSaved ? "Unsave post" : "Save post"}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" asChild>
-                <Link href={`/report/${post.id}`}>Report post</Link>
-              </DropdownMenuItem>
+              {!isOwnPost && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" asChild>
+                    <Link href={`/report/${post.id}`}>Report post</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -205,16 +248,7 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
             className="h-9 justify-start"
             aria-label="Repost"
             onClick={() =>
-              toast.custom(() => (
-                <Alert variant="success">
-                  <AlertContent>
-                    <AlertTitle>Repost coming soon</AlertTitle>
-                    <AlertDescription>
-                      Repost will be available in a future update.
-                    </AlertDescription>
-                  </AlertContent>
-                </Alert>
-              ))
+              appToast.info("Repost coming soon", "Repost will be available in a future update.")
             }
           >
             <Repeat2 className="size-4" />
@@ -228,6 +262,25 @@ export function PostCard({ post, showActions = true }: PostCardProps) {
             onClick={() => setShareOpen(true)}
           >
             <Send className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            className={cn(
+              "ml-auto h-9 justify-start",
+              isSaved && "text-foreground",
+            )}
+            aria-label={isSaved ? "Unsave post" : "Save post"}
+            aria-pressed={isSaved}
+            disabled={saving}
+            onClick={() => void handleToggleSave()}
+          >
+            {isSaved ? (
+              <BookmarkCheck className="size-4 fill-current" />
+            ) : (
+              <Bookmark className="size-4" />
+            )}
           </Button>
         </div>
       </CardFooter>

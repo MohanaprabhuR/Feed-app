@@ -86,8 +86,20 @@ export function validateLoginInput(username: string, password: string): string |
   return null;
 }
 
+/** UI Faces human avatars: https://uifaces.co/category/human (222 images). */
+const UI_FACES_HUMAN_COUNT = 222;
+
+function hashUsernameToAvatarId(username: string) {
+  let hash = 0;
+  for (const char of username.toLowerCase()) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+  return (hash % UI_FACES_HUMAN_COUNT) + 1;
+}
+
 export function getDefaultAvatar(username: string) {
-  return `https://i.pravatar.cc/150?u=${encodeURIComponent(username)}`;
+  const id = hashUsernameToAvatarId(username.trim() || "user");
+  return `https://mockmind-api.uifaces.co/content/human/${id}.jpg`;
 }
 
 export function formatAuthError(message: string): string {

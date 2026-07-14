@@ -18,9 +18,7 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isArticle } from "@/lib/articles";
-import { fetchPosts } from "@/lib/posts";
 import { getErrorMessage } from "@/lib/errors";
-import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
@@ -28,6 +26,23 @@ import { cn } from "@/lib/utils";
 type FeedPostsProps = {
   initialPosts?: Post[];
 };
+
+async function loadFeedPosts(): Promise<Post[]> {
+  const response = await fetch("/api/posts", {
+    method: "GET",
+    cache: "no-store",
+  });
+  const payload = (await response.json()) as {
+    posts?: Post[];
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not load posts.");
+  }
+
+  return payload.posts ?? [];
+}
 
 export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
   const { user } = useCurrentUser();
@@ -38,16 +53,15 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
 
   const loadPosts = useCallback(async () => {
     try {
-      const supabase = createClient();
-      const data = await fetchPosts(supabase, { userId });
+      const data = await loadFeedPosts();
       setPosts(data);
       setError(null);
-    } catch (error) {
-      setError(getErrorMessage(error, "Could not load posts."));
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not load posts."));
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   const handlePosted = useCallback(
     (newPost?: Post) => {
@@ -67,18 +81,9 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
   useEffect(() => {
     void loadPosts();
 
-    const supabase = createClient();
-
-    const channel = supabase
-      .channel("feed-posts")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "posts" },
-        () => {
-          void loadPosts();
-        },
-      )
-      .subscribe();
+    const timer = window.setInterval(() => {
+      void loadPosts();
+    }, 30_000);
 
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") {
@@ -89,10 +94,10 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(timer);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [loadPosts]);
+  }, [loadPosts, userId]);
 
   return (
     <div className="min-w-0 space-y-3">
@@ -140,21 +145,25 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
         </Empty>
       )}
 
-      {posts.map((post) =>
-        isArticle(post) ? (
+      {posts.map((post) => {
+        const isOwnPost = Boolean(user?.id && user.id === post.author.id);
+
+        return isArticle(post) ? (
           <ArticleCard
             key={post.id}
             post={post}
-            showActions={user?.id === post.author.id}
+            showActions
+            canManage={isOwnPost}
           />
         ) : (
           <PostCard
             key={post.id}
             post={post}
-            showActions={user?.id === post.author.id}
+            showActions
+            canManage={isOwnPost}
           />
-        ),
-      )}
+        );
+      })}
     </div>
   );
 }

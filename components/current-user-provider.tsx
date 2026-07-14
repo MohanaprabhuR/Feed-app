@@ -67,6 +67,7 @@ export function CurrentUserProvider({
         id: authUser.id,
         name: authUser.user_metadata?.name || "User",
         username,
+        email: authUser.email || undefined,
         avatar: getDefaultAvatar(username),
         bio: "",
         followers: 0,

@@ -14,6 +14,7 @@ export type PostRow = {
   comments_count: number;
   shares_count: number;
   created_at: string;
+  author_id?: string | null;
   author: ProfileRow | ProfileRow[] | null;
 };
 
@@ -31,6 +32,7 @@ const postSelect = `
   comments_count,
   shares_count,
   created_at,
+  author_id,
   author:profiles!author_id (
     id,
     name,
@@ -51,6 +53,7 @@ const legacyPostSelect = `
   comments_count,
   shares_count,
   created_at,
+  author_id,
   author:profiles!author_id (
     id,
     name,
@@ -65,7 +68,10 @@ const legacyPostSelect = `
 
 function normalizePostRow(row: PostRow) {
   const author = Array.isArray(row.author) ? row.author[0] : row.author;
-  return { ...row, author };
+  return {
+    ...row,
+    author: author ?? (row.author_id ? getFallbackAuthor(row.author_id) : null),
+  };
 }
 
 function getFallbackAuthor(authorId?: string): ProfileRow {
@@ -208,11 +214,12 @@ async function withLikedState(
   if (!userId || posts.length === 0) return posts;
 
   const { fetchUserReactions } = await import("@/lib/likes");
-  const reactions = await fetchUserReactions(
-    supabase,
-    userId,
-    posts.map((post) => post.id)
-  );
+  const { fetchSavedPostIds } = await import("@/lib/saves");
+  const postIds = posts.map((post) => post.id);
+  const [reactions, savedIds] = await Promise.all([
+    fetchUserReactions(supabase, userId, postIds),
+    fetchSavedPostIds(supabase, userId, postIds),
+  ]);
 
   return posts.map((post) => {
     const reaction = reactions.get(post.id) ?? null;
@@ -220,22 +227,97 @@ async function withLikedState(
       ...post,
       isLiked: reaction !== null,
       reaction,
+      isSaved: savedIds.has(post.id),
     };
   });
 }
 
+async function loadAllPostRows(reader: SupabaseClient) {
+  // Prefer admin reader when available so a misconfigured RLS can't hide
+  // other users' posts from the shared feed.
+  const mode = await resolveSchemaMode(reader);
+
+  const result =
+    mode === "modern"
+      ? await reader
+          .from("posts")
+          .select(
+            "id, content, image, post_type, title, likes_count, comments_count, shares_count, created_at, author_id",
+          )
+          .order("created_at", { ascending: false })
+      : await reader
+          .from("posts")
+          .select(
+            "id, content, image, likes_count, comments_count, shares_count, created_at, author_id",
+          )
+          .order("created_at", { ascending: false });
+
+  if (result.error) throw result.error;
+
+  return normalizeRows(
+    (result.data as unknown as PostRow[] | null) ?? null,
+  ).map(withLegacyDefaults);
+}
+
+async function loadAuthorsById(
+  reader: SupabaseClient,
+  authorIds: string[],
+): Promise<Map<string, ProfileRow>> {
+  if (authorIds.length === 0) return new Map();
+
+  const { data: profiles, error: profileError } = await reader
+    .from("profiles")
+    .select(
+      "id, name, username, avatar, bio, followers_count, following_count, posts_count",
+    )
+    .in("id", authorIds);
+
+  if (profileError || !profiles) return new Map();
+
+  return new Map(
+    profiles.map((profile) => [profile.id as string, profile as ProfileRow]),
+  );
+}
+
+/**
+ * Feed posts from every author. Never filters by the signed-in user.
+ * `userId` is only used to attach like/saved state for the current viewer.
+ */
 export async function fetchPosts(
   supabase: SupabaseClient,
-  options: { userId?: string | null } = {}
+  options: { userId?: string | null; reader?: SupabaseClient } = {},
 ) {
-  const rows = await queryPosts(supabase, (select) =>
-    supabase.from("posts").select(select).order("created_at", { ascending: false })
-  );
+  // Prefer service-role reader on the server so misconfigured RLS can't hide
+  // other authors. Never use the admin client in the browser.
+  let reader = options.reader ?? supabase;
+  if (!options.reader && typeof window === "undefined") {
+    const { getAdminClient } = await import("@/lib/supabase/admin");
+    reader = getAdminClient() ?? supabase;
+  }
 
-  const posts = rows
-    .map((row) => postRowToPost(row))
+  const postRows = await loadAllPostRows(reader);
+  const authorIds = [
+    ...new Set(
+      postRows
+        .map((row) => row.author_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const authorsById = await loadAuthorsById(reader, authorIds);
+
+  const posts = postRows
+    .map((row) =>
+      postRowToPost({
+        ...row,
+        author: row.author_id
+          ? (authorsById.get(row.author_id) ?? getFallbackAuthor(row.author_id))
+          : getFallbackAuthor(),
+      }),
+    )
     .filter((post): post is Post => post !== null);
 
+  // Likes / saves still use the viewer client (RLS-aware for that user).
   return withLikedState(supabase, posts, options.userId);
 }
 

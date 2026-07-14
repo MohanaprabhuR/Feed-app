@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 type AppShellProps = {
   children: React.ReactNode;
   className?: string;
+  shellClassName?: string;
   noPadding?: boolean;
   wide?: boolean;
   feedLayout?: boolean;
@@ -12,6 +13,7 @@ type AppShellProps = {
 export function AppShell({
   children,
   className,
+  shellClassName,
   noPadding,
   wide,
   feedLayout,
@@ -20,7 +22,8 @@ export function AppShell({
     <div
       className={cn(
         "flex min-h-full flex-col",
-        feedLayout && "bg-muted/40 dark:bg-background"
+        feedLayout && "bg-muted/40 dark:bg-background",
+        shellClassName
       )}
     >
       <AppHeader />

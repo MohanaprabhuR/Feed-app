@@ -32,6 +32,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "mockmind-api.uifaces.co",
+        pathname: "/content/human/**",
+      },
+      {
+        protocol: "https",
         hostname: "i.pravatar.cc",
       },
       ...(supabaseHostname

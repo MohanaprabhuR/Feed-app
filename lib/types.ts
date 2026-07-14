@@ -2,8 +2,14 @@ export type User = {
   id: string;
   name: string;
   username: string;
+  email?: string;
   avatar: string;
   bio: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
   followers: number;
   following: number;
   posts: number;

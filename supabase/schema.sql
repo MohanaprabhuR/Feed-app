@@ -8,6 +8,11 @@ create table if not exists public.profiles (
   email text,
   bio text default '',
   avatar text,
+  phone text,
+  address text,
+  city text,
+  state text,
+  zip_code text,
   followers_count integer default 0,
   following_count integer default 0,
   posts_count integer default 0,
@@ -16,12 +21,18 @@ create table if not exists public.profiles (
 );
 
 alter table public.profiles add column if not exists email text;
+alter table public.profiles add column if not exists phone text;
+alter table public.profiles add column if not exists address text;
+alter table public.profiles add column if not exists city text;
+alter table public.profiles add column if not exists state text;
+alter table public.profiles add column if not exists zip_code text;
 
 alter table public.profiles enable row level security;
 
 drop policy if exists "Profiles are viewable by everyone" on public.profiles;
 create policy "Profiles are viewable by everyone"
   on public.profiles for select
+  to anon, authenticated
   using (true);
 
 drop policy if exists "Users can insert their own profile" on public.profiles;
@@ -56,7 +67,9 @@ begin
     coalesce(new.raw_user_meta_data->>'name', 'User'),
     coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
     new.email,
-    'https://i.pravatar.cc/150?u=' || coalesce(new.raw_user_meta_data->>'username', new.id::text)
+    'https://mockmind-api.uifaces.co/content/human/' ||
+      ((abs(hashtext(coalesce(new.raw_user_meta_data->>'username', new.id::text))) % 222) + 1)::text ||
+      '.jpg'
   );
   return new;
 end;
@@ -93,6 +106,7 @@ alter table public.posts enable row level security;
 drop policy if exists "Posts are viewable by everyone" on public.posts;
 create policy "Posts are viewable by everyone"
   on public.posts for select
+  to anon, authenticated
   using (true);
 
 drop policy if exists "Users can create their own posts" on public.posts;
@@ -495,3 +509,32 @@ create trigger on_post_share_created
 
 alter table public.follows replica identity full;
 alter table public.post_shares replica identity full;
+
+-- Saved posts
+create table if not exists public.post_saves (
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  post_id uuid references public.posts(id) on delete cascade not null,
+  created_at timestamptz default now() not null,
+  primary key (user_id, post_id)
+);
+
+create index if not exists post_saves_user_id_idx on public.post_saves (user_id);
+create index if not exists post_saves_post_id_idx on public.post_saves (post_id);
+create index if not exists post_saves_created_at_idx on public.post_saves (created_at desc);
+
+alter table public.post_saves enable row level security;
+
+drop policy if exists "Users can view their own saved posts" on public.post_saves;
+create policy "Users can view their own saved posts"
+  on public.post_saves for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can save posts" on public.post_saves;
+create policy "Users can save posts"
+  on public.post_saves for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can unsave posts" on public.post_saves;
+create policy "Users can unsave posts"
+  on public.post_saves for delete
+  using (auth.uid() = user_id);

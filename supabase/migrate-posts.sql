@@ -18,6 +18,7 @@ alter table public.posts enable row level security;
 drop policy if exists "Posts are viewable by everyone" on public.posts;
 create policy "Posts are viewable by everyone"
   on public.posts for select
+  to anon, authenticated
   using (true);
 
 drop policy if exists "Users can create their own posts" on public.posts;

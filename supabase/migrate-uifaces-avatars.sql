@@ -1,7 +1,6 @@
--- Run ONLY this if you already ran the original schema and just need the email column.
+-- Switch default / existing pravatar URLs to UI Faces human avatars:
+-- https://uifaces.co/category/human (mockmind-api.uifaces.co)
 -- Safe to re-run.
-
-alter table public.profiles add column if not exists email text;
 
 create or replace function public.handle_new_user()
 returns trigger as $$
@@ -20,12 +19,11 @@ begin
 end;
 $$ language plpgsql security definer;
 
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
-
-update public.profiles p
-set email = u.email
-from auth.users u
-where p.id = u.id and p.email is null;
+update public.profiles
+set avatar =
+  'https://mockmind-api.uifaces.co/content/human/' ||
+  ((abs(hashtext(coalesce(username, id::text))) % 222) + 1)::text ||
+  '.jpg'
+where avatar is null
+   or avatar = ''
+   or avatar like 'https://i.pravatar.cc/%';

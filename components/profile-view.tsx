@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Settings } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
-import { PostCard } from "@/components/post-card";
 import { ProfileEditForm } from "@/components/profile-edit-form";
 import { ProfileGeneralSettings } from "@/components/profile-general-settings";
 import { UserAvatar } from "@/components/user-avatar";
@@ -18,7 +16,6 @@ import {
 } from "@/components/ui/empty";
 import {
   Item,
-  ItemActions,
   ItemContent,
   ItemDescription,
   ItemTitle,
@@ -26,9 +23,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { getUserById } from "@/lib/mock-data";
 import { fetchProfileById } from "@/lib/profile";
-import { fetchPostsByAuthor } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/client";
-import type { Post, User } from "@/lib/types";
+import type { User } from "@/lib/types";
 
 export type ProfileMode = "view" | "edit" | "general";
 
@@ -50,8 +46,6 @@ export function ProfileView({
   const [mode, setMode] = useState<ProfileMode>(initialMode);
   const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
-  const [userPosts, setUserPosts] = useState<Post[]>([]);
-  const [postsLoading, setPostsLoading] = useState(true);
 
   function setProfileMode(next: ProfileMode) {
     setMode(next);
@@ -107,30 +101,6 @@ export function ProfileView({
   }, [userId, currentUser, onUserLoaded]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadPosts() {
-      setPostsLoading(true);
-      try {
-        const supabase = createClient();
-        const data = await fetchPostsByAuthor(supabase, userId, {
-          userId: currentUser?.id,
-        });
-        if (!cancelled) setUserPosts(data);
-      } catch {
-        if (!cancelled) setUserPosts([]);
-      } finally {
-        if (!cancelled) setPostsLoading(false);
-      }
-    }
-
-    loadPosts();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, mode, currentUser?.id]);
-
-  useEffect(() => {
     setProfileMode(initialMode);
   }, [userId, initialMode]);
 
@@ -157,7 +127,6 @@ export function ProfileView({
   }
 
   const isMe = currentUser?.id === user.id;
-  const postCount = Math.max(user.posts, userPosts.length);
 
   if (isMe && mode === "edit") {
     return (
@@ -181,21 +150,15 @@ export function ProfileView({
           <ItemTitle className="text-2xl font-semibold tracking-tight">
             {user.name}
           </ItemTitle>
-          <ItemDescription className="text-base">@{user.username}</ItemDescription>
+          <ItemDescription className="text-base">
+            @{user.username}
+          </ItemDescription>
         </ItemContent>
-        <ItemActions>
-          {isMe ? (
-            <Button variant="outline" size="sm" iconOnly asChild aria-label="Profile settings">
-              <Link href="/profile/settings">
-                <Settings />
-              </Link>
-            </Button>
-          ) : (
-            <Button variant={user.isFollowing ? "outline" : "primary"} size="sm">
-              {user.isFollowing ? "Following" : "Follow"}
-            </Button>
-          )}
-        </ItemActions>
+        {!isMe && (
+          <Button variant={user.isFollowing ? "outline" : "primary"} size="sm">
+            {user.isFollowing ? "Following" : "Follow"}
+          </Button>
+        )}
       </Item>
 
       <p className="text-base leading-relaxed">{user.bio || "No bio yet."}</p>
@@ -213,10 +176,19 @@ export function ProfileView({
             <span className="text-muted-foreground">Following</span>
           </Link>
         </Button>
-        <span>
-          <span className="font-semibold">{postCount}</span>{" "}
-          <span className="text-muted-foreground">Posts</span>
-        </span>
+        {isMe ? (
+          <Button variant="ghost" size="sm" className="h-auto px-0" asChild>
+            <Link href="/my-posts">
+              <span className="font-semibold">{user.posts}</span>{" "}
+              <span className="text-muted-foreground">Posts</span>
+            </Link>
+          </Button>
+        ) : (
+          <span>
+            <span className="font-semibold">{user.posts}</span>{" "}
+            <span className="text-muted-foreground">Posts</span>
+          </span>
+        )}
       </div>
 
       {isMe ? (
@@ -239,29 +211,6 @@ export function ProfileView({
           <Link href="/messages">Message</Link>
         </Button>
       )}
-
-      <div className="space-y-4 border-t pt-5">
-        <h3 className="text-base font-semibold">Posts</h3>
-        {postsLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-32 w-full rounded-xl" />
-            <Skeleton className="h-32 w-full rounded-xl" />
-          </div>
-        ) : userPosts.length > 0 ? (
-          userPosts.map((post) => (
-            <PostCard key={post.id} post={post} showActions={isMe} />
-          ))
-        ) : (
-          <Empty className="border">
-            <EmptyContent>
-              <EmptyTitle>No posts yet</EmptyTitle>
-              <EmptyDescription>
-                Posts from this profile will appear here.
-              </EmptyDescription>
-            </EmptyContent>
-          </Empty>
-        )}
-      </div>
     </div>
   );
 }
