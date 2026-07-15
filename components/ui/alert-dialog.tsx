@@ -100,7 +100,7 @@ function AlertDialogTitle({
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
       className={cn(
-        "text-secondary-foreground font-normal tracking-4 grid justify-items-start gap-1 text-base leading-6",
+        "font-serif text-secondary-foreground font-normal tracking-4 grid justify-items-start gap-1 text-base leading-6",
         className
       )}
       {...props}

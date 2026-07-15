@@ -1,11 +1,21 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
+import localFont from "next/font/local";
+import { Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
+const timelessSans = localFont({
+  src: "./fonts/TimelessSansVF.ttf",
   variable: "--font-sans",
+  display: "swap",
+  weight: "100 900",
+});
+
+const timelessSerif = localFont({
+  src: "./fonts/TimelessSerifVF.ttf",
+  variable: "--font-serif",
+  display: "swap",
+  weight: "100 900",
 });
 
 const geistMono = Geist_Mono({
@@ -26,10 +36,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geistMono.variable} h-full min-h-dvh antialiased`}
+      className={`${timelessSans.variable} ${timelessSerif.variable} ${geistMono.variable} h-full min-h-dvh antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-dvh w-full flex-col">
+      <body className="flex min-h-dvh w-full flex-col font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>

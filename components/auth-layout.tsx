@@ -1,12 +1,6 @@
 import Link from "next/link";
-import { Fraunces } from "next/font/google";
 import { Bell, FileText, Heart, MessageCircle, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const brandSerif = Fraunces({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
 
 type AuthLayoutProps = {
   children: React.ReactNode;
@@ -18,15 +12,10 @@ type AuthLayoutProps = {
 function FeedMark({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
-      <span className="flex size-10 items-center justify-center rounded-[0.7rem] bg-foreground text-lg font-bold tracking-tight text-background sm:size-11 sm:text-xl">
+      <span className="flex size-10 items-center justify-center rounded-[0.7rem] bg-foreground font-sans text-lg font-bold tracking-tight text-background sm:size-11 sm:text-xl">
         F
       </span>
-      <span
-        className={cn(
-          brandSerif.className,
-          "text-2xl font-semibold tracking-tight text-foreground sm:text-[1.7rem]",
-        )}
-      >
+      <span className="font-serif text-2xl font-semibold tracking-tight text-foreground sm:text-[1.7rem]">
         Feed
       </span>
     </div>

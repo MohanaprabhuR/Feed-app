@@ -598,8 +598,9 @@
 
 @theme inline {
   --tw-leading: 1.5;
-  /* Fonts — uses Inter from next/font in layout.tsx */
+  /* Fonts — Timeless Sans / Serif from app/fonts via next/font */
   --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
   --font-mono: var(--font-geist-mono);
 
   /* Variations Fonts */
@@ -846,6 +847,15 @@
   }
   body {
     @apply bg-background text-foreground font-sans text-base leading-normal;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-serif tracking-tight;
   }
 
   svg {
