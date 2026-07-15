@@ -15,9 +15,15 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { getErrorMessage } from "@/lib/errors";
+import {
+  pageColumnClass,
+  pageErrorClass,
+  pageListClass,
+} from "@/lib/feed-layout";
 import { fetchFollowing } from "@/lib/follows";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export default function FollowingPage() {
   const { user, loading: userLoading } = useCurrentUser();
@@ -54,13 +60,17 @@ export default function FollowingPage() {
   const showLoading = userLoading || loading;
 
   return (
-    <AppShell noPadding>
+    <AppShell noPadding feedLayout>
       <PageHeader title="Following" backHref="/profile" />
-      <div className="px-4">
-        {showLoading && <UserListSkeleton count={5} />}
+      <div className={pageColumnClass}>
+        {showLoading && (
+          <div className={cn(pageListClass, "px-4")}>
+            <UserListSkeleton count={5} />
+          </div>
+        )}
 
         {!showLoading && !user && (
-          <Empty className="border-0 py-16">
+          <Empty className="border bg-card py-16">
             <EmptyContent>
               <EmptyTitle>Sign in to see who you follow</EmptyTitle>
               <EmptyDescription>
@@ -74,7 +84,7 @@ export default function FollowingPage() {
         )}
 
         {!showLoading && user && error && (
-          <div className="space-y-3 py-10 text-center">
+          <div className={pageErrorClass}>
             <p className="text-sm text-destructive">{error}</p>
             <Button
               type="button"
@@ -88,7 +98,7 @@ export default function FollowingPage() {
         )}
 
         {!showLoading && user && !error && following.length === 0 && (
-          <Empty className="border-0 py-16">
+          <Empty className="border bg-card py-16">
             <EmptyContent>
               <EmptyTitle>Not following anyone yet</EmptyTitle>
               <EmptyDescription>
@@ -103,7 +113,7 @@ export default function FollowingPage() {
         )}
 
         {!showLoading && user && !error && following.length > 0 && (
-          <div className="divide-y">
+          <div className={cn(pageListClass, "px-4")}>
             {following.map((followedUser) => (
               <UserListItem
                 key={followedUser.id}

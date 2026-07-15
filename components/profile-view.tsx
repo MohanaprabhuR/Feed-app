@@ -196,7 +196,7 @@ export function ProfileView({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 rounded-xl border bg-card p-5 shadow-sm sm:p-6">
       <Item size="sm" className="items-start p-0">
         <UserAvatar src={user.avatar} name={user.name} size="lg" />
         <ItemContent>

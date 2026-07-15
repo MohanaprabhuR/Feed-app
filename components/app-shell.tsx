@@ -21,20 +21,21 @@ export function AppShell({
   return (
     <div
       className={cn(
-        "flex min-h-full flex-col",
+        "flex min-h-dvh flex-col bg-background",
         feedLayout && "bg-muted/40 dark:bg-background",
-        shellClassName
+        shellClassName,
       )}
     >
       <AppHeader />
       <main
         className={cn(
           "mx-auto w-full flex-1 pb-20 md:pb-8",
-          feedLayout && "max-w-[1128px] px-3 py-5 sm:px-5 sm:py-7",
+          feedLayout && "max-w-[1128px]",
+          feedLayout && !noPadding && "px-3 py-5 sm:px-5 sm:py-7",
           wide && !feedLayout && "max-w-6xl",
           !wide && !feedLayout && "max-w-2xl md:max-w-3xl",
           !noPadding && !feedLayout && "px-4 py-5 sm:px-6 sm:py-6",
-          className
+          className,
         )}
       >
         {children}

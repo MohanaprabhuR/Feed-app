@@ -112,12 +112,16 @@ export function NotificationsList() {
   }
 
   if (userLoading || loading) {
-    return <NotificationListSkeleton count={6} />;
+    return (
+      <div className="overflow-hidden rounded-xl border bg-card px-4">
+        <NotificationListSkeleton count={6} />
+      </div>
+    );
   }
 
   if (!user) {
     return (
-      <Empty className="border-0 py-16">
+      <Empty className="border bg-card py-16">
         <EmptyContent>
           <EmptyTitle>Sign in to see notifications</EmptyTitle>
           <EmptyDescription>
@@ -134,7 +138,7 @@ export function NotificationsList() {
   const hasUnread = items.some((item) => !item.read);
 
   return (
-    <div>
+    <div className="overflow-hidden rounded-xl border bg-card">
       {error && (
         <Alert variant="error" className="m-4 w-auto max-w-none">
           <AlertContent>

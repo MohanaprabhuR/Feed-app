@@ -19,3 +19,21 @@ export const feedCardActionsClass =
 export const feedCardSectionClass = "p-4 sm:p-5";
 
 export const feedCardTitleClass = "px-4 pt-4 pb-2 sm:px-5";
+
+/** Secondary page column under AppHeader + PageHeader. */
+export const pageColumnClass =
+  "mx-auto w-full max-w-2xl px-4 py-5 sm:px-5 sm:py-6";
+
+/** Vertical stack for feed-style card lists. */
+export const pageStackClass = "space-y-4";
+
+/** Divided people / notification lists. */
+export const pageListClass = "divide-y overflow-hidden rounded-xl border bg-card";
+
+/** In-list / empty panel surface. */
+export const pagePanelClass =
+  "overflow-hidden rounded-xl border bg-card shadow-sm";
+
+/** Compact error retry block. */
+export const pageErrorClass =
+  "space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-6 text-center";

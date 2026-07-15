@@ -18,9 +18,15 @@ import {
 import { FeedListSkeleton } from "@/components/skeletons";
 import { isArticle } from "@/lib/articles";
 import { getErrorMessage } from "@/lib/errors";
+import {
+  pageColumnClass,
+  pageErrorClass,
+  pageStackClass,
+} from "@/lib/feed-layout";
 import { fetchSavedPosts } from "@/lib/saves";
 import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export default function SavedPostsPage() {
   const { user, loading: userLoading } = useCurrentUser();
@@ -57,13 +63,13 @@ export default function SavedPostsPage() {
   const showLoading = userLoading || loading;
 
   return (
-    <AppShell noPadding>
+    <AppShell noPadding feedLayout>
       <PageHeader title="Saved Posts" backHref="/feed" />
-      <div className="mx-auto max-w-2xl space-y-4 px-4 py-5 sm:px-5">
+      <div className={cn(pageColumnClass, pageStackClass)}>
         {showLoading && <FeedListSkeleton count={3} />}
 
         {!showLoading && !user && (
-          <Empty className="border py-16">
+          <Empty className="border bg-card py-16">
             <EmptyContent>
               <EmptyTitle>Sign in to see saved posts</EmptyTitle>
               <EmptyDescription>
@@ -77,7 +83,7 @@ export default function SavedPostsPage() {
         )}
 
         {!showLoading && user && error && (
-          <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-6 text-center">
+          <div className={pageErrorClass}>
             <p className="text-sm text-destructive">{error}</p>
             <Button
               type="button"
@@ -91,7 +97,7 @@ export default function SavedPostsPage() {
         )}
 
         {!showLoading && user && !error && posts.length === 0 && (
-          <Empty className="border py-16">
+          <Empty className="border bg-card py-16">
             <EmptyContent>
               <EmptyTitle>No saved posts yet</EmptyTitle>
               <EmptyDescription>

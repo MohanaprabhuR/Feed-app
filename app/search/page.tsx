@@ -8,8 +8,20 @@ import { PageHeader } from "@/components/page-header";
 import { PostCard } from "@/components/post-card";
 import { UserListItem } from "@/components/user-list-item";
 import { Input } from "@/components/ui/input";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  pageColumnClass,
+  pageListClass,
+  pageStackClass,
+} from "@/lib/feed-layout";
 import { posts, users } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
@@ -17,26 +29,27 @@ export default function SearchPage() {
   const filteredUsers = users.filter(
     (u) =>
       u.name.toLowerCase().includes(query.toLowerCase()) ||
-      u.username.toLowerCase().includes(query.toLowerCase())
+      u.username.toLowerCase().includes(query.toLowerCase()),
   );
 
   const filteredPosts = posts.filter((p) =>
-    p.content.toLowerCase().includes(query.toLowerCase())
+    p.content.toLowerCase().includes(query.toLowerCase()),
   );
 
   return (
-    <AppShell noPadding>
+    <AppShell noPadding feedLayout>
       <PageHeader title="Search" backHref="/feed" />
-      <div className="space-y-4 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search users, posts..."
-            className="pl-9"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
+      <div className={cn(pageColumnClass, pageStackClass)}>
+        <Input
+          type="search"
+          size="lg"
+          variant="outline"
+          placeholder="Search users, posts..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          prefix={<Search className="size-4 text-muted-foreground" />}
+          className="bg-card"
+        />
 
         <Tabs defaultValue="all">
           <TabsList className="w-full">
@@ -50,50 +63,95 @@ export default function SearchPage() {
               Posts
             </TabsTrigger>
           </TabsList>
+
           <TabsContent value="all" className="mt-4 space-y-6">
-            {query && (
+            {!query ? (
+              <Empty className="border bg-card py-14">
+                <EmptyContent>
+                  <EmptyTitle>Search Feed</EmptyTitle>
+                  <EmptyDescription>
+                    Find people and posts by name, username, or keywords.
+                  </EmptyDescription>
+                </EmptyContent>
+              </Empty>
+            ) : (
               <>
-                <div>
-                  <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                <div className="space-y-2">
+                  <h3 className="px-1 text-sm font-medium text-muted-foreground">
                     Users
                   </h3>
-                  {filteredUsers.map((user) => (
-                    <UserListItem key={user.id} user={user} />
-                  ))}
+                  {filteredUsers.length > 0 ? (
+                    <div className={cn(pageListClass, "px-4")}>
+                      {filteredUsers.map((user) => (
+                        <UserListItem key={user.id} user={user} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-1 text-sm text-muted-foreground">
+                      No users matched.
+                    </p>
+                  )}
                 </div>
-                <div>
-                  <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                <div className="space-y-2">
+                  <h3 className="px-1 text-sm font-medium text-muted-foreground">
                     Posts
                   </h3>
-                  <div className="space-y-4">
-                    {filteredPosts.map((post) => (
-                      <PostCard key={post.id} post={post} />
-                    ))}
-                  </div>
+                  {filteredPosts.length > 0 ? (
+                    <div className={pageStackClass}>
+                      {filteredPosts.map((post) => (
+                        <PostCard key={post.id} post={post} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-1 text-sm text-muted-foreground">
+                      No posts matched.
+                    </p>
+                  )}
                 </div>
               </>
             )}
-            {!query && (
-              <p className="py-8 text-center text-muted-foreground">
-                Search for users and posts
-              </p>
+          </TabsContent>
+
+          <TabsContent value="users" className="mt-4">
+            {filteredUsers.length > 0 ? (
+              <div className={cn(pageListClass, "px-4")}>
+                {filteredUsers.map((user) => (
+                  <UserListItem key={user.id} user={user} />
+                ))}
+              </div>
+            ) : (
+              <Empty className="border bg-card py-14">
+                <EmptyContent>
+                  <EmptyTitle>No users found</EmptyTitle>
+                  <EmptyDescription>
+                    Try a different name or username.
+                  </EmptyDescription>
+                </EmptyContent>
+              </Empty>
             )}
           </TabsContent>
-          <TabsContent value="users" className="mt-4">
-            {filteredUsers.map((user) => (
-              <UserListItem key={user.id} user={user} />
-            ))}
-          </TabsContent>
+
           <TabsContent value="posts" className="mt-4 space-y-4">
-            {filteredPosts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
+            {filteredPosts.length > 0 ? (
+              filteredPosts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))
+            ) : (
+              <Empty className="border bg-card py-14">
+                <EmptyContent>
+                  <EmptyTitle>No posts found</EmptyTitle>
+                  <EmptyDescription>
+                    Try different keywords.
+                  </EmptyDescription>
+                </EmptyContent>
+              </Empty>
+            )}
           </TabsContent>
         </Tabs>
 
         <Link
           href="/trending"
-          className="block text-center text-sm text-primary hover:underline"
+          className="block text-center text-sm text-muted-foreground hover:text-foreground hover:underline"
         >
           View trending topics →
         </Link>

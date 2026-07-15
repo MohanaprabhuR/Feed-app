@@ -13,6 +13,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { Separator } from "@/components/ui/separator";
+import { pageColumnClass, pagePanelClass } from "@/lib/feed-layout";
 
 const settingsGroups = [
   {
@@ -45,15 +46,15 @@ const settingsGroups = [
 
 export default function SettingsPage() {
   return (
-    <AppShell noPadding>
+    <AppShell noPadding feedLayout>
       <PageHeader title="Settings" backHref="/feed" />
-      <div className="px-4 py-5 sm:px-5 sm:py-6">
+      <div className={pageColumnClass}>
         {settingsGroups.map((group, i) => (
           <div key={group.title} className="mb-7">
             <h2 className="mb-2.5 px-1 text-sm font-medium uppercase tracking-wider text-muted-foreground">
               {group.title}
             </h2>
-            <div className="rounded-xl border">
+            <div className={pagePanelClass}>
               {group.items.map((item, j) => (
                 <div key={item.href + item.label}>
                   <Link
@@ -74,7 +75,7 @@ export default function SettingsPage() {
 
         <Link
           href="/logout"
-          className="flex items-center gap-3 rounded-xl border border-destructive/20 px-4 py-3.5 text-destructive transition-colors hover:bg-destructive/10"
+          className="flex items-center gap-3 rounded-xl border border-destructive/20 bg-card px-4 py-3.5 text-destructive transition-colors hover:bg-destructive/10"
         >
           <LogOut className="size-4" />
           <span className="text-base font-medium">Sign out</span>

@@ -20,23 +20,23 @@ export function PageHeader({
   return (
     <Header
       className={cn(
-        "sticky top-0 z-40 h-14 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-5",
-        className
+        "sticky top-14 z-30 h-12 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-5 md:top-14",
+        className,
       )}
     >
       {backHref ? (
         <Button variant="ghost" size="sm" iconOnly asChild>
-          <Link href={backHref}>
+          <Link href={backHref} aria-label="Go back">
             <ChevronLeft />
           </Link>
         </Button>
       ) : (
         <div className="w-9" />
       )}
-      <h1 className="flex-1 truncate text-center text-lg font-semibold tracking-tight">
+      <h1 className="flex-1 truncate text-center text-base font-semibold tracking-tight sm:text-lg">
         {title}
       </h1>
-      <div className="flex w-9 items-center justify-end">{action}</div>
+      <div className="flex min-w-9 items-center justify-end">{action}</div>
     </Header>
   );
 }

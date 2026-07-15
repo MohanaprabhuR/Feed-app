@@ -17,9 +17,15 @@ import { Button } from "@/components/ui/button";
 import { FeedListSkeleton } from "@/components/skeletons";
 import { isArticle } from "@/lib/articles";
 import { getErrorMessage } from "@/lib/errors";
+import {
+  pageColumnClass,
+  pageErrorClass,
+  pageStackClass,
+} from "@/lib/feed-layout";
 import { fetchPostsByAuthor } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export default function MyPostsPage() {
   const { user, loading: userLoading } = useCurrentUser();
@@ -58,22 +64,27 @@ export default function MyPostsPage() {
   const showLoading = userLoading || loading;
 
   return (
-    <AppShell noPadding>
+    <AppShell noPadding feedLayout>
       <PageHeader title="My Posts" backHref="/profile" />
-      <div className="mx-auto max-w-2xl space-y-4 px-4 py-5 sm:px-5">
+      <div className={cn(pageColumnClass, pageStackClass)}>
         {showLoading && <FeedListSkeleton count={3} />}
 
         {!showLoading && error && (
-          <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-6 text-center">
+          <div className={pageErrorClass}>
             <p className="text-sm text-destructive">{error}</p>
-            <Button type="button" size="sm" variant="outline" onClick={() => void loadPosts()}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void loadPosts()}
+            >
               Try again
             </Button>
           </div>
         )}
 
         {!showLoading && !error && posts.length === 0 && (
-          <Empty className="border py-16">
+          <Empty className="border bg-card py-16">
             <EmptyContent>
               <EmptyTitle>No posts yet</EmptyTitle>
               <EmptyDescription>
