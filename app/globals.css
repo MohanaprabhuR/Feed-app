@@ -154,6 +154,8 @@
   --color-violet-800: #392980;
   --color-violet-900: #251959;
 
+  color-scheme: light;
+
   --border: var(--color-gray-200);
   --background: var(--color-white);
   --foreground: var(--color-gray-900);
@@ -475,6 +477,8 @@
   --color-gray-alpha-800: rgba(255, 255, 255, 0.08);
   --color-gray-alpha-900: rgba(255, 255, 255, 0.06);
   --color-gray-alpha-950: rgba(255, 255, 255, 0.04);
+
+  color-scheme: dark;
 
   --border: var(--color-gray-600);
   --background: var(--color-black);

@@ -2,15 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
-import {
-  Check,
-  Monitor,
-  Moon,
-  Sun,
-} from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
+import { ThemeMenuRow } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import {
   Item,
@@ -22,13 +15,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
-import { cn } from "@/lib/utils";
-
-const themes = [
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-  { value: "system", label: "System", icon: Monitor },
-] as const;
 
 type MeMenuPanelProps = {
   user: User;
@@ -37,11 +23,6 @@ type MeMenuPanelProps = {
 
 export function MeMenuPanel({ user, onClose }: MeMenuPanelProps) {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  const [showTheme, setShowTheme] = useState(false);
-
-  useEffect(() => setMounted(true), []);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -80,7 +61,7 @@ export function MeMenuPanel({ user, onClose }: MeMenuPanelProps) {
         <p className="mb-1 text-sm font-semibold">Account</p>
         <ItemGroup>
           <Button variant="ghost" className="w-full justify-start" asChild>
-            <Link href="/profile/settings" onClick={onClose}>
+            <Link href="/settings" onClick={onClose}>
               Settings &amp; Privacy
             </Link>
           </Button>
@@ -94,32 +75,7 @@ export function MeMenuPanel({ user, onClose }: MeMenuPanelProps) {
               Language
             </Link>
           </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => setShowTheme((v) => !v)}
-          >
-            Theme
-          </Button>
-          {showTheme && (
-            <ItemGroup className="rounded-lg border bg-muted/30 p-1">
-              {themes.map(({ value, label, icon: Icon }) => (
-                <Button
-                  key={value}
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start",
-                    mounted && theme === value && "bg-background font-medium"
-                  )}
-                  onClick={() => setTheme(value)}
-                >
-                  <Icon className="size-3.5 text-muted-foreground" />
-                  <span className="flex-1 text-left">{label}</span>
-                  {mounted && theme === value && <Check className="size-3.5" />}
-                </Button>
-              ))}
-            </ItemGroup>
-          )}
+          <ThemeMenuRow />
         </ItemGroup>
       </div>
 
