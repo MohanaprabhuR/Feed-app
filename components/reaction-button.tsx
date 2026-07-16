@@ -22,6 +22,10 @@ type ReactionButtonProps = {
   compact?: boolean;
   hideCount?: boolean;
   className?: string;
+  onOptimisticChange?: (
+    reaction: ReactionType | null,
+    likesCount: number,
+  ) => void;
   onReact: (
     reaction: ReactionType | null,
   ) => Promise<{ reaction: ReactionType | null; likesCount: number }>;
@@ -39,6 +43,7 @@ export function ReactionButton({
   compact = false,
   hideCount = false,
   className,
+  onOptimisticChange,
   onReact,
 }: ReactionButtonProps) {
   const router = useRouter();
@@ -126,15 +131,15 @@ export function ReactionButton({
     const previousCount = count;
     const wasReacted = previousReaction !== null;
     const willReact = next !== null;
-
-    setReactionState(next);
-    setCount(
-      Math.max(
-        previousCount + (wasReacted === willReact ? 0 : willReact ? 1 : -1),
-        0,
-      ),
+    const optimisticCount = Math.max(
+      previousCount + (wasReacted === willReact ? 0 : willReact ? 1 : -1),
+      0,
     );
+
     setPending(true);
+    setReactionState(next);
+    setCount(optimisticCount);
+    onOptimisticChange?.(next, optimisticCount);
     setPickerOpen(false);
     setHoveredReaction(null);
     clearOpenTimer();
@@ -147,6 +152,7 @@ export function ReactionButton({
     } catch (error) {
       setReactionState(previousReaction);
       setCount(previousCount);
+      onOptimisticChange?.(previousReaction, previousCount);
       appToast.error(
         "Could not update reaction",
         getErrorMessage(error, "Please try again."),

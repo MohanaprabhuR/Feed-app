@@ -64,12 +64,15 @@ export function PostEngagementBar({
   className,
 }: PostEngagementBarProps) {
   const hasLikes = likesCount > 0;
-  const shown =
+  // Never show more type badges than total reactions (fixes 2 icons with count 1).
+  const maxTypes = Math.min(3, Math.max(likesCount, 0));
+  const shown = (
     types.length > 0
-      ? types.slice(0, 3)
+      ? types
       : hasLikes
         ? (["like"] as ReactionType[])
-        : [];
+        : []
+  ).slice(0, maxTypes);
 
   return (
     <div
@@ -165,21 +168,29 @@ export function PostEngagementBar({
   );
 }
 
+/** Keep summary icons in sync when the current user adds / changes / removes a reaction. */
 export function mergeReactionSummary(
   current: ReactionType[],
   previous: ReactionType | null | undefined,
   next: ReactionType | null,
+  likesCount?: number,
 ): ReactionType[] {
+  if (likesCount !== undefined && likesCount <= 0) return [];
+  // One reactor can only contribute one type.
+  if (likesCount === 1) return next ? [next] : [];
+
   let summary = [...current];
 
-  if (next) {
-    summary = [next, ...summary.filter((type) => type !== next)].slice(0, 3);
-    return summary;
-  }
-
+  // Drop previous on clear or change so swaps don't stack leftover badges.
   if (previous) {
     summary = summary.filter((type) => type !== previous);
   }
 
-  return summary;
+  if (next) {
+    summary = [next, ...summary.filter((type) => type !== next)];
+  }
+
+  const max =
+    likesCount !== undefined ? Math.min(3, Math.max(likesCount, 0)) : 3;
+  return summary.slice(0, max);
 }

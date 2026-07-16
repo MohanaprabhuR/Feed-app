@@ -13,7 +13,10 @@ type PostLikeButtonProps = {
   hideCount?: boolean;
   className?: string;
   onCountChange?: (count: number) => void;
-  onReactionChange?: (reaction: ReactionType | null) => void;
+  onReactionChange?: (
+    reaction: ReactionType | null,
+    likesCount: number,
+  ) => void;
 };
 
 export function PostLikeButton({
@@ -35,6 +38,10 @@ export function PostLikeButton({
       initialCount={initialCount}
       loginNext={`/feed`}
       countHref={hideCount ? undefined : `/post/${postId}/likes`}
+      onOptimisticChange={(reaction, likesCount) => {
+        onCountChange?.(likesCount);
+        onReactionChange?.(reaction, likesCount);
+      }}
       onReact={async (reaction) => {
         const supabase = createClient();
         const {
@@ -48,7 +55,7 @@ export function PostLikeButton({
             : await setReaction(supabase, postId, user.id, reaction);
 
         onCountChange?.(result.likesCount);
-        onReactionChange?.(result.reaction);
+        onReactionChange?.(result.reaction, result.likesCount);
         return { reaction: result.reaction, likesCount: result.likesCount };
       }}
     />

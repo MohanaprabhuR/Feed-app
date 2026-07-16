@@ -231,7 +231,6 @@ export function ArticleCard({
           onShare={() => setShareOpen(true)}
           likeControl={
             <PostLikeButton
-              key={`${post.id}:${myReaction ?? "none"}`}
               postId={post.id}
               initialLiked={Boolean(myReaction)}
               initialReaction={myReaction}
@@ -239,10 +238,10 @@ export function ArticleCard({
               hideCount
               className="justify-start"
               onCountChange={setLikesCount}
-              onReactionChange={(next) => {
+              onReactionChange={(next, count) => {
                 setMyReaction((prev) => {
                   setReactionSummary((current) =>
-                    mergeReactionSummary(current, prev, next),
+                    mergeReactionSummary(current, prev, next, count),
                   );
                   return next;
                 });
