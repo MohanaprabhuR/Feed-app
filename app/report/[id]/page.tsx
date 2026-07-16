@@ -17,7 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getPostById } from "@/lib/mock-data";
-import { Alert, AlertTitle, AlertDescription, AlertContent } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  AlertContent,
+} from "@/components/ui/alert";
 
 export default function ReportPostPage({
   params,
@@ -59,11 +64,7 @@ export default function ReportPostPage({
 
         <div className="space-y-2">
           <Label htmlFor="details">Additional details</Label>
-          <Textarea
-            id="details"
-            placeholder="Describe the issue..."
-            className="min-h-24"
-          />
+          <Textarea id="details" placeholder="Describe the issue..." />
         </div>
 
         <Button

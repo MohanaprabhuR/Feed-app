@@ -48,7 +48,6 @@ export default function SearchPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           prefix={<Search className="size-4 text-muted-foreground" />}
-          className="bg-card"
         />
 
         <Tabs defaultValue="all">
@@ -140,9 +139,7 @@ export default function SearchPage() {
               <Empty className="border bg-card py-14">
                 <EmptyContent>
                   <EmptyTitle>No posts found</EmptyTitle>
-                  <EmptyDescription>
-                    Try different keywords.
-                  </EmptyDescription>
+                  <EmptyDescription>Try different keywords.</EmptyDescription>
                 </EmptyContent>
               </Empty>
             )}

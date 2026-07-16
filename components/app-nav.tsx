@@ -2,13 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  Bell,
-  Home,
-  MessageCircle,
-  Search,
-  Users,
-} from "lucide-react";
+import { Bell, Home, MessageCircle, Search, Users } from "lucide-react";
 import { MeMenu } from "@/components/me-menu";
 import { useMessaging } from "@/components/messaging-provider";
 import { useNotifications } from "@/components/notifications-provider";
@@ -54,7 +48,7 @@ function NavItem({
       variant="ghost"
       className={cn(
         "relative flex min-w-[72px] h-auto flex-col items-center gap-1 px-1.5 py-1.5 text-2xs font-medium",
-        active ? "text-foreground" : "text-muted-foreground"
+        active ? "text-foreground" : "text-muted-foreground",
       )}
     >
       <Link href={href}>
@@ -88,7 +82,7 @@ function MessagingNavItem() {
       aria-pressed={expanded}
       className={cn(
         "relative flex min-w-[72px] h-auto flex-col items-center gap-1 px-1.5 py-1.5 text-2xs font-medium",
-        expanded ? "text-foreground" : "text-muted-foreground"
+        expanded ? "text-foreground" : "text-muted-foreground",
       )}
     >
       <MessageCircle className="size-5" />
@@ -115,9 +109,7 @@ function NotificationsNavItem({ active }: { active: boolean }) {
 }
 
 function isNavActive(pathname: string, href: string) {
-  return (
-    pathname === href || (href !== "/feed" && pathname.startsWith(href))
-  );
+  return pathname === href || (href !== "/feed" && pathname.startsWith(href));
 }
 
 export function BottomNav() {
@@ -159,48 +151,55 @@ export function AppHeader() {
   return (
     <Header className="sticky top-0 z-40 h-14 w-full border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-5">
       <div className="mx-auto flex h-full w-full max-w-[1128px] items-center gap-3">
-      <Button asChild variant="ghost" size="sm" iconOnly className="shrink-0">
-        <Link href="/feed">
-          <Avatar size="2xl" className="rounded bg-primary">
-            <AvatarFallback className="rounded bg-primary text-lg font-bold text-primary-foreground">
-              F
-            </AvatarFallback>
-          </Avatar>
-        </Link>
-      </Button>
+        <Button asChild variant="ghost" size="sm" iconOnly className="shrink-0">
+          <Link href="/feed">
+            <Avatar size="2xl" className="rounded bg-primary">
+              <AvatarFallback className="rounded bg-primary text-lg font-bold text-primary-foreground">
+                F
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+        </Button>
 
-      <Input
-        type="search"
-        size="sm"
-        placeholder="Search"
-        prefix={<Search className="size-4 text-muted-foreground" />}
-        className="hidden max-w-[280px] flex-1 md:flex"
-        onKeyDown={(e) => {
-          if (e.key === "Enter") router.push("/search");
-        }}
-      />
+        <div className="hidden max-w-[280px] flex-1 md:block">
+          <Input
+            type="search"
+            size="sm"
+            placeholder="Search"
+            prefix={<Search className="size-4 text-muted-foreground" />}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") router.push("/search");
+            }}
+          />
+        </div>
 
-      <nav className="mx-auto hidden flex-1 items-center justify-center md:flex">
-        <NavItem
-          {...navItems[0]}
-          active={isNavActive(pathname, navItems[0].href)}
-        />
-        <NavItem
-          {...navItems[1]}
-          active={isNavActive(pathname, navItems[1].href)}
-        />
-        <MessagingNavItem />
-        <NotificationsNavItem
-          active={isNavActive(pathname, "/notifications")}
-        />
-        <MeMenu />
-      </nav>
+        <nav className="mx-auto hidden flex-1 items-center justify-center md:flex">
+          <NavItem
+            {...navItems[0]}
+            active={isNavActive(pathname, navItems[0].href)}
+          />
+          <NavItem
+            {...navItems[1]}
+            active={isNavActive(pathname, navItems[1].href)}
+          />
+          <MessagingNavItem />
+          <NotificationsNavItem
+            active={isNavActive(pathname, "/notifications")}
+          />
+          <MeMenu />
+        </nav>
 
-      <Button variant="ghost" size="sm" iconOnly className="md:hidden" asChild>
-        <Link href="/search">
-          <Search />
-        </Link>
-      </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          className="md:hidden"
+          asChild
+        >
+          <Link href="/search">
+            <Search />
+          </Link>
+        </Button>
       </div>
     </Header>
   );

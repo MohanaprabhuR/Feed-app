@@ -335,18 +335,20 @@ export function EditPostDialog({
                   name={post.author.name}
                   size="sm"
                 />
+              <div className="mb-3 min-w-0 flex-1">
                 <Textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   disabled={busy}
+                  size="md"
                   placeholder={
                     isArticle
                       ? "Update your article..."
                       : "What do you want to talk about?"
                   }
-                  className="min-h-[140px] flex-1 resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   autoFocus
                 />
+              </div>
               </div>
 
               {attachment && (

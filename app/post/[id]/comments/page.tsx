@@ -193,24 +193,21 @@ function CommentBlock({
 
           {isReplying && user && (
             <form className="mt-2 flex gap-2" onSubmit={handleReply}>
-              <div className="relative min-w-0 flex-1">
+              <div className="flex min-w-0 flex-1 items-center gap-1">
                 <Input
                   ref={replyInputRef}
                   placeholder={`Reply to ${comment.author.name}...`}
-                  className="pr-10"
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
                   disabled={submitting}
                   autoFocus
                 />
-                <div className="absolute inset-y-0 right-1 flex items-center">
-                  <EmojiPickerButton
-                    disabled={submitting}
-                    side="top"
-                    align="end"
-                    onSelect={insertReplyEmoji}
-                  />
-                </div>
+                <EmojiPickerButton
+                  disabled={submitting}
+                  side="top"
+                  align="end"
+                  onSelect={insertReplyEmoji}
+                />
               </div>
               <Button
                 type="submit"
@@ -387,24 +384,21 @@ export default function CommentsPage({
           <Skeleton className="h-10 w-full" />
         ) : user ? (
           <form className="flex gap-2" onSubmit={handleSubmit}>
-            <div className="relative min-w-0 flex-1">
+            <div className="flex min-w-0 flex-1 items-center gap-1">
               <Input
                 ref={commentInputRef}
                 placeholder="Write a comment..."
-                className="pr-10"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 disabled={submitting || missingPost}
                 autoComplete="off"
               />
-              <div className="absolute inset-y-0 right-1 flex items-center">
-                <EmojiPickerButton
-                  disabled={submitting || missingPost}
-                  side="top"
-                  align="end"
-                  onSelect={insertCommentEmoji}
-                />
-              </div>
+              <EmojiPickerButton
+                disabled={submitting || missingPost}
+                side="top"
+                align="end"
+                onSelect={insertCommentEmoji}
+              />
             </div>
             <Button
               type="submit"

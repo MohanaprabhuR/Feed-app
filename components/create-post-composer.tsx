@@ -449,6 +449,8 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
             <Textarea
               ref={textareaRef}
               autoFocus
+              variant="ghost"
+              size="md"
               placeholder={
                 showEventForm
                   ? "What is this event about?"
@@ -456,10 +458,6 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
               }
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className={cn(
-                "resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0",
-                showEventForm ? "min-h-[88px]" : "min-h-[168px]",
-              )}
               disabled={loading}
             />
 

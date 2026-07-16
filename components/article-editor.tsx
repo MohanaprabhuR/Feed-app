@@ -158,11 +158,11 @@ export function ArticleEditor() {
           <Label htmlFor="article-title">Title</Label>
           <Input
             id="article-title"
+            size="lg"
             placeholder="Article title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={loading}
-            className="text-lg font-semibold"
           />
         </div>
 
@@ -212,11 +212,11 @@ export function ArticleEditor() {
           <Label htmlFor="article-body">Body</Label>
           <Textarea
             id="article-body"
+            size="lg"
             placeholder="Write your article..."
             value={content}
             onChange={(e) => setContent(e.target.value)}
             disabled={loading}
-            className="min-h-[360px] resize-y text-[15px] leading-relaxed"
           />
         </div>
 

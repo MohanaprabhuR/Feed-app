@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Loader2 } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
-import { Alert, AlertContent, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertContent,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,9 +36,6 @@ function splitName(fullName: string) {
     lastName: parts.slice(1).join(" "),
   };
 }
-
-const fieldInputClass =
-  "h-12 rounded-xl border-0 bg-[#f3f3f3] px-4 text-base text-foreground shadow-none outline-none placeholder:text-muted-foreground/70 hover:bg-[#eeeeee] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-ring dark:bg-muted dark:hover:bg-muted/80 dark:focus-visible:bg-background";
 
 function Field({
   id,
@@ -198,7 +200,9 @@ export function ProfileEditForm({
       appToast.success("Profile updated", "Your profile changes were saved.");
       onSaved();
     } catch (err) {
-      setError(getErrorMessage(err, "Could not save profile. Please try again."));
+      setError(
+        getErrorMessage(err, "Could not save profile. Please try again."),
+      );
     } finally {
       setLoading(false);
     }
@@ -325,7 +329,6 @@ export function ProfileEditForm({
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="Enter first name"
-                    className={fieldInputClass}
                     disabled={loading}
                     required
                   />
@@ -336,7 +339,6 @@ export function ProfileEditForm({
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Enter last name"
-                    className={fieldInputClass}
                     disabled={loading}
                   />
                 </Field>
@@ -350,7 +352,6 @@ export function ProfileEditForm({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter email address"
-                    className={fieldInputClass}
                     disabled={loading}
                   />
                 </Field>
@@ -361,7 +362,6 @@ export function ProfileEditForm({
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="Enter phone number"
-                    className={fieldInputClass}
                     disabled={loading}
                   />
                 </Field>
@@ -373,7 +373,6 @@ export function ProfileEditForm({
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Enter address"
-                  className={fieldInputClass}
                   disabled={loading}
                 />
               </Field>
@@ -385,7 +384,6 @@ export function ProfileEditForm({
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="Enter city"
-                    className={fieldInputClass}
                     disabled={loading}
                   />
                 </Field>
@@ -395,7 +393,6 @@ export function ProfileEditForm({
                     value={state}
                     onChange={(e) => setState(e.target.value)}
                     placeholder="Enter state"
-                    className={fieldInputClass}
                     disabled={loading}
                   />
                 </Field>
@@ -405,7 +402,6 @@ export function ProfileEditForm({
                     value={zipCode}
                     onChange={(e) => setZipCode(e.target.value)}
                     placeholder="Enter zip code"
-                    className={fieldInputClass}
                     disabled={loading}
                   />
                 </Field>
@@ -445,7 +441,6 @@ export function ProfileEditForm({
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
-                  className={fieldInputClass}
                   disabled={loading}
                   autoComplete="new-password"
                   required
@@ -458,7 +453,6 @@ export function ProfileEditForm({
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm new password"
-                  className={fieldInputClass}
                   disabled={loading}
                   autoComplete="new-password"
                   required

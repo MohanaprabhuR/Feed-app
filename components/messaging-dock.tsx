@@ -252,7 +252,9 @@ export function MessagingDock() {
       (row: DirectMessageRow) => {
         const message = messageRowToMessage(row);
         setConversationList((current) => {
-          const existing = current.find((conv) => conv.id === row.conversation_id);
+          const existing = current.find(
+            (conv) => conv.id === row.conversation_id,
+          );
           if (!existing) {
             void loadConversations();
             return current;
@@ -401,61 +403,69 @@ export function MessagingDock() {
         "fixed inset-x-0 z-50 flex flex-col border bg-background shadow-2xl",
         "bottom-14 md:bottom-0 md:inset-x-auto md:right-4 md:border-b-0",
         conversation && expanded ? "md:w-[420px]" : "md:w-[360px]",
-        expanded ? "h-[min(78vh,640px)] md:rounded-t-xl" : "h-12 md:rounded-t-xl",
+        expanded
+          ? "h-[min(78vh,640px)] md:rounded-t-xl"
+          : "h-12 md:rounded-t-xl",
       )}
     >
       {/* List / dock chrome — hide when in WhatsApp-style chat */}
       {!(conversation && expanded) && (
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-        <button
-          type="button"
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-          onClick={() => {
-            if (expanded) {
-              setExpanded(false);
-              closeConversation();
-            } else {
-              openMessaging();
-            }
-          }}
-        >
-          <span className="relative shrink-0">
-            <CurrentUserAvatar size="sm" />
-            <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background bg-emerald-500" />
-          </span>
-          <span className="truncate text-sm font-semibold">Messaging</span>
-        </button>
-        <Button type="button" variant="ghost" size="sm" iconOnly aria-label="More">
-          <MoreHorizontal />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          iconOnly
-          aria-label="Compose"
-          onClick={() => void openCompose()}
-        >
-          <SquarePen />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          iconOnly
-          aria-label={expanded ? "Minimize messaging" : "Expand messaging"}
-          onClick={() => {
-            if (expanded) {
-              setExpanded(false);
-              closeConversation();
-            } else {
-              openMessaging();
-            }
-          }}
-        >
-          {expanded ? <ChevronDown /> : <ChevronUp />}
-        </Button>
-      </div>
+        <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+            onClick={() => {
+              if (expanded) {
+                setExpanded(false);
+                closeConversation();
+              } else {
+                openMessaging();
+              }
+            }}
+          >
+            <span className="relative shrink-0">
+              <CurrentUserAvatar size="sm" />
+              <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background bg-emerald-500" />
+            </span>
+            <span className="truncate text-sm font-semibold">Messaging</span>
+          </button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            iconOnly
+            aria-label="More"
+          >
+            <MoreHorizontal />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            iconOnly
+            aria-label="Compose"
+            onClick={() => void openCompose()}
+          >
+            <SquarePen />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            iconOnly
+            aria-label={expanded ? "Minimize messaging" : "Expand messaging"}
+            onClick={() => {
+              if (expanded) {
+                setExpanded(false);
+                closeConversation();
+              } else {
+                openMessaging();
+              }
+            }}
+          >
+            {expanded ? <ChevronDown /> : <ChevronUp />}
+          </Button>
+        </div>
       )}
 
       {expanded && (
@@ -581,10 +591,7 @@ export function MessagingDock() {
                       {isMe && (
                         <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center">
                           {showAvatar ? (
-                            <CurrentUserAvatar
-                              size="sm"
-                              className="!size-7"
-                            />
+                            <CurrentUserAvatar size="sm" className="!size-7" />
                           ) : null}
                         </span>
                       )}
@@ -613,12 +620,11 @@ export function MessagingDock() {
                   >
                     <Smile />
                   </Button>
-                  <div className="flex min-h-10 flex-1 items-center gap-1 rounded-full border bg-muted/40 px-1.5">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
                     <Input
                       placeholder="Type a message"
                       value={draft}
                       onChange={(e) => setDraft(e.target.value)}
-                      className="flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
                       size="sm"
                       autoComplete="off"
                       disabled={sending}
@@ -703,7 +709,7 @@ export function MessagingDock() {
                   {setupError}
                 </p>
               )}
-              <div className="flex items-center gap-2 px-3 pt-3">
+              <div className="flex flex-1 items-center gap-2 px-3 pt-3">
                 <Input
                   type="search"
                   size="sm"
@@ -711,7 +717,6 @@ export function MessagingDock() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   prefix={<Search className="size-4 text-muted-foreground" />}
-                  className="flex-1"
                 />
                 <Button
                   type="button"

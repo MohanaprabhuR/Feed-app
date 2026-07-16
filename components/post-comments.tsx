@@ -210,25 +210,22 @@ function CommentItem({
                 size="sm"
                 userId={user.id}
               />
-              <div className="relative min-w-0 flex-1">
+              <div className="flex min-w-0 flex-1 items-center gap-1">
                 <Input
                   ref={replyInputRef}
                   placeholder={`Reply to ${comment.author.name}...`}
-                  className="h-9 rounded-full pr-10"
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
                   disabled={submitting}
                   autoFocus
                   autoComplete="off"
                 />
-                <div className="absolute inset-y-0 right-1 flex items-center">
-                  <EmojiPickerButton
-                    disabled={submitting}
-                    side="top"
-                    align="end"
-                    onSelect={insertReplyEmoji}
-                  />
-                </div>
+                <EmojiPickerButton
+                  disabled={submitting}
+                  side="top"
+                  align="end"
+                  onSelect={insertReplyEmoji}
+                />
               </div>
               <Button
                 type="submit"
@@ -384,36 +381,32 @@ export function PostComments({
             size="sm"
             userId={user.id}
           />
-          <div className="relative min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 items-center gap-1">
             <Input
               ref={commentInputRef}
               placeholder="Add a comment..."
-              className="h-10 rounded-full pr-20"
               value={content}
               onChange={(e) => setContent(e.target.value)}
               disabled={submitting}
               autoFocus
               autoComplete="off"
             />
-            <div className="absolute inset-y-0 right-1 flex items-center gap-0.5 text-muted-foreground">
-              <EmojiPickerButton
-                disabled={submitting}
-                side="top"
-                align="end"
-                onSelect={insertCommentEmoji}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                iconOnly
-                className="text-muted-foreground"
-                aria-label="Add image"
-                disabled
-              >
-                <ImageIcon className="size-4" />
-              </Button>
-            </div>
+            <EmojiPickerButton
+              disabled={submitting}
+              side="top"
+              align="end"
+              onSelect={insertCommentEmoji}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              iconOnly
+              aria-label="Add image"
+              disabled
+            >
+              <ImageIcon className="size-4" />
+            </Button>
           </div>
           {content.trim() ? (
             <Button
@@ -439,9 +432,7 @@ export function PostComments({
       )}
 
       {loading && (
-        <CommentListSkeleton
-          count={Math.min(initialCount || 2, 3)}
-        />
+        <CommentListSkeleton count={Math.min(initialCount || 2, 3)} />
       )}
 
       {error && (
