@@ -64,6 +64,7 @@ import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PostEventCard } from "@/components/post-event-card";
+import { DateTimePickerPopover } from "@/components/datetime-picker-popover";
 
 function toDatetimeLocalValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -214,7 +215,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
 
     const validationError = validatePostAttachment(file);
     if (validationError) {
-      toast.custom((t) => (
+      toast.custom(() => (
         <Alert variant="error">
           <AlertContent>
             <AlertTitle>Invalid file.</AlertTitle>
@@ -494,14 +495,13 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="event-start">Start</Label>
-                      <Input
+                      <DateTimePickerPopover
                         id="event-start"
-                        type="datetime-local"
                         value={eventDraft.startsAt}
-                        onChange={(e) =>
+                        onChange={(next) =>
                           setEventDraft((d) => ({
                             ...d,
-                            startsAt: e.target.value,
+                            startsAt: next,
                           }))
                         }
                         disabled={loading}
@@ -509,18 +509,18 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="event-end">End (optional)</Label>
-                      <Input
+                      <DateTimePickerPopover
                         id="event-end"
-                        type="datetime-local"
                         value={eventDraft.endsAt}
-                        min={eventDraft.startsAt || undefined}
-                        onChange={(e) =>
+                        onChange={(next) =>
                           setEventDraft((d) => ({
                             ...d,
-                            endsAt: e.target.value,
+                            endsAt: next,
                           }))
                         }
                         disabled={loading}
+                        placeholder="Select end"
+                        minValue={eventDraft.startsAt}
                       />
                     </div>
                   </div>
@@ -540,27 +540,28 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                       autoComplete="off"
                     />
                   </div>
-                  {eventDraft.title.trim() && eventDraft.startsAt ? (
-                    <PostEventCard
-                      event={{
-                        title: eventDraft.title.trim(),
-                        startsAt: new Date(eventDraft.startsAt).toISOString(),
-                        ...(eventDraft.endsAt
-                          ? {
-                              endsAt: new Date(
-                                eventDraft.endsAt,
-                              ).toISOString(),
-                            }
-                          : {}),
-                        ...(eventDraft.location.trim()
-                          ? { location: eventDraft.location.trim() }
-                          : {}),
-                      }}
-                    />
-                  ) : null}
                 </CardContent>
               </Card>
             )}
+
+            {showEventForm &&
+            eventDraft.title.trim() &&
+            eventDraft.startsAt ? (
+              <PostEventCard
+                event={{
+                  title: eventDraft.title.trim(),
+                  startsAt: new Date(eventDraft.startsAt).toISOString(),
+                  ...(eventDraft.endsAt
+                    ? {
+                        endsAt: new Date(eventDraft.endsAt).toISOString(),
+                      }
+                    : {}),
+                  ...(eventDraft.location.trim()
+                    ? { location: eventDraft.location.trim() }
+                    : {}),
+                }}
+              />
+            ) : null}
 
             {attachment && (
               <Card className="relative mb-2 overflow-hidden">
@@ -626,7 +627,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
               size="sm"
               className="hidden sm:inline-flex"
               onClick={() =>
-                toast.custom((t) => (
+                toast.custom(() => (
                   <Alert variant="information">
                     <AlertContent>
                       <AlertTitle>AI enhance coming soon</AlertTitle>
@@ -680,7 +681,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                 size="sm"
                 iconOnly
                 onClick={() =>
-                  toast.custom((t) => (
+                  toast.custom(() => (
                     <Alert variant="information">
                       <AlertContent>
                         <AlertTitle>Celebrate coming soon</AlertTitle>
@@ -734,7 +735,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
               size="sm"
               iconOnly
               onClick={() =>
-                toast.custom((t) => (
+                toast.custom(() => (
                   <Alert variant="information">
                     <AlertContent>
                       <AlertTitle>Scheduling coming soon</AlertTitle>

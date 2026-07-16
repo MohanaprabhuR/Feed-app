@@ -77,7 +77,7 @@ export default function RegisterPage() {
 
       const { data: existingProfile } = await supabase
         .from("profiles")
-        .select("email, username")
+        .select("email, username, name")
         .or(`username.eq.${username},email.eq.${email}`)
         .maybeSingle();
 
@@ -88,12 +88,15 @@ export default function RegisterPage() {
           input.password,
         );
 
+        const displayName =
+          existingProfile.name?.trim() || existingProfile.username || username;
+
         if (signIn.ok) {
-          toast.custom((t) => (
+          toast.custom(() => (
             <Alert variant="success">
               <AlertContent>
                 <AlertTitle>Welcome back!</AlertTitle>
-                <AlertDescription>Welcome back to Feed App.</AlertDescription>
+                <AlertDescription>{`Welcome back, ${displayName}.`}</AlertDescription>
               </AlertContent>
             </Alert>
           ));
@@ -134,11 +137,11 @@ export default function RegisterPage() {
           const signIn = await trySignIn(supabase, [email], input.password);
 
           if (signIn.ok) {
-            toast.custom((t) => (
+            toast.custom(() => (
               <Alert variant="success">
                 <AlertContent>
                   <AlertTitle>Welcome back!</AlertTitle>
-                  <AlertDescription>Welcome back to Feed App.</AlertDescription>
+                  <AlertDescription>{`Welcome back, ${username}.`}</AlertDescription>
                 </AlertContent>
               </Alert>
             ));
@@ -176,7 +179,7 @@ export default function RegisterPage() {
       }
 
       if (data.session) {
-        toast.custom((t) => (
+        toast.custom(() => (
           <Alert variant="success">
             <AlertContent>
               <AlertTitle>Account created!</AlertTitle>
@@ -192,7 +195,7 @@ export default function RegisterPage() {
       const signIn = await trySignIn(supabase, [email], input.password);
 
       if (signIn.ok) {
-        toast.custom((t) => (
+        toast.custom(() => (
           <Alert variant="success">
             <AlertContent>
               <AlertTitle>Account created!</AlertTitle>

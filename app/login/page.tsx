@@ -46,7 +46,7 @@ function LoginForm() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("email")
+        .select("email, name, username")
         .eq("username", username)
         .maybeSingle();
 
@@ -54,6 +54,8 @@ function LoginForm() {
         setError("Invalid username or password.");
         return;
       }
+
+      const displayName = profile.name?.trim() || profile.username || username;
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: profile.email,
@@ -65,11 +67,11 @@ function LoginForm() {
         return;
       }
 
-      toast.custom((t) => (
+      toast.custom(() => (
         <Alert variant="success">
           <AlertContent>
             <AlertTitle>Welcome back!</AlertTitle>
-            <AlertDescription>Welcome back to Feed App.</AlertDescription>
+            <AlertDescription>{`Welcome back, ${displayName}.`}</AlertDescription>
           </AlertContent>
         </Alert>
       ));
