@@ -709,7 +709,7 @@ export function MessagingDock() {
                   {setupError}
                 </p>
               )}
-              <div className="flex flex-1 items-center gap-2 px-3 pt-3">
+              <div className="flex items-center gap-2 px-3 pt-3">
                 <Input
                   type="search"
                   size="sm"

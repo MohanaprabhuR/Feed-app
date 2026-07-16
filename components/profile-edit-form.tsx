@@ -20,6 +20,7 @@ import { uploadPostAttachment } from "@/lib/post-media";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 type ProfileEditFormProps = {
   user: User;
@@ -294,184 +295,171 @@ export function ProfileEditForm({
         </div>
       </aside>
 
-      <div className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm sm:p-8 dark:border-border dark:bg-card">
-        {error && (
-          <Alert variant="error" className="mb-6 w-full max-w-none">
-            <AlertContent>
-              <AlertTitle>Something went wrong</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </AlertContent>
-          </Alert>
-        )}
+      <Card>
+        <CardContent className="p-0">
+          {error && (
+            <Alert variant="error" className="mb-6 w-full max-w-none">
+              <AlertContent>
+                <AlertTitle>Something went wrong</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </AlertContent>
+            </Alert>
+          )}
 
-        <Tabs defaultValue="personal" variant="underline" className="gap-8">
-          <TabsList className="h-auto w-full justify-start gap-8 rounded-none border-b border-border/70 bg-transparent p-0">
-            <TabsTrigger
-              value="personal"
-              className="rounded-none border-b-2 border-transparent px-0 pb-3 text-base font-medium shadow-none data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-            >
-              Personal Information
-            </TabsTrigger>
-            <TabsTrigger
-              value="password"
-              className="rounded-none border-b-2 border-transparent px-0 pb-3 text-base font-medium text-muted-foreground shadow-none data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-            >
-              Change Password
-            </TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="personal" variant="underline" className="gap-8">
+            <TabsList className="h-auto w-full justify-start gap-8 rounded-none border-b border-border/70 bg-transparent p-0">
+              <TabsTrigger value="personal">Personal Information</TabsTrigger>
+              <TabsTrigger value="password">Change Password</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="personal" className="mt-0 outline-none">
-            <form className="space-y-6" onSubmit={handleSaveProfile}>
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field id="profile-first-name" label="First Name">
+            <TabsContent value="personal" className="mt-0 outline-none p-0">
+              <form className="space-y-6" onSubmit={handleSaveProfile}>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field id="profile-first-name" label="First Name">
+                    <Input
+                      id="profile-first-name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="Enter first name"
+                      disabled={loading}
+                      required
+                    />
+                  </Field>
+                  <Field id="profile-last-name" label="Last Name">
+                    <Input
+                      id="profile-last-name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Enter last name"
+                      disabled={loading}
+                    />
+                  </Field>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field id="profile-email" label="Email Address">
+                    <Input
+                      id="profile-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter email address"
+                      disabled={loading}
+                    />
+                  </Field>
+                  <Field id="profile-phone" label="Phone Number">
+                    <Input
+                      id="profile-phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Enter phone number"
+                      disabled={loading}
+                    />
+                  </Field>
+                </div>
+
+                <Field id="profile-address" label="Address">
                   <Input
-                    id="profile-first-name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Enter first name"
+                    id="profile-address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Enter address"
                     disabled={loading}
+                  />
+                </Field>
+
+                <div className="grid gap-5 sm:grid-cols-3">
+                  <Field id="profile-city" label="City">
+                    <Input
+                      id="profile-city"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Enter city"
+                      disabled={loading}
+                    />
+                  </Field>
+                  <Field id="profile-state" label="State">
+                    <Input
+                      id="profile-state"
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      placeholder="Enter state"
+                      disabled={loading}
+                    />
+                  </Field>
+                  <Field id="profile-zip" label="Zip Code">
+                    <Input
+                      id="profile-zip"
+                      value={zipCode}
+                      onChange={(e) => setZipCode(e.target.value)}
+                      placeholder="Enter zip code"
+                      disabled={loading}
+                    />
+                  </Field>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={onCancel}
+                    disabled={loading || uploadingAvatar}
+                    size="md"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="md"
+                    loading={loading}
+                    disabled={uploadingAvatar}
+                  >
+                    Edit Profile
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="password" className="mt-0 outline-none p-0">
+              <form
+                className="mx-auto  space-y-6"
+                onSubmit={handleChangePassword}
+              >
+                <Field id="profile-new-password" label="New Password">
+                  <Input
+                    id="profile-new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    disabled={loading}
+                    autoComplete="new-password"
                     required
                   />
                 </Field>
-                <Field id="profile-last-name" label="Last Name">
+                <Field id="profile-confirm-password" label="Confirm Password">
                   <Input
-                    id="profile-last-name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Enter last name"
+                    id="profile-confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
                     disabled={loading}
+                    autoComplete="new-password"
+                    required
                   />
                 </Field>
-              </div>
-
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field id="profile-email" label="Email Address">
-                  <Input
-                    id="profile-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter email address"
-                    disabled={loading}
-                  />
-                </Field>
-                <Field id="profile-phone" label="Phone Number">
-                  <Input
-                    id="profile-phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Enter phone number"
-                    disabled={loading}
-                  />
-                </Field>
-              </div>
-
-              <Field id="profile-address" label="Address">
-                <Input
-                  id="profile-address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Enter address"
-                  disabled={loading}
-                />
-              </Field>
-
-              <div className="grid gap-5 sm:grid-cols-3">
-                <Field id="profile-city" label="City">
-                  <Input
-                    id="profile-city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Enter city"
-                    disabled={loading}
-                  />
-                </Field>
-                <Field id="profile-state" label="State">
-                  <Input
-                    id="profile-state"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    placeholder="Enter state"
-                    disabled={loading}
-                  />
-                </Field>
-                <Field id="profile-zip" label="Zip Code">
-                  <Input
-                    id="profile-zip"
-                    value={zipCode}
-                    onChange={(e) => setZipCode(e.target.value)}
-                    placeholder="Enter zip code"
-                    disabled={loading}
-                  />
-                </Field>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onCancel}
-                  disabled={loading || uploadingAvatar}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="min-w-36 rounded-xl"
-                  loading={loading}
-                  disabled={uploadingAvatar}
-                >
-                  Edit Profile
-                </Button>
-              </div>
-            </form>
-          </TabsContent>
-
-          <TabsContent value="password" className="mt-0 outline-none">
-            <form
-              className="mx-auto max-w-md space-y-6"
-              onSubmit={handleChangePassword}
-            >
-              <Field id="profile-new-password" label="New Password">
-                <Input
-                  id="profile-new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
-                  disabled={loading}
-                  autoComplete="new-password"
-                  required
-                />
-              </Field>
-              <Field id="profile-confirm-password" label="Confirm Password">
-                <Input
-                  id="profile-confirm-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                  disabled={loading}
-                  autoComplete="new-password"
-                  required
-                />
-              </Field>
-              <div className="flex justify-end pt-2">
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="min-w-36 rounded-xl"
-                  loading={loading}
-                >
-                  Update Password
-                </Button>
-              </div>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </div>
+                <div className="flex justify-end pt-2">
+                  <Button type="submit" size="md" loading={loading}>
+                    Update Password
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
