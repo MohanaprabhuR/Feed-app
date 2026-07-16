@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { splitPostMedia } from "@/lib/errors";
 import { profileToUser, type ProfileRow } from "@/lib/profile";
-import type { Post, PostType } from "@/lib/types";
+import type { Post, PostEvent, PostType } from "@/lib/types";
 
 export type PostRow = {
   id: string;
@@ -10,6 +10,7 @@ export type PostRow = {
   video?: string | null;
   post_type?: PostType | null;
   title?: string | null;
+  event?: PostEvent | null;
   likes_count: number;
   comments_count: number;
   shares_count: number;
@@ -21,6 +22,30 @@ export type PostRow = {
 type SchemaMode = "legacy" | "modern";
 
 let cachedSchemaMode: SchemaMode | null = null;
+let cachedEventColumn: boolean | null = null;
+
+const postSelectBase = `
+  id,
+  content,
+  image,
+  post_type,
+  title,
+  likes_count,
+  comments_count,
+  shares_count,
+  created_at,
+  author_id,
+  author:profiles!author_id (
+    id,
+    name,
+    username,
+    avatar,
+    bio,
+    followers_count,
+    following_count,
+    posts_count
+  )
+`;
 
 const postSelect = `
   id,
@@ -28,6 +53,7 @@ const postSelect = `
   image,
   post_type,
   title,
+  event,
   likes_count,
   comments_count,
   shares_count,
@@ -95,6 +121,44 @@ function isMissingArticleColumnsError(message: string) {
   );
 }
 
+function isMissingEventColumnError(message: string) {
+  return (
+    message.includes("event") &&
+    (message.includes("column") ||
+      message.includes("schema cache") ||
+      message.includes("Could not find"))
+  );
+}
+
+function normalizeEvent(value: unknown): PostEvent | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Record<string, unknown>;
+  const title = typeof raw.title === "string" ? raw.title.trim() : "";
+  const startsAt =
+    typeof raw.startsAt === "string"
+      ? raw.startsAt
+      : typeof raw.starts_at === "string"
+        ? raw.starts_at
+        : "";
+  if (!title || !startsAt) return undefined;
+
+  const endsAt =
+    typeof raw.endsAt === "string"
+      ? raw.endsAt
+      : typeof raw.ends_at === "string"
+        ? raw.ends_at
+        : undefined;
+  const location =
+    typeof raw.location === "string" ? raw.location.trim() : undefined;
+
+  return {
+    title,
+    startsAt,
+    ...(endsAt ? { endsAt } : {}),
+    ...(location ? { location } : {}),
+  };
+}
+
 function normalizeRows(data: PostRow | PostRow[] | null | undefined): PostRow[] {
   if (!data) return [];
   return Array.isArray(data) ? data : [data];
@@ -105,6 +169,7 @@ function withLegacyDefaults(row: PostRow): PostRow {
     ...row,
     post_type: row.post_type ?? "post",
     title: row.title ?? null,
+    event: normalizeEvent(row.event) ?? null,
   };
 }
 
@@ -121,10 +186,19 @@ export async function resolveSchemaMode(
 
 export function resetSchemaModeCache() {
   cachedSchemaMode = null;
+  cachedEventColumn = null;
 }
 
-function activeSelect(mode: SchemaMode) {
-  return mode === "modern" ? postSelect : legacyPostSelect;
+async function resolveEventColumn(supabase: SupabaseClient): Promise<boolean> {
+  if (cachedEventColumn !== null) return cachedEventColumn;
+  const { error } = await supabase.from("posts").select("event").limit(1);
+  cachedEventColumn = !(error && isMissingEventColumnError(error.message));
+  return cachedEventColumn;
+}
+
+function activeSelect(mode: SchemaMode, includeEvent: boolean) {
+  if (mode === "legacy") return legacyPostSelect;
+  return includeEvent ? postSelect : postSelectBase;
 }
 
 async function queryPosts(
@@ -135,11 +209,23 @@ async function queryPosts(
   }>
 ) {
   const mode = await resolveSchemaMode(supabase);
-  const result = await buildQuery(activeSelect(mode));
-  if (result.error) throw result.error;
+  const includeEvent =
+    mode === "modern" ? await resolveEventColumn(supabase) : false;
+  const result = await buildQuery(activeSelect(mode, includeEvent));
+  if (result.error) {
+    if (includeEvent && isMissingEventColumnError(result.error.message)) {
+      cachedEventColumn = false;
+      const retry = await buildQuery(activeSelect(mode, false));
+      if (retry.error) throw retry.error;
+      return normalizeRows(retry.data as PostRow | PostRow[] | null).map(
+        withLegacyDefaults,
+      );
+    }
+    throw result.error;
+  }
 
   return normalizeRows(result.data as PostRow | PostRow[] | null).map(
-    withLegacyDefaults
+    withLegacyDefaults,
   );
 }
 
@@ -188,15 +274,18 @@ export function postRowToPost(
   }
 
   const media = splitPostMedia(normalized.image, normalized.video);
+  const event = normalizeEvent(normalized.event);
 
   return {
     id: normalized.id,
     author: profileToUser(author),
-    type: "post",
+    type: event ? "event" : "post",
+    title: normalized.title ?? event?.title,
     content: normalized.content,
     image: media.image,
     video: media.video,
     file: media.file,
+    event,
     likes: normalized.likes_count ?? 0,
     comments: normalized.comments_count ?? 0,
     shares: normalized.shares_count ?? 0,
@@ -245,14 +334,18 @@ async function loadAllPostRows(reader: SupabaseClient) {
   // Prefer admin reader when available so a misconfigured RLS can't hide
   // other users' posts from the shared feed.
   const mode = await resolveSchemaMode(reader);
+  const includeEvent =
+    mode === "modern" ? await resolveEventColumn(reader) : false;
+
+  const modernColumns = includeEvent
+    ? "id, content, image, post_type, title, event, likes_count, comments_count, shares_count, created_at, author_id"
+    : "id, content, image, post_type, title, likes_count, comments_count, shares_count, created_at, author_id";
 
   const result =
     mode === "modern"
       ? await reader
           .from("posts")
-          .select(
-            "id, content, image, post_type, title, likes_count, comments_count, shares_count, created_at, author_id",
-          )
+          .select(modernColumns)
           .order("created_at", { ascending: false })
       : await reader
           .from("posts")
@@ -261,7 +354,22 @@ async function loadAllPostRows(reader: SupabaseClient) {
           )
           .order("created_at", { ascending: false });
 
-  if (result.error) throw result.error;
+  if (result.error) {
+    if (includeEvent && isMissingEventColumnError(result.error.message)) {
+      cachedEventColumn = false;
+      const retry = await reader
+        .from("posts")
+        .select(
+          "id, content, image, post_type, title, likes_count, comments_count, shares_count, created_at, author_id",
+        )
+        .order("created_at", { ascending: false });
+      if (retry.error) throw retry.error;
+      return normalizeRows(
+        (retry.data as unknown as PostRow[] | null) ?? null,
+      ).map(withLegacyDefaults);
+    }
+    throw result.error;
+  }
 
   return normalizeRows(
     (result.data as unknown as PostRow[] | null) ?? null,
@@ -372,39 +480,78 @@ export async function createPost(
   supabase: SupabaseClient,
   authorId: string,
   content: string,
-  media?: { image?: string; video?: string; file?: string }
+  media?: { image?: string; video?: string; file?: string },
+  event?: PostEvent,
 ) {
   const trimmed = content.trim();
-  if (!trimmed && !media?.image && !media?.video && !media?.file) {
-    throw new Error("Post must include text or an attachment.");
+  const normalizedEvent = event ? normalizeEvent(event) : undefined;
+
+  if (
+    !trimmed &&
+    !media?.image &&
+    !media?.video &&
+    !media?.file &&
+    !normalizedEvent
+  ) {
+    throw new Error("Post must include text, an attachment, or an event.");
+  }
+
+  if (event && !normalizedEvent) {
+    throw new Error("Event needs a title and start date/time.");
   }
 
   const mediaUrl = media?.video ?? media?.image ?? media?.file ?? null;
   const mode = await resolveSchemaMode(supabase);
+  // Keep DB post_type as "post" — many projects only allow ('post','article').
+  // UI treats rows with an `event` payload as event posts.
+  const includeEvent =
+    mode === "modern" ? await resolveEventColumn(supabase) : false;
+
+  if (normalizedEvent && !includeEvent) {
+    throw new Error(
+      "Events need database setup. Run supabase/migrate-post-events.sql in Supabase → SQL Editor.",
+    );
+  }
+
+  const modernPayload: Record<string, unknown> = {
+    author_id: authorId,
+    content: trimmed || (normalizedEvent ? normalizedEvent.title : ""),
+    image: mediaUrl,
+    post_type: "post",
+    title: normalizedEvent?.title ?? null,
+  };
+  if (includeEvent) {
+    modernPayload.event = normalizedEvent ?? null;
+  }
+
+  const select = activeSelect(mode, includeEvent);
 
   const { data, error } =
     mode === "modern"
       ? await supabase
           .from("posts")
-          .insert({
-            author_id: authorId,
-            content: trimmed,
-            image: mediaUrl,
-            post_type: "post",
-          })
-          .select(postSelect)
+          .insert(modernPayload)
+          .select(select)
           .single()
       : await supabase
           .from("posts")
           .insert({
             author_id: authorId,
-            content: trimmed,
+            content: trimmed || (normalizedEvent ? normalizedEvent.title : ""),
             image: mediaUrl,
           })
           .select(legacyPostSelect)
           .single();
 
-  if (error) throw error;
+  if (error) {
+    if (normalizedEvent && isMissingEventColumnError(error.message)) {
+      cachedEventColumn = false;
+      throw new Error(
+        "Events need database setup. Run supabase/migrate-post-events.sql in Supabase → SQL Editor.",
+      );
+    }
+    throw error;
+  }
   return postRowToPost(withLegacyDefaults(data as PostRow))!;
 }
 
@@ -435,7 +582,7 @@ export async function createArticle(
       image: input.coverImage ?? null,
       post_type: "article",
     })
-    .select(postSelect)
+    .select(postSelectBase)
     .single();
 
   if (error) {
@@ -467,7 +614,9 @@ export async function updatePost(
   }
 
   const mode = await resolveSchemaMode(supabase);
-  const select = activeSelect(mode);
+  const includeEvent =
+    mode === "modern" ? await resolveEventColumn(supabase) : false;
+  const select = activeSelect(mode, includeEvent);
 
   const payload: { content: string; image?: string | null } = {
     content: trimmed,

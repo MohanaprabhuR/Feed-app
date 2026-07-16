@@ -876,6 +876,13 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
+
+  /* emoji-picker-react: keep category list scrollable inside dialogs/popovers */
+  .emoji-picker-shell .epr-body {
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 @keyframes scroll-shadow-mask {

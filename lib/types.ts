@@ -16,7 +16,7 @@ export type User = {
   isFollowing?: boolean;
 };
 
-export type PostType = "post" | "article";
+export type PostType = "post" | "article" | "event";
 
 export type ReactionType =
   | "like"
@@ -25,6 +25,13 @@ export type ReactionType =
   | "love"
   | "insightful"
   | "funny";
+
+export type PostEvent = {
+  title: string;
+  startsAt: string;
+  endsAt?: string;
+  location?: string;
+};
 
 export type Post = {
   id: string;
@@ -38,6 +45,7 @@ export type Post = {
     url: string;
     name: string;
   };
+  event?: PostEvent;
   likes: number;
   comments: number;
   shares: number;

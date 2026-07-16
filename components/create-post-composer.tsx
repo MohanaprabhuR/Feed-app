@@ -14,12 +14,15 @@ import {
   Newspaper,
   Paperclip,
   Plus,
-  Smile,
   Video,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/components/current-user-provider";
+import {
+  EmojiPickerButton,
+  insertEmojiAtCaret,
+} from "@/components/emoji-picker-button";
 import { CurrentUserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,11 +56,33 @@ import {
   type PostAttachmentType,
 } from "@/lib/post-media";
 import { createPost } from "@/lib/posts";
-import type { Post } from "@/lib/types";
+import type { Post, PostEvent } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
 import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PostEventCard } from "@/components/post-event-card";
+
+function toDatetimeLocalValue(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function defaultEventStart() {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return toDatetimeLocalValue(d);
+}
+
+type EventDraft = {
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  location: string;
+};
 
 const feedActions = [
   {
@@ -96,10 +121,71 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [eventDraft, setEventDraft] = useState<EventDraft>({
+    title: "",
+    startsAt: defaultEventStart(),
+    endsAt: "",
+    location: "",
+  });
+
+  function insertEmoji(emoji: string) {
+    const el = textareaRef.current;
+    const { value, caret } = insertEmojiAtCaret(
+      content,
+      emoji,
+      el?.selectionStart,
+      el?.selectionEnd,
+    );
+    setContent(value);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(caret, caret);
+    });
+  }
+
+  function openEventForm() {
+    openModal();
+    setShowEventForm(true);
+    setEventDraft((current) => ({
+      ...current,
+      startsAt: current.startsAt || defaultEventStart(),
+    }));
+  }
+
+  function clearEvent() {
+    setShowEventForm(false);
+    setEventDraft({
+      title: "",
+      startsAt: defaultEventStart(),
+      endsAt: "",
+      location: "",
+    });
+  }
+
+  function buildEventPayload(): PostEvent | undefined {
+    if (!showEventForm) return undefined;
+    const title = eventDraft.title.trim();
+    if (!title || !eventDraft.startsAt) return undefined;
+
+    const startsAt = new Date(eventDraft.startsAt).toISOString();
+    const endsAt = eventDraft.endsAt
+      ? new Date(eventDraft.endsAt).toISOString()
+      : undefined;
+    const location = eventDraft.location.trim() || undefined;
+
+    return {
+      title,
+      startsAt,
+      ...(endsAt ? { endsAt } : {}),
+      ...(location ? { location } : {}),
+    };
+  }
 
   useEffect(() => {
     return () => {
@@ -118,6 +204,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
 
   function resetComposer() {
     clearAttachment();
+    clearEvent();
     setContent("");
     setOpen(false);
   }
@@ -168,7 +255,24 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
   }
 
   async function handlePost() {
-    if (!user || (!content.trim() && !attachment)) return;
+    if (!user) return;
+
+    const event = buildEventPayload();
+    if (showEventForm && !event) {
+      toast.custom(() => (
+        <Alert variant="error">
+          <AlertContent>
+            <AlertTitle>Event details required</AlertTitle>
+            <AlertDescription>
+              Add an event title and start date/time.
+            </AlertDescription>
+          </AlertContent>
+        </Alert>
+      ));
+      return;
+    }
+
+    if (!content.trim() && !attachment && !event) return;
 
     setLoading(true);
 
@@ -185,29 +289,39 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
         else file = uploaded.url;
       }
 
-      const created = await createPost(supabase, user.id, content, {
-        image,
-        video,
-        file,
-      });
+      const created = await createPost(
+        supabase,
+        user.id,
+        content,
+        { image, video, file },
+        event,
+      );
       await refresh();
 
-      toast.custom((t) => (
+      toast.custom(() => (
         <Alert variant="success">
           <AlertContent>
-            <AlertTitle>Post published!</AlertTitle>
-            <AlertDescription>You have published the post.</AlertDescription>
+            <AlertTitle>
+              {event ? "Event published!" : "Post published!"}
+            </AlertTitle>
+            <AlertDescription>
+              {event
+                ? "Your event is live on the feed."
+                : "You have published the post."}
+            </AlertDescription>
           </AlertContent>
         </Alert>
       ));
       resetComposer();
       onPosted?.(created);
     } catch (error) {
-      toast.custom((t) => (
+      toast.custom(() => (
         <Alert variant="error">
           <AlertContent>
-            <AlertTitle>Could not publish post.</AlertTitle>
-            <AlertDescription>You could not publish the post.</AlertDescription>
+            <AlertTitle>Could not publish</AlertTitle>
+            <AlertDescription>
+              {getErrorMessage(error, "Please try again.")}
+            </AlertDescription>
           </AlertContent>
         </Alert>
       ));
@@ -216,7 +330,13 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
     }
   }
 
-  const canPost = Boolean(user && (content.trim() || attachment) && !loading);
+  const canPost = Boolean(
+    user &&
+      !loading &&
+      (content.trim() ||
+        attachment ||
+        (showEventForm && eventDraft.title.trim() && eventDraft.startsAt)),
+  );
 
   return (
     <>
@@ -300,11 +420,11 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
       >
         <DialogContent
           size="lg"
-          className="max-h-[min(90vh,720px)] gap-0 overflow-hidden p-0 sm:max-w-[552px]"
+          className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[552px]"
         >
           <DialogTitle className="sr-only">Create a post</DialogTitle>
 
-          <div className="flex items-start gap-3 px-4 pt-4 pr-12">
+          <div className="flex shrink-0 items-start gap-3 px-4 pt-4 pr-12">
             <CurrentUserAvatar size="sm" />
             <div className="min-w-0 flex-1 space-y-1">
               <Button
@@ -322,15 +442,127 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-2">
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2"
+            data-scroll-lock-scrollable=""
+          >
             <Textarea
+              ref={textareaRef}
               autoFocus
-              placeholder="What do you want to talk about?"
+              placeholder={
+                showEventForm
+                  ? "What is this event about?"
+                  : "What do you want to talk about?"
+              }
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="min-h-[168px] resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+              className={cn(
+                "resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0",
+                showEventForm ? "min-h-[88px]" : "min-h-[168px]",
+              )}
               disabled={loading}
             />
+
+            {showEventForm && (
+              <Card className="mb-3 overflow-hidden border shadow-sm">
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">Event details</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      iconOnly
+                      onClick={clearEvent}
+                      disabled={loading}
+                      aria-label="Remove event"
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="event-title">Event name</Label>
+                    <Input
+                      id="event-title"
+                      placeholder="Add a title"
+                      value={eventDraft.title}
+                      onChange={(e) =>
+                        setEventDraft((d) => ({ ...d, title: e.target.value }))
+                      }
+                      disabled={loading}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="event-start">Start</Label>
+                      <Input
+                        id="event-start"
+                        type="datetime-local"
+                        value={eventDraft.startsAt}
+                        onChange={(e) =>
+                          setEventDraft((d) => ({
+                            ...d,
+                            startsAt: e.target.value,
+                          }))
+                        }
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="event-end">End (optional)</Label>
+                      <Input
+                        id="event-end"
+                        type="datetime-local"
+                        value={eventDraft.endsAt}
+                        min={eventDraft.startsAt || undefined}
+                        onChange={(e) =>
+                          setEventDraft((d) => ({
+                            ...d,
+                            endsAt: e.target.value,
+                          }))
+                        }
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="event-location">Location (optional)</Label>
+                    <Input
+                      id="event-location"
+                      placeholder="Add a venue or online link"
+                      value={eventDraft.location}
+                      onChange={(e) =>
+                        setEventDraft((d) => ({
+                          ...d,
+                          location: e.target.value,
+                        }))
+                      }
+                      disabled={loading}
+                      autoComplete="off"
+                    />
+                  </div>
+                  {eventDraft.title.trim() && eventDraft.startsAt ? (
+                    <PostEventCard
+                      event={{
+                        title: eventDraft.title.trim(),
+                        startsAt: new Date(eventDraft.startsAt).toISOString(),
+                        ...(eventDraft.endsAt
+                          ? {
+                              endsAt: new Date(
+                                eventDraft.endsAt,
+                              ).toISOString(),
+                            }
+                          : {}),
+                        ...(eventDraft.location.trim()
+                          ? { location: eventDraft.location.trim() }
+                          : {}),
+                      }}
+                    />
+                  ) : null}
+                </CardContent>
+              </Card>
+            )}
 
             {attachment && (
               <Card className="relative mb-2 overflow-hidden">
@@ -380,31 +612,16 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
               </Card>
             )}
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              iconOnly
-              className="mb-2 self-start"
-              onClick={() =>
-                toast.custom((t) => (
-                  <Alert variant="information">
-                    <AlertContent>
-                      <AlertTitle>Emoji picker coming soon</AlertTitle>
-                      <AlertDescription>
-                        You can add emojis to your post.
-                      </AlertDescription>
-                    </AlertContent>
-                  </Alert>
-                ))
-              }
-              aria-label="Add emoji"
-            >
-              <Smile />
-            </Button>
+            <EmojiPickerButton
+              disabled={loading}
+              buttonClassName="mb-2 self-start"
+              side="top"
+              align="start"
+              onSelect={insertEmoji}
+            />
           </div>
 
-          <div className="flex items-center justify-between gap-2 border-t px-4 py-3">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t px-4 py-3">
             <Button
               type="button"
               variant="outline"
@@ -452,19 +669,10 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                 variant="ghost"
                 size="sm"
                 iconOnly
-                onClick={() =>
-                  toast.custom((t) => (
-                    <Alert variant="information">
-                      <AlertContent>
-                        <AlertTitle>Events coming soon</AlertTitle>
-                        <AlertDescription>
-                          You can create events for your post.
-                        </AlertDescription>
-                      </AlertContent>
-                    </Alert>
-                  ))
-                }
+                onClick={openEventForm}
                 aria-label="Create event"
+                aria-pressed={showEventForm}
+                className={cn(showEventForm && "bg-accent text-foreground")}
               >
                 <Calendar />
               </Button>
@@ -506,20 +714,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                     <Paperclip className="size-4" />
                     Add a document
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      toast.custom((t) => (
-                        <Alert variant="information">
-                          <AlertContent>
-                            <AlertTitle>Events coming soon</AlertTitle>
-                            <AlertDescription>
-                              You can create events for your post.
-                            </AlertDescription>
-                          </AlertContent>
-                        </Alert>
-                      ))
-                    }
-                  >
+                  <DropdownMenuItem onClick={openEventForm}>
                     <Calendar className="size-4" />
                     Create an event
                   </DropdownMenuItem>
@@ -534,7 +729,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
             </div>
           </div>
 
-          <DialogFooter className="border-t px-4 py-3 sm:justify-end">
+          <DialogFooter className="shrink-0 border-t px-4 py-3 sm:justify-end">
             <Button
               type="button"
               variant="ghost"

@@ -1,10 +1,14 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ImageIcon, Smile } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
+import {
+  EmojiPickerButton,
+  insertEmojiAtCaret,
+} from "@/components/emoji-picker-button";
 import { ProfileTrigger } from "@/components/profile-trigger";
 import { ReactionButton } from "@/components/reaction-button";
 import { UserAvatar } from "@/components/user-avatar";
@@ -72,7 +76,23 @@ function CommentItem({
 }) {
   const [replyContent, setReplyContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const replyInputRef = useRef<HTMLInputElement>(null);
   const isReplying = replyToId === comment.id;
+
+  function insertReplyEmoji(emoji: string) {
+    const el = replyInputRef.current;
+    const { value, caret } = insertEmojiAtCaret(
+      replyContent,
+      emoji,
+      el?.selectionStart,
+      el?.selectionEnd,
+    );
+    setReplyContent(value);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(caret, caret);
+    });
+  }
 
   async function handleReact(reaction: ReactionType | null) {
     const supabase = createClient();
@@ -190,15 +210,26 @@ function CommentItem({
                 size="sm"
                 userId={user.id}
               />
-              <Input
-                placeholder={`Reply to ${comment.author.name}...`}
-                className="h-9 flex-1 rounded-full"
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                disabled={submitting}
-                autoFocus
-                autoComplete="off"
-              />
+              <div className="relative min-w-0 flex-1">
+                <Input
+                  ref={replyInputRef}
+                  placeholder={`Reply to ${comment.author.name}...`}
+                  className="h-9 rounded-full pr-10"
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  disabled={submitting}
+                  autoFocus
+                  autoComplete="off"
+                />
+                <div className="absolute inset-y-0 right-1 flex items-center">
+                  <EmojiPickerButton
+                    disabled={submitting}
+                    side="top"
+                    align="end"
+                    onSelect={insertReplyEmoji}
+                  />
+                </div>
+              </div>
               <Button
                 type="submit"
                 size="sm"
@@ -252,6 +283,22 @@ export function PostComments({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+
+  function insertCommentEmoji(emoji: string) {
+    const el = commentInputRef.current;
+    const { value, caret } = insertEmojiAtCaret(
+      content,
+      emoji,
+      el?.selectionStart,
+      el?.selectionEnd,
+    );
+    setContent(value);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(caret, caret);
+    });
+  }
   const [loaded, setLoaded] = useState(false);
   const [replyToId, setReplyToId] = useState<string | null>(null);
 
@@ -339,6 +386,7 @@ export function PostComments({
           />
           <div className="relative min-w-0 flex-1">
             <Input
+              ref={commentInputRef}
               placeholder="Add a comment..."
               className="h-10 rounded-full pr-20"
               value={content}
@@ -347,9 +395,24 @@ export function PostComments({
               autoFocus
               autoComplete="off"
             />
-            <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-1 text-muted-foreground">
-              <Smile className="size-4" />
-              <ImageIcon className="size-4" />
+            <div className="absolute inset-y-0 right-1 flex items-center gap-0.5 text-muted-foreground">
+              <EmojiPickerButton
+                disabled={submitting}
+                side="top"
+                align="end"
+                onSelect={insertCommentEmoji}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                iconOnly
+                className="text-muted-foreground"
+                aria-label="Add image"
+                disabled
+              >
+                <ImageIcon className="size-4" />
+              </Button>
             </div>
           </div>
           {content.trim() ? (

@@ -94,11 +94,13 @@ create table if not exists public.posts (
   image text,
   post_type text default 'post' not null,
   title text,
+  event jsonb,
   likes_count integer default 0 not null,
   comments_count integer default 0 not null,
   shares_count integer default 0 not null,
   created_at timestamptz default now() not null,
-  updated_at timestamptz default now() not null
+  updated_at timestamptz default now() not null,
+  constraint posts_post_type_check check (post_type in ('post', 'article', 'event'))
 );
 
 alter table public.posts enable row level security;

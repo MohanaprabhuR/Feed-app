@@ -1,10 +1,14 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Send } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useCurrentUser } from "@/components/current-user-provider";
+import {
+  EmojiPickerButton,
+  insertEmojiAtCaret,
+} from "@/components/emoji-picker-button";
 import { PageHeader } from "@/components/page-header";
 import { ProfileTrigger } from "@/components/profile-trigger";
 import { ReactionButton } from "@/components/reaction-button";
@@ -67,7 +71,23 @@ function CommentBlock({
 }) {
   const [replyContent, setReplyContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const replyInputRef = useRef<HTMLInputElement>(null);
   const isReplying = replyToId === comment.id;
+
+  function insertReplyEmoji(emoji: string) {
+    const el = replyInputRef.current;
+    const { value, caret } = insertEmojiAtCaret(
+      replyContent,
+      emoji,
+      el?.selectionStart,
+      el?.selectionEnd,
+    );
+    setReplyContent(value);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(caret, caret);
+    });
+  }
 
   async function handleReact(reaction: ReactionType | null) {
     const supabase = createClient();
@@ -173,13 +193,25 @@ function CommentBlock({
 
           {isReplying && user && (
             <form className="mt-2 flex gap-2" onSubmit={handleReply}>
-              <Input
-                placeholder={`Reply to ${comment.author.name}...`}
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                disabled={submitting}
-                autoFocus
-              />
+              <div className="relative min-w-0 flex-1">
+                <Input
+                  ref={replyInputRef}
+                  placeholder={`Reply to ${comment.author.name}...`}
+                  className="pr-10"
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  disabled={submitting}
+                  autoFocus
+                />
+                <div className="absolute inset-y-0 right-1 flex items-center">
+                  <EmojiPickerButton
+                    disabled={submitting}
+                    side="top"
+                    align="end"
+                    onSelect={insertReplyEmoji}
+                  />
+                </div>
+              </div>
               <Button
                 type="submit"
                 size="sm"
@@ -224,6 +256,22 @@ export default function CommentsPage({
   const [error, setError] = useState<string | null>(null);
   const [missingPost, setMissingPost] = useState(false);
   const [replyToId, setReplyToId] = useState<string | null>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+
+  function insertCommentEmoji(emoji: string) {
+    const el = commentInputRef.current;
+    const { value, caret } = insertEmojiAtCaret(
+      content,
+      emoji,
+      el?.selectionStart,
+      el?.selectionEnd,
+    );
+    setContent(value);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(caret, caret);
+    });
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -339,14 +387,25 @@ export default function CommentsPage({
           <Skeleton className="h-10 w-full" />
         ) : user ? (
           <form className="flex gap-2" onSubmit={handleSubmit}>
-            <Input
-              placeholder="Write a comment..."
-              className="flex-1"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              disabled={submitting || missingPost}
-              autoComplete="off"
-            />
+            <div className="relative min-w-0 flex-1">
+              <Input
+                ref={commentInputRef}
+                placeholder="Write a comment..."
+                className="pr-10"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                disabled={submitting || missingPost}
+                autoComplete="off"
+              />
+              <div className="absolute inset-y-0 right-1 flex items-center">
+                <EmojiPickerButton
+                  disabled={submitting || missingPost}
+                  side="top"
+                  align="end"
+                  onSelect={insertCommentEmoji}
+                />
+              </div>
+            </div>
             <Button
               type="submit"
               size="sm"

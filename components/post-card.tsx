@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { PostComments } from "@/components/post-comments";
+import { PostEventCard } from "@/components/post-event-card";
 import { PostLikeButton } from "@/components/post-like-button";
 import {
   mergeReactionSummary,
@@ -187,7 +188,11 @@ export function PostCard({
         )}
       </CardHeader>
       <CardContent className={feedCardContentClass}>
-        <p className="text-base leading-relaxed">{content}</p>
+        {content.trim() &&
+        !(post.event && content.trim() === post.event.title) ? (
+          <p className="text-base leading-relaxed">{content}</p>
+        ) : null}
+        {post.event ? <PostEventCard event={post.event} /> : null}
         {post.video ? (
           <video
             src={post.video}
