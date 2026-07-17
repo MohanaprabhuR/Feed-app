@@ -62,7 +62,8 @@ function formatDisplayValue(value: string) {
   const parsed = parseDatetimeLocalValue(value);
   if (!parsed) return "";
 
-  return parsed.toLocaleString(undefined, {
+  // Fixed locale so SSR and client render the same string.
+  return parsed.toLocaleString("en-US", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

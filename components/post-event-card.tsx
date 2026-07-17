@@ -4,17 +4,29 @@ import { Calendar, MapPin } from "lucide-react";
 import type { PostEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const EVENT_DATE_LOCALE = "en-US";
+
+const eventDateTimeOptions: Intl.DateTimeFormatOptions = {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+};
+
+const eventTimeOptions: Intl.DateTimeFormatOptions = {
+  hour: "numeric",
+  minute: "2-digit",
+};
+
 function formatEventWhen(startsAt: string, endsAt?: string) {
   const start = new Date(startsAt);
   if (Number.isNaN(start.getTime())) return startsAt;
 
-  const startLabel = start.toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const startLabel = start.toLocaleString(
+    EVENT_DATE_LOCALE,
+    eventDateTimeOptions,
+  );
 
   if (!endsAt) return startLabel;
 
@@ -23,19 +35,16 @@ function formatEventWhen(startsAt: string, endsAt?: string) {
 
   const sameDay = start.toDateString() === end.toDateString();
   if (sameDay) {
-    return `${startLabel} – ${end.toLocaleTimeString(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-    })}`;
+    return `${startLabel} – ${end.toLocaleTimeString(
+      EVENT_DATE_LOCALE,
+      eventTimeOptions,
+    )}`;
   }
 
-  return `${startLabel} – ${end.toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  })}`;
+  return `${startLabel} – ${end.toLocaleString(
+    EVENT_DATE_LOCALE,
+    eventDateTimeOptions,
+  )}`;
 }
 
 export function PostEventCard({
@@ -55,7 +64,7 @@ export function PostEventCard({
       <div className="flex gap-3 p-4">
         <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <span className="text-[10px] font-semibold uppercase leading-none">
-            {new Date(event.startsAt).toLocaleString(undefined, {
+            {new Date(event.startsAt).toLocaleString(EVENT_DATE_LOCALE, {
               month: "short",
             })}
           </span>
