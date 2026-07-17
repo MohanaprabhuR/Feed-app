@@ -19,6 +19,10 @@ import { FeedListSkeleton } from "@/components/skeletons";
 import { isArticle } from "@/lib/articles";
 import { getErrorMessage } from "@/lib/errors";
 import {
+  PAGE_LOAD_MIN_DELAY_MS,
+  withMinimumDelay,
+} from "@/lib/minimum-delay";
+import {
   pageColumnClass,
   pageErrorClass,
   pageStackClass,
@@ -46,7 +50,10 @@ export default function SavedPostsPage() {
 
     try {
       const supabase = createClient();
-      const data = await fetchSavedPosts(supabase, user.id);
+      const data = await withMinimumDelay(
+        fetchSavedPosts(supabase, user.id),
+        PAGE_LOAD_MIN_DELAY_MS,
+      );
       setPosts(data);
     } catch (err) {
       setPosts([]);
@@ -113,7 +120,8 @@ export default function SavedPostsPage() {
         {!showLoading &&
           user &&
           !error &&
-          posts.map((post) => {
+          posts.map((post, index) => {
+            const revealDelay = Math.min(index * 60, 300);
             const isOwnPost = user.id === post.author.id;
             const removePost = (postId: string) => {
               setPosts((current) => current.filter((p) => p.id !== postId));
@@ -142,6 +150,7 @@ export default function SavedPostsPage() {
                 post={post}
                 showActions
                 canManage={isOwnPost}
+                revealDelay={revealDelay}
                 onUpdated={updatePostInList}
                 onDeleted={removePost}
                 onUnsaved={removePost}

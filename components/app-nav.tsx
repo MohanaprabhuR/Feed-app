@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, Home, MessageCircle, Search, Users } from "lucide-react";
 import { MeMenu } from "@/components/me-menu";
+import { FeedLogoMark } from "@/components/feed-logo";
 import { useMessaging } from "@/components/messaging-provider";
 import { useNotifications } from "@/components/notifications-provider";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/ui/header";
@@ -149,17 +149,15 @@ export function AppHeader() {
   }
 
   return (
-    <Header className="sticky top-0 z-40 h-14 w-full border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-5">
+    <Header className="sticky top-0 z-40 h-14 w-full border-b bg-background/95 px-3 backdrop-blur supports-backdrop-filter:bg-background/80 sm:px-5">
       <div className="mx-auto flex h-full w-full max-w-[1128px] items-center gap-3">
-        <Button asChild variant="ghost" size="sm" iconOnly className="shrink-0">
-          <Link href="/feed">
-            <Avatar size="2xl" className="rounded bg-primary">
-              <AvatarFallback className="rounded bg-primary text-lg font-bold text-primary-foreground">
-                F
-              </AvatarFallback>
-            </Avatar>
-          </Link>
-        </Button>
+        <Link
+          href="/feed"
+          aria-label="Feed home"
+          className="inline-flex shrink-0 rounded-[0.7rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <FeedLogoMark />
+        </Link>
 
         <div className="hidden max-w-[280px] flex-1 md:block">
           <Input

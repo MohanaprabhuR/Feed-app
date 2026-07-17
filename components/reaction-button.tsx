@@ -61,10 +61,16 @@ export function ReactionButton({
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ignoreClick = useRef(false);
+  const skipNextSyncRef = useRef(false);
 
-  // Keep button in sync after refresh / feed reload (skip while a save is in flight).
+  // Sync from parent when feed data changes. Skip while saving, and skip once
+  // after save completes so stale props cannot wipe the optimistic icon state.
   useEffect(() => {
     if (pending) return;
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
+    }
     setReactionState(initialReaction ?? (initialLiked ? "like" : null));
     setCount(initialCount);
   }, [initialCount, initialLiked, initialReaction, pending]);
@@ -158,6 +164,7 @@ export function ReactionButton({
         getErrorMessage(error, "Please try again."),
       );
     } finally {
+      skipNextSyncRef.current = true;
       setPending(false);
     }
   }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Bell, FileText, Heart, MessageCircle, Users } from "lucide-react";
+import { FeedMark } from "@/components/feed-logo";
 import { cn } from "@/lib/utils";
 
 type AuthLayoutProps = {
@@ -9,18 +10,6 @@ type AuthLayoutProps = {
   className?: string;
 };
 
-function FeedMark({ className }: { className?: string }) {
-  return (
-    <div className={cn("flex items-center gap-2.5", className)}>
-      <span className="flex size-10 items-center justify-center rounded-[0.7rem] bg-foreground font-sans text-lg font-bold tracking-tight text-background sm:size-11 sm:text-xl">
-        F
-      </span>
-      <span className="font-serif text-2xl font-semibold tracking-tight text-foreground sm:text-[1.7rem]">
-        Feed
-      </span>
-    </div>
-  );
-}
 
 function AuthBrandPanel() {
   return (

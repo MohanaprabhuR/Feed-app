@@ -97,8 +97,12 @@ export default function SearchPage() {
                   </h3>
                   {filteredPosts.length > 0 ? (
                     <div className={pageStackClass}>
-                      {filteredPosts.map((post) => (
-                        <PostCard key={post.id} post={post} />
+                      {filteredPosts.map((post, index) => (
+                        <PostCard
+                          key={post.id}
+                          post={post}
+                          revealDelay={Math.min(index * 60, 300)}
+                        />
                       ))}
                     </div>
                   ) : (
@@ -132,8 +136,12 @@ export default function SearchPage() {
 
           <TabsContent value="posts" className="mt-4 space-y-4">
             {filteredPosts.length > 0 ? (
-              filteredPosts.map((post) => (
-                <PostCard key={post.id} post={post} />
+              filteredPosts.map((post, index) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  revealDelay={Math.min(index * 60, 300)}
+                />
               ))
             ) : (
               <Empty className="border bg-card py-14">

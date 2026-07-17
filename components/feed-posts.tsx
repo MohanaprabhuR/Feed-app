@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ArticleCard } from "@/components/article-card";
 import { CreatePostComposer } from "@/components/create-post-composer";
 import { useCurrentUser } from "@/components/current-user-provider";
@@ -20,12 +20,18 @@ import {
 import { FeedListSkeleton } from "@/components/skeletons";
 import { isArticle } from "@/lib/articles";
 import { getErrorMessage } from "@/lib/errors";
+import {
+  PAGE_LOAD_MIN_DELAY_MS,
+  withMinimumDelay,
+} from "@/lib/minimum-delay";
 import type { Post } from "@/lib/types";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
 
 type FeedPostsProps = {
   initialPosts?: Post[];
+  serverLoaded?: boolean;
+  editPostId?: string | null;
 };
 
 async function loadFeedPosts(): Promise<Post[]> {
@@ -45,34 +51,39 @@ async function loadFeedPosts(): Promise<Post[]> {
   return payload.posts ?? [];
 }
 
-export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
+let clientFeedFetchStarted = false;
+
+export function FeedPosts({
+  initialPosts = [],
+  serverLoaded = false,
+  editPostId = null,
+}: FeedPostsProps) {
   const { user } = useCurrentUser();
-  const userId = user?.id;
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const editPostId = searchParams.get("edit");
   const [posts, setPosts] = useState<Post[]>(initialPosts);
-  const [loading, setLoading] = useState(initialPosts.length === 0);
+  const [loading, setLoading] = useState(!serverLoaded);
   const [error, setError] = useState<string | null>(null);
 
   const clearEditParam = useCallback(() => {
-    if (!searchParams.has("edit")) return;
-    const next = new URLSearchParams(searchParams.toString());
-    next.delete("edit");
-    const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname);
-  }, [pathname, router, searchParams]);
+    if (!editPostId) return;
+    router.replace(pathname);
+  }, [editPostId, pathname, router]);
 
-  const loadPosts = useCallback(async () => {
+  const loadPosts = useCallback(async (options?: { showLoading?: boolean }) => {
+    const showLoading = options?.showLoading ?? false;
+    if (showLoading) setLoading(true);
+
     try {
-      const data = await loadFeedPosts();
+      const data = showLoading
+        ? await withMinimumDelay(loadFeedPosts(), PAGE_LOAD_MIN_DELAY_MS)
+        : await loadFeedPosts();
       setPosts(data);
       setError(null);
     } catch (err) {
       setError(getErrorMessage(err, "Could not load posts."));
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
@@ -92,25 +103,10 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
   );
 
   useEffect(() => {
-    void loadPosts();
-
-    const timer = window.setInterval(() => {
-      void loadPosts();
-    }, 30_000);
-
-    function handleVisibilityChange() {
-      if (document.visibilityState === "visible") {
-        void loadPosts();
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [loadPosts, userId]);
+    if (serverLoaded || clientFeedFetchStarted) return;
+    clientFeedFetchStarted = true;
+    void loadPosts({ showLoading: true });
+  }, [serverLoaded, loadPosts]);
 
   return (
     <div className="min-w-0 space-y-3">
@@ -155,8 +151,10 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
         </Empty>
       )}
 
-      {posts.map((post) => {
+      {!loading &&
+        posts.map((post, index) => {
         const isOwnPost = Boolean(user?.id && user.id === post.author.id);
+        const revealDelay = Math.min(index * 60, 300);
         const removePost = (postId: string) => {
           setPosts((current) => current.filter((p) => p.id !== postId));
         };
@@ -166,7 +164,7 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
           );
         };
 
-        return isArticle(post) ? (
+        const card = isArticle(post) ? (
           <ArticleCard
             key={post.id}
             post={post}
@@ -186,6 +184,7 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
             post={post}
             showActions
             canManage={isOwnPost}
+            revealDelay={revealDelay}
             initialEditOpen={isOwnPost && editPostId === post.id}
             onEditClose={clearEditParam}
             onUpdated={updatePostInList}
@@ -195,6 +194,8 @@ export function FeedPosts({ initialPosts = [] }: FeedPostsProps) {
             }}
           />
         );
+
+        return card;
       })}
     </div>
   );

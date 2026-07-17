@@ -991,11 +991,41 @@
   animation-delay: 1.85s;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(1rem);
+  transition:
+    opacity 0.55s ease,
+    transform 0.55s ease;
+  will-change: opacity, transform;
+}
+
+.scroll-reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-enter {
+  animation-fill-mode: both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .auth-preview-card,
   .auth-preview-float {
     opacity: 1;
     animation: none !important;
+    will-change: auto;
+  }
+
+  .scroll-reveal,
+  .scroll-reveal-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
     will-change: auto;
   }
 }

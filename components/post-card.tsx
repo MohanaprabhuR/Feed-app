@@ -14,6 +14,7 @@ import { useCurrentUser } from "@/components/current-user-provider";
 import { PostComments } from "@/components/post-comments";
 import { PostEventCard } from "@/components/post-event-card";
 import { PostLikeButton } from "@/components/post-like-button";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import {
   mergeReactionSummary,
   PostEngagementBar,
@@ -61,6 +62,7 @@ type PostCardProps = {
   showActions?: boolean;
   canManage?: boolean;
   initialEditOpen?: boolean;
+  revealDelay?: number;
   onUnsaved?: (postId: string) => void;
   onUpdated?: (post: Post) => void;
   onDeleted?: (postId: string) => void;
@@ -72,6 +74,7 @@ export function PostCard({
   showActions = true,
   canManage,
   initialEditOpen = false,
+  revealDelay = 0,
   onUnsaved,
   onUpdated,
   onDeleted,
@@ -131,7 +134,8 @@ export function PostCard({
   }
 
   return (
-    <Card padding="none" className={feedCardClass}>
+    <ScrollReveal delay={revealDelay}>
+      <Card padding="none" className={feedCardClass}>
       <CardHeader className={feedCardHeaderClass}>
         <UserAvatar
           src={post.author.avatar}
@@ -310,6 +314,7 @@ export function PostCard({
           }}
         />
       )}
-    </Card>
+      </Card>
+    </ScrollReveal>
   );
 }

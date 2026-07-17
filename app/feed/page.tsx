@@ -1,17 +1,21 @@
-import { Suspense } from "react";
 import { AppShell } from "@/components/app-shell";
 import { FeedLeftSidebar } from "@/components/feed-left-sidebar";
 import { FeedRightSidebar } from "@/components/feed-right-sidebar";
 import { FeedPosts } from "@/components/feed-posts";
-import { FeedListSkeleton } from "@/components/skeletons";
 import { fetchPosts } from "@/lib/posts";
 import { fetchSuggestedProfiles } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import type { Post, User } from "@/lib/types";
 
-export default async function FeedPage() {
+export default async function FeedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string }>;
+}) {
+  const { edit: editPostId } = await searchParams;
   let initialPosts: Post[] = [];
   let initialSuggestedUsers: User[] = [];
+  let serverLoaded = false;
 
   try {
     const supabase = await createClient();
@@ -29,6 +33,7 @@ export default async function FeedPage() {
 
     initialPosts = posts;
     initialSuggestedUsers = suggestedUsers;
+    serverLoaded = true;
   } catch {
     initialPosts = [];
     initialSuggestedUsers = [];
@@ -43,9 +48,11 @@ export default async function FeedPage() {
           </div>
         </div>
 
-        <Suspense fallback={<FeedListSkeleton count={3} withComposer />}>
-          <FeedPosts initialPosts={initialPosts} />
-        </Suspense>
+        <FeedPosts
+          initialPosts={initialPosts}
+          serverLoaded={serverLoaded}
+          editPostId={editPostId ?? null}
+        />
 
         <div className="hidden lg:block">
           <div className="sticky top-[72px]">
