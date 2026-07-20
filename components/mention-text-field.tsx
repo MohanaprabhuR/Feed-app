@@ -3,7 +3,6 @@
 import {
   forwardRef,
   useCallback,
-  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -50,10 +49,8 @@ function useMentionField({
   );
   const isOpen =
     activeMention !== null && (loading || users.length > 0);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [activeMention?.query, users.length]);
+  const clampedActiveIndex =
+    users.length === 0 ? 0 : Math.min(activeIndex, users.length - 1);
 
   const updateCaret = useCallback(
     (element: HTMLInputElement | HTMLTextAreaElement | null) => {
@@ -69,6 +66,7 @@ function useMentionField({
     ) => {
       onValueChange(event.target.value);
       setCaret(event.target.selectionStart ?? event.target.value.length);
+      setActiveIndex(0);
     },
     [onValueChange],
   );
@@ -85,6 +83,7 @@ function useMentionField({
       );
       onValueChange(nextValue);
       setCaret(nextCaret);
+      setActiveIndex(0);
       requestAnimationFrame(() => {
         element?.focus();
         element?.setSelectionRange(nextCaret, nextCaret);
@@ -114,15 +113,15 @@ function useMentionField({
 
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
-        const selected = users[activeIndex];
+        const selected = users[clampedActiveIndex];
         if (selected) selectMention(selected, element);
       }
     },
-    [activeIndex, isOpen, selectMention, users],
+    [clampedActiveIndex, isOpen, selectMention, users],
   );
 
   return {
-    activeIndex,
+    activeIndex: clampedActiveIndex,
     activeMention,
     handleChange,
     handleKeyDown,

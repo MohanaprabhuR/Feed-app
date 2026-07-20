@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useRef } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 type PageEnterProps = {
@@ -11,8 +11,8 @@ type PageEnterProps = {
 
 export function PageEnter({ children, className }: PageEnterProps) {
   const pathname = usePathname();
-  const initialPathname = useRef(pathname);
-  const shouldAnimate = pathname !== initialPathname.current;
+  const [initialPathname] = useState(pathname);
+  const shouldAnimate = pathname !== initialPathname;
 
   return (
     <div

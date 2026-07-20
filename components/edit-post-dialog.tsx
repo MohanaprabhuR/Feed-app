@@ -124,13 +124,17 @@ export function EditPostDialog({
   const isArticle = post.type === "article";
   const hadExistingMedia = Boolean(post.image || post.video || post.file);
 
-  useEffect(() => {
-    if (!open) return;
+  function resetForm() {
     setDraft(post.content);
     setTitleDraft(post.title ?? "");
     setAttachment(existingAttachmentFromPost(post));
     setError(null);
-  }, [open, post]);
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) resetForm();
+    onOpenChange(nextOpen);
+  }
 
   useEffect(() => {
     return () => {
@@ -253,7 +257,7 @@ export function EditPostDialog({
         isArticle ? "Article updated" : "Post updated",
         "Your changes have been saved.",
       );
-      onOpenChange(false);
+      handleOpenChange(false);
     } catch (err) {
       setError(getErrorMessage(err, "Could not update post."));
     } finally {
@@ -280,7 +284,7 @@ export function EditPostDialog({
         isArticle ? "Article deleted" : "Post deleted",
         "It has been removed from the feed.",
       );
-      onOpenChange(false);
+      handleOpenChange(false);
     } catch (err) {
       setError(getErrorMessage(err, "Could not delete post."));
     } finally {
@@ -303,7 +307,7 @@ export function EditPostDialog({
         : undefined;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         size="lg"
         className={cn(
@@ -646,7 +650,7 @@ export function EditPostDialog({
                   type="button"
                   variant="outline"
                   disabled={busy}
-                  onClick={() => onOpenChange(false)}
+                  onClick={() => handleOpenChange(false)}
                 >
                   Cancel
                 </Button>

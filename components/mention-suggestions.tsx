@@ -78,7 +78,7 @@ export function MentionSuggestions({
         ...(position.top !== undefined ? { top: position.top } : {}),
         ...(position.bottom !== undefined ? { bottom: position.bottom } : {}),
       }}
-      className="z-[200] max-h-56 overflow-y-auto rounded-lg border bg-popover p-1 shadow-lg"
+      className="z-200 max-h-56 overflow-y-auto rounded-lg border bg-popover p-1 shadow-lg"
     >
       {loading && users.length === 0 ? (
         <div className="space-y-1 p-1">

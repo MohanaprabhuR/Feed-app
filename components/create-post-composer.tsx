@@ -129,7 +129,8 @@ export function CreatePostComposer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [open, setOpen] = useState(false);
-  const [articleOpen, setArticleOpen] = useState(initialArticleOpen);
+  const [articleOpen, setArticleOpen] = useState(false);
+  const isArticleDialogOpen = articleOpen || initialArticleOpen;
   const [content, setContent] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [loading, setLoading] = useState(false);
@@ -173,10 +174,6 @@ export function CreatePostComposer({
     setArticleOpen(nextOpen);
     if (!nextOpen) onArticleClose?.();
   }
-
-  useEffect(() => {
-    if (initialArticleOpen) setArticleOpen(true);
-  }, [initialArticleOpen]);
 
   function clearEvent() {
     setShowEventForm(false);
@@ -781,7 +778,7 @@ export function CreatePostComposer({
       </Dialog>
 
       <ArticleEditorDialog
-        open={articleOpen}
+        open={isArticleDialogOpen}
         onOpenChange={handleArticleOpenChange}
         onPublished={(post) => onPosted?.(post)}
       />

@@ -305,6 +305,7 @@ export function PostComments({
       const supabase = createClient();
       const data = await fetchComments(supabase, postId, { userId });
       setComments(data);
+      onCountChange?.(data.length);
       setError(null);
       setLoaded(true);
     } catch (err) {
@@ -312,12 +313,7 @@ export function PostComments({
     } finally {
       setLoading(false);
     }
-  }, [postId, userId]);
-
-  useEffect(() => {
-    if (!open || !loaded) return;
-    onCountChange?.(comments.length);
-  }, [comments.length, loaded, onCountChange, open]);
+  }, [onCountChange, postId, userId]);
 
   useEffect(() => {
     if (!open || loaded) return;
@@ -348,7 +344,9 @@ export function PostComments({
     try {
       const supabase = createClient();
       const created = await createComment(supabase, postId, user, content);
-      setComments((current) => [...current, created]);
+      const nextComments = [...comments, created];
+      setComments(nextComments);
+      onCountChange?.(nextComments.length);
       setContent("");
       appToast.success("Comment posted");
     } catch (err) {
