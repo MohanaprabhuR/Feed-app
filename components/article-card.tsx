@@ -72,7 +72,8 @@ export function ArticleCard({
   onEditClose,
 }: ArticleCardProps) {
   const { user } = useCurrentUser();
-  const isOwnPost = canManage ?? Boolean(user?.id && user.id === post.author.id);
+  const isOwnPost =
+    canManage ?? Boolean(user?.id && user.id === post.author.id);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(initialEditOpen);
@@ -189,7 +190,7 @@ export function ArticleCard({
       <CardContent className={feedCardContentClass}>
         <Link href={`/articles/${post.id}`} className="group block space-y-3">
           {post.image && (
-            <div className="relative aspect-[2/1] overflow-hidden rounded-lg bg-muted">
+            <div className="relative aspect-2/1 overflow-hidden rounded-lg bg-muted">
               <Image
                 src={post.image}
                 alt={post.title ?? "Article cover"}
@@ -226,7 +227,10 @@ export function ArticleCard({
           commentsOpen={commentsOpen}
           onOpenComments={() => setCommentsOpen((open) => !open)}
           onRepost={() =>
-            appToast.info("Repost coming soon", "Repost will be available in a future update.")
+            appToast.info(
+              "Repost coming soon",
+              "Repost will be available in a future update.",
+            )
           }
           onShare={() => setShareOpen(true)}
           likeControl={
@@ -254,7 +258,10 @@ export function ArticleCard({
                 variant="ghost"
                 size="sm"
                 iconOnly
-                className={cn("h-9 justify-start", isSaved && "text-foreground")}
+                className={cn(
+                  "h-9 justify-start",
+                  isSaved && "text-foreground",
+                )}
                 aria-label={isSaved ? "Unsave article" : "Save article"}
                 aria-pressed={isSaved}
                 disabled={saving}

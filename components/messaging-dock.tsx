@@ -561,7 +561,7 @@ export function MessagingDock() {
                               src={conversation.user.avatar}
                               name={conversation.user.name}
                               size="sm"
-                              className="!size-7"
+                              className="size-7!"
                             />
                           ) : null}
                         </span>
@@ -591,7 +591,7 @@ export function MessagingDock() {
                       {isMe && (
                         <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center">
                           {showAvatar ? (
-                            <CurrentUserAvatar size="sm" className="!size-7" />
+                            <CurrentUserAvatar size="sm" className="size-7!" />
                           ) : null}
                         </span>
                       )}

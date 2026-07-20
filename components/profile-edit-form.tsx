@@ -20,7 +20,7 @@ import { uploadPostAttachment } from "@/lib/post-media";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent } from "./ui/card";
 
 type ProfileEditFormProps = {
   user: User;

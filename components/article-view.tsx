@@ -9,7 +9,12 @@ import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Item, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import type { Post } from "@/lib/types";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
@@ -23,7 +28,10 @@ export function ArticleView({ article }: ArticleViewProps) {
   const readTime = getReadTimeMinutes(article.content);
 
   return (
-    <Card padding="none" className={cn(feedCardClass, "mx-auto max-w-3xl border-0 shadow-none")}>
+    <Card
+      padding="none"
+      className={cn(feedCardClass, "mx-auto max-w-3xl border-0 shadow-none")}
+    >
       <CardContent className={cn(feedCardSectionClass, "py-6")}>
         <Item size="sm" className="mb-6 p-0">
           <UserAvatar
@@ -58,7 +66,7 @@ export function ArticleView({ article }: ArticleViewProps) {
         </h1>
 
         {article.image && (
-          <div className="relative mt-6 aspect-[2/1] overflow-hidden rounded-xl bg-muted">
+          <div className="relative mt-6 aspect-2/1 overflow-hidden rounded-xl bg-muted">
             <Image
               src={article.image}
               alt={article.title ?? "Article cover"}
@@ -79,7 +87,7 @@ export function ArticleView({ article }: ArticleViewProps) {
               </p>
             ) : (
               <div key={index} className="h-4" />
-            )
+            ),
           )}
         </div>
 

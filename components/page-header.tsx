@@ -20,7 +20,7 @@ export function PageHeader({
   return (
     <Header
       className={cn(
-        "sticky top-14 z-30 h-12 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-5 md:top-14",
+        "sticky top-14 z-30 h-12 border-b bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/80 sm:px-5 md:top-14",
         className,
       )}
     >

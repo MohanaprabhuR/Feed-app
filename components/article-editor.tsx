@@ -20,7 +20,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { getErrorMessage } from "@/lib/errors";
 import { uploadPostAttachment } from "@/lib/post-media";
 import { createArticle } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/client";
@@ -47,7 +46,7 @@ export function ArticleEditor() {
   function handleCoverSelect(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.custom((t) => (
+      toast.custom(() => (
         <Alert variant="error">
           <AlertContent>
             <AlertTitle>Cover must be an image.</AlertTitle>
@@ -66,7 +65,7 @@ export function ArticleEditor() {
 
   async function handlePublish() {
     if (!user) {
-      toast.custom((t) => (
+      toast.custom(() => (
         <Alert variant="error">
           <AlertContent>
             <AlertTitle>Sign in to publish an article.</AlertTitle>
@@ -99,7 +98,7 @@ export function ArticleEditor() {
         coverImage,
       });
 
-      toast.custom((t) => (
+      toast.custom(() => (
         <Alert variant="success">
           <AlertContent>
             <AlertTitle>Article published!</AlertTitle>
@@ -109,8 +108,9 @@ export function ArticleEditor() {
       ));
       router.push(`/articles/${article.id}`);
       router.refresh();
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      toast.custom((t) => (
+      toast.custom(() => (
         <Alert variant="error">
           <AlertContent>
             <AlertTitle>Could not publish article.</AlertTitle>
@@ -183,7 +183,7 @@ export function ArticleEditor() {
 
           {coverPreview && (
             <div className="relative overflow-hidden rounded-xl border">
-              <div className="relative aspect-[2/1] w-full">
+              <div className="relative aspect-2/1 w-full">
                 <Image
                   src={coverPreview}
                   alt="Cover preview"

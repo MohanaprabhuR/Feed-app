@@ -37,6 +37,7 @@ export function UserListItem({
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFollowing(Boolean(user.isFollowing));
   }, [user.id, user.isFollowing]);
 

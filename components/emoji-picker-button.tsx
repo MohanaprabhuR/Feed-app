@@ -60,8 +60,7 @@ export function EmojiPickerButton({
 }: EmojiPickerButtonProps) {
   const [open, setOpen] = useState(false);
   const { resolvedTheme } = useTheme();
-  const pickerTheme =
-    resolvedTheme === "dark" ? Theme.DARK : Theme.LIGHT;
+  const pickerTheme = resolvedTheme === "dark" ? Theme.DARK : Theme.LIGHT;
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal>
@@ -83,7 +82,7 @@ export function EmojiPickerButton({
         align={align}
         sideOffset={8}
         // Override default popover `overflow-auto flex` so the picker's own body can scroll.
-        className="z-[80] block w-auto overflow-visible border-0 bg-transparent p-0 shadow-none"
+        className="z-80 block w-auto overflow-visible border-0 bg-transparent p-0 shadow-none"
         onOpenAutoFocus={(e) => e.preventDefault()}
         onWheel={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
