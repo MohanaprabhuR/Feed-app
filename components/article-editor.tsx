@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -11,23 +10,23 @@ import { CurrentUserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@/components/ui/item";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { MentionTextarea } from "@/components/mention-text-field";
 import { uploadPostAttachment } from "@/lib/post-media";
 import { createArticle } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
+import type { Post } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
 
-export function ArticleEditor() {
+type ArticleEditorProps = {
+  onPublished?: (post?: Post) => void;
+  onCancel?: () => void;
+};
+
+export function ArticleEditor({ onPublished, onCancel }: ArticleEditorProps = {}) {
   const router = useRouter();
   const { user } = useCurrentUser();
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -106,8 +105,12 @@ export function ArticleEditor() {
           </AlertContent>
         </Alert>
       ));
-      router.push(`/articles/${article.id}`);
-      router.refresh();
+      if (onPublished) {
+        onPublished(article);
+      } else {
+        router.push("/feed");
+        router.refresh();
+      }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast.custom(() => (
@@ -135,24 +138,13 @@ export function ArticleEditor() {
       className={cn(feedCardClass, "mx-auto max-w-3xl border-0 shadow-none")}
     >
       <CardContent className={cn(feedCardSectionClass, "space-y-6 pb-10")}>
-        <Item size="sm" className="p-0">
-          <CurrentUserAvatar size="sm" />
-          <ItemContent>
-            <ItemTitle>{user?.name ?? "Your profile"}</ItemTitle>
-            <ItemDescription>Writing an article</ItemDescription>
-          </ItemContent>
-        </Item>
-
-        <input
-          ref={coverInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp"
-          className="hidden"
-          onChange={(e) => {
-            handleCoverSelect(e.target.files?.[0]);
-            e.target.value = "";
-          }}
-        />
+        <div className="space-y-2">
+          <Label>Name</Label>
+          <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5">
+            <CurrentUserAvatar size="sm" />
+            <span className="font-medium">{user?.name ?? "Your profile"}</span>
+          </div>
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="article-title">Title</Label>
@@ -165,6 +157,17 @@ export function ArticleEditor() {
             disabled={loading}
           />
         </div>
+
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            handleCoverSelect(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -210,12 +213,12 @@ export function ArticleEditor() {
 
         <div className="space-y-2">
           <Label htmlFor="article-body">Body</Label>
-          <Textarea
+          <MentionTextarea
             id="article-body"
             size="lg"
             placeholder="Write your article..."
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onValueChange={setContent}
             disabled={loading}
           />
         </div>
@@ -223,8 +226,19 @@ export function ArticleEditor() {
         <Separator />
 
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" asChild disabled={loading}>
-            <Link href="/feed">Cancel</Link>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={loading}
+            onClick={() => {
+              if (onCancel) {
+                onCancel();
+                return;
+              }
+              router.push("/feed");
+            }}
+          >
+            Cancel
           </Button>
           <Button
             onClick={handlePublish}

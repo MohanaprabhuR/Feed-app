@@ -14,7 +14,7 @@ import { ReactionButton } from "@/components/reaction-button";
 import { UserAvatar } from "@/components/user-avatar";
 import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { MentionInput } from "@/components/mention-text-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CommentListSkeleton } from "@/components/skeletons";
 import { appToast } from "@/lib/app-toast";
@@ -211,11 +211,11 @@ function CommentItem({
                 userId={user.id}
               />
               <div className="flex min-w-0 flex-1 items-center gap-1">
-                <Input
+                <MentionInput
                   ref={replyInputRef}
                   placeholder={`Reply to ${comment.author.name}...`}
                   value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
+                  onValueChange={setReplyContent}
                   disabled={submitting}
                   autoFocus
                   autoComplete="off"
@@ -305,7 +305,6 @@ export function PostComments({
       const supabase = createClient();
       const data = await fetchComments(supabase, postId, { userId });
       setComments(data);
-      onCountChange?.(data.length);
       setError(null);
       setLoaded(true);
     } catch (err) {
@@ -313,7 +312,12 @@ export function PostComments({
     } finally {
       setLoading(false);
     }
-  }, [onCountChange, postId, userId]);
+  }, [postId, userId]);
+
+  useEffect(() => {
+    if (!open || !loaded) return;
+    onCountChange?.(comments.length);
+  }, [comments.length, loaded, onCountChange, open]);
 
   useEffect(() => {
     if (!open || loaded) return;
@@ -344,11 +348,7 @@ export function PostComments({
     try {
       const supabase = createClient();
       const created = await createComment(supabase, postId, user, content);
-      setComments((current) => {
-        const next = [...current, created];
-        onCountChange?.(next.length);
-        return next;
-      });
+      setComments((current) => [...current, created]);
       setContent("");
       appToast.success("Comment posted");
     } catch (err) {
@@ -382,11 +382,11 @@ export function PostComments({
             userId={user.id}
           />
           <div className="flex min-w-0 flex-1 items-center gap-1">
-            <Input
+            <MentionInput
               ref={commentInputRef}
               placeholder="Add a comment..."
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onValueChange={setContent}
               disabled={submitting}
               autoFocus
               autoComplete="off"

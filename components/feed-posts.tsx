@@ -32,6 +32,7 @@ type FeedPostsProps = {
   initialPosts?: Post[];
   serverLoaded?: boolean;
   editPostId?: string | null;
+  initialArticleOpen?: boolean;
 };
 
 async function loadFeedPosts(): Promise<Post[]> {
@@ -57,6 +58,7 @@ export function FeedPosts({
   initialPosts = [],
   serverLoaded = false,
   editPostId = null,
+  initialArticleOpen = false,
 }: FeedPostsProps) {
   const { user } = useCurrentUser();
   const router = useRouter();
@@ -69,6 +71,11 @@ export function FeedPosts({
     if (!editPostId) return;
     router.replace(pathname);
   }, [editPostId, pathname, router]);
+
+  const clearArticleParam = useCallback(() => {
+    if (!initialArticleOpen) return;
+    router.replace(pathname);
+  }, [initialArticleOpen, pathname, router]);
 
   const loadPosts = useCallback(async (options?: { showLoading?: boolean }) => {
     const showLoading = options?.showLoading ?? false;
@@ -111,7 +118,11 @@ export function FeedPosts({
   return (
     <div className="min-w-0 space-y-3">
       {user ? (
-        <CreatePostComposer onPosted={handlePosted} />
+        <CreatePostComposer
+          onPosted={handlePosted}
+          initialArticleOpen={initialArticleOpen}
+          onArticleClose={clearArticleParam}
+        />
       ) : (
         <Card padding="none" className={feedCardClass}>
           <CardContent className={cn(feedCardSectionClass, "text-center")}>

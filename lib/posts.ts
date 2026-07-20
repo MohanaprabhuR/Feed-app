@@ -604,10 +604,17 @@ export async function updatePost(
   authorId: string,
   content: string,
   media?: { image?: string; video?: string; file?: string } | null,
+  options?: { title?: string },
 ) {
   const trimmed = content.trim();
   const replacingMedia = media !== undefined;
   const hasNewMedia = Boolean(media?.image || media?.video || media?.file);
+  const title =
+    options?.title !== undefined ? options.title.trim() : undefined;
+
+  if (title !== undefined && !title) {
+    throw new Error("Article title is required.");
+  }
 
   if (replacingMedia && !trimmed && !hasNewMedia) {
     throw new Error("Post must include text or an attachment.");
@@ -618,9 +625,17 @@ export async function updatePost(
     mode === "modern" ? await resolveEventColumn(supabase) : false;
   const select = activeSelect(mode, includeEvent);
 
-  const payload: { content: string; image?: string | null } = {
+  const payload: {
+    content: string;
+    image?: string | null;
+    title?: string;
+  } = {
     content: trimmed,
   };
+
+  if (title !== undefined) {
+    payload.title = title;
+  }
 
   if (media === null) {
     payload.image = null;

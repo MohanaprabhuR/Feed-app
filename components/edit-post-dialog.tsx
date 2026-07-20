@@ -44,7 +44,9 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-import { Textarea } from "@/components/ui/textarea";
+import { MentionTextarea } from "@/components/mention-text-field";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { appToast } from "@/lib/app-toast";
 import { getErrorMessage } from "@/lib/errors";
 import {
@@ -56,6 +58,7 @@ import {
 import { deletePost, updatePost } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type EditAttachment =
   | {
@@ -109,6 +112,7 @@ export function EditPostDialog({
   const videoInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState(post.content);
+  const [titleDraft, setTitleDraft] = useState(post.title ?? "");
   const [attachment, setAttachment] = useState<EditAttachment | null>(() =>
     existingAttachmentFromPost(post),
   );
@@ -119,6 +123,14 @@ export function EditPostDialog({
   const isOwner = Boolean(user?.id && user.id === post.author.id);
   const isArticle = post.type === "article";
   const hadExistingMedia = Boolean(post.image || post.video || post.file);
+
+  useEffect(() => {
+    if (!open) return;
+    setDraft(post.content);
+    setTitleDraft(post.title ?? "");
+    setAttachment(existingAttachmentFromPost(post));
+    setError(null);
+  }, [open, post]);
 
   useEffect(() => {
     return () => {
@@ -143,6 +155,20 @@ export function EditPostDialog({
 
   function handleFileSelect(file: File | undefined) {
     if (!file) return;
+
+    if (isArticle && !file.type.startsWith("image/")) {
+      toast.custom(() => (
+        <Alert variant="error">
+          <AlertContent>
+            <AlertTitle>Cover must be an image.</AlertTitle>
+            <AlertDescription>
+              Choose a JPEG, PNG, GIF, or WebP file for the cover.
+            </AlertDescription>
+          </AlertContent>
+        </Alert>
+      ));
+      return;
+    }
 
     const validationError = validatePostAttachment(file);
     if (validationError) {
@@ -176,7 +202,18 @@ export function EditPostDialog({
     if (!user || !isOwner || saving) return;
 
     const trimmed = draft.trim();
-    if (!trimmed && !attachment) {
+    const trimmedTitle = titleDraft.trim();
+
+    if (isArticle) {
+      if (!trimmedTitle) {
+        setError("Article title is required.");
+        return;
+      }
+      if (!trimmed) {
+        setError("Article body is required.");
+        return;
+      }
+    } else if (!trimmed && !attachment) {
       setError("Post must include text or an attachment.");
       return;
     }
@@ -209,6 +246,7 @@ export function EditPostDialog({
         user.id,
         trimmed,
         media,
+        isArticle ? { title: trimmedTitle } : undefined,
       );
       onUpdated?.(updated);
       appToast.success(
@@ -268,7 +306,10 @@ export function EditPostDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size="lg"
-        className="max-h-[min(90vh,720px)] gap-0 overflow-hidden p-0 sm:max-w-[552px]"
+        className={cn(
+          "max-h-[min(90vh,720px)] gap-0 overflow-hidden p-0",
+          isArticle ? "sm:max-w-3xl" : "sm:max-w-[552px]",
+        )}
       >
         <DialogHeader className="border-b px-4 py-3 pr-12">
           <DialogTitle>{isArticle ? "Edit article" : "Edit post"}</DialogTitle>
@@ -329,29 +370,104 @@ export function EditPostDialog({
                 </Alert>
               )}
 
-              <div className="mb-3 flex gap-3">
-                <UserAvatar
-                  src={post.author.avatar}
-                  name={post.author.name}
-                  size="sm"
-                />
-              <div className="mb-3 min-w-0 flex-1">
-                <Textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  disabled={busy}
-                  size="md"
-                  placeholder={
-                    isArticle
-                      ? "Update your article..."
-                      : "What do you want to talk about?"
-                  }
-                  autoFocus
-                />
-              </div>
-              </div>
+              {isArticle ? (
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label>Name</Label>
+                    <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5">
+                      <UserAvatar
+                        src={post.author.avatar}
+                        name={post.author.name}
+                        size="sm"
+                      />
+                      <span className="font-medium">{post.author.name}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-article-title">Title</Label>
+                    <Input
+                      id="edit-article-title"
+                      size="lg"
+                      placeholder="Article title"
+                      value={titleDraft}
+                      onChange={(e) => setTitleDraft(e.target.value)}
+                      disabled={busy}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label>Cover image (optional)</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => openPicker("image")}
+                      >
+                        <ImageIcon className="size-4" />
+                        {attachment?.type === "image" ? "Change cover" : "Add cover"}
+                      </Button>
+                    </div>
+                    {attachment?.type === "image" && imagePreview ? (
+                      <div className="relative overflow-hidden rounded-xl border">
+                        <div className="relative aspect-2/1 w-full">
+                          <Image
+                            src={imagePreview}
+                            alt="Article cover preview"
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          iconOnly
+                          className="absolute right-3 top-3 rounded-full"
+                          onClick={clearAttachment}
+                          disabled={busy}
+                          aria-label="Remove cover"
+                        >
+                          <X />
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-article-body">Body</Label>
+                    <MentionTextarea
+                      id="edit-article-body"
+                      value={draft}
+                      onValueChange={setDraft}
+                      disabled={busy}
+                      size="lg"
+                      placeholder="Write your article..."
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-3 flex gap-3">
+                  <UserAvatar
+                    src={post.author.avatar}
+                    name={post.author.name}
+                    size="sm"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <MentionTextarea
+                      value={draft}
+                      onValueChange={setDraft}
+                      disabled={busy}
+                      size="md"
+                      placeholder="What do you want to talk about?"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+              )}
 
-              {attachment && (
+              {attachment && !isArticle && (
                 <Card className="relative mb-2 overflow-hidden">
                   {attachment.type === "image" && imagePreview && (
                     <div className="relative aspect-video max-h-72 w-full">
@@ -406,6 +522,7 @@ export function EditPostDialog({
               )}
             </div>
 
+            {!isArticle && (
             <div className="flex items-center justify-end gap-0.5 border-t px-4 py-3">
               <Button
                 type="button"
@@ -511,6 +628,7 @@ export function EditPostDialog({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            )}
 
             <DialogFooter className="border-t px-4 py-3 sm:justify-between">
               <Button
@@ -534,7 +652,12 @@ export function EditPostDialog({
                 </Button>
                 <Button
                   type="button"
-                  disabled={(!draft.trim() && !attachment) || deleting}
+                  disabled={
+                    deleting ||
+                    (isArticle
+                      ? !titleDraft.trim() || !draft.trim()
+                      : !draft.trim() && !attachment)
+                  }
                   loading={saving}
                   onClick={() => void handleSave()}
                 >

@@ -10,9 +10,9 @@ import type { Post, User } from "@/lib/types";
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{ edit?: string; write?: string }>;
 }) {
-  const { edit: editPostId } = await searchParams;
+  const { edit: editPostId, write } = await searchParams;
   let initialPosts: Post[] = [];
   let initialSuggestedUsers: User[] = [];
   let serverLoaded = false;
@@ -52,6 +52,7 @@ export default async function FeedPage({
           initialPosts={initialPosts}
           serverLoaded={serverLoaded}
           editPostId={editPostId ?? null}
+          initialArticleOpen={write === "article"}
         />
 
         <div className="hidden lg:block">

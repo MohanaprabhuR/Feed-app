@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
@@ -47,7 +46,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { MentionTextarea } from "@/components/mention-text-field";
 import { getErrorMessage } from "@/lib/errors";
 import {
   getAttachmentType,
@@ -65,6 +64,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PostEventCard } from "@/components/post-event-card";
 import { DateTimePickerPopover } from "@/components/datetime-picker-popover";
+import { ArticleEditorDialog } from "@/components/article-editor-dialog";
 
 function toDatetimeLocalValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -114,16 +114,22 @@ type ComposerAttachment = {
 
 type CreatePostComposerProps = {
   onPosted?: (post?: Post) => void;
+  initialArticleOpen?: boolean;
+  onArticleClose?: () => void;
 };
 
-export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
-  const router = useRouter();
+export function CreatePostComposer({
+  onPosted,
+  initialArticleOpen = false,
+  onArticleClose,
+}: CreatePostComposerProps) {
   const { user, refresh } = useCurrentUser();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [open, setOpen] = useState(false);
+  const [articleOpen, setArticleOpen] = useState(initialArticleOpen);
   const [content, setContent] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [loading, setLoading] = useState(false);
@@ -158,6 +164,19 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
       startsAt: current.startsAt || defaultEventStart(),
     }));
   }
+
+  function openArticleEditor() {
+    setArticleOpen(true);
+  }
+
+  function handleArticleOpenChange(nextOpen: boolean) {
+    setArticleOpen(nextOpen);
+    if (!nextOpen) onArticleClose?.();
+  }
+
+  useEffect(() => {
+    if (initialArticleOpen) setArticleOpen(true);
+  }, [initialArticleOpen]);
 
   function clearEvent() {
     setShowEventForm(false);
@@ -401,7 +420,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                     openPicker(kind);
                     return;
                   }
-                  router.push("/articles/new");
+                  openArticleEditor();
                 }}
               >
                 <Icon className={cn("size-5", iconClass)} />
@@ -447,7 +466,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2"
             data-scroll-lock-scrollable=""
           >
-            <Textarea
+            <MentionTextarea
               ref={textareaRef}
               autoFocus
               variant="ghost"
@@ -458,7 +477,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                   : "What do you want to talk about?"
               }
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onValueChange={setContent}
               disabled={loading}
             />
 
@@ -717,9 +736,7 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
                     <Calendar className="size-4" />
                     Create an event
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => router.push("/articles/new")}
-                  >
+                  <DropdownMenuItem onClick={openArticleEditor}>
                     <Newspaper className="size-4" />
                     Write article
                   </DropdownMenuItem>
@@ -762,6 +779,12 @@ export function CreatePostComposer({ onPosted }: CreatePostComposerProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ArticleEditorDialog
+        open={articleOpen}
+        onOpenChange={handleArticleOpenChange}
+        onPublished={(post) => onPosted?.(post)}
+      />
     </>
   );
 }
