@@ -203,3 +203,29 @@ export async function fetchFollowers(
   }
   return users;
 }
+
+/** Users the viewer follows, filtered for @mention suggestions. */
+export async function searchFollowingForMentions(
+  supabase: SupabaseClient,
+  userId: string,
+  query: string,
+  options: { limit?: number } = {},
+): Promise<User[]> {
+  const { limit = 8 } = options;
+  if (!userId) return [];
+
+  const following = await fetchFollowing(supabase, userId, { limit: 100 });
+  const trimmed = query.trim().toLowerCase().replace(/^@+/, "");
+
+  if (!trimmed) {
+    return following.slice(0, limit);
+  }
+
+  return following
+    .filter((user) => {
+      const name = user.name.toLowerCase();
+      const username = user.username.toLowerCase();
+      return name.includes(trimmed) || username.includes(trimmed);
+    })
+    .slice(0, limit);
+}

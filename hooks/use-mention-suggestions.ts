@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { searchProfiles } from "@/lib/profile";
+import { searchFollowingForMentions } from "@/lib/follows";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
 
 export function useMentionSuggestions(
   query: string,
-  excludeUserId?: string,
+  userId?: string,
   enabled = true,
 ) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !userId) {
       setUsers([]);
       setLoading(false);
       return;
@@ -26,10 +26,12 @@ export function useMentionSuggestions(
         setLoading(true);
         try {
           const supabase = createClient();
-          const results = await searchProfiles(supabase, query, {
-            excludeUserId,
-            limit: 8,
-          });
+          const results = await searchFollowingForMentions(
+            supabase,
+            userId,
+            query,
+            { limit: 8 },
+          );
           if (!cancelled) setUsers(results);
         } catch {
           if (!cancelled) setUsers([]);
@@ -43,7 +45,7 @@ export function useMentionSuggestions(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, excludeUserId, enabled]);
+  }, [query, userId, enabled]);
 
   return { users, loading };
 }
