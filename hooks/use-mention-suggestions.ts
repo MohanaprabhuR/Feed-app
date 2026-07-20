@@ -15,6 +15,7 @@ export function useMentionSuggestions(
 
   useEffect(() => {
     if (!enabled || !userId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsers([]);
       setLoading(false);
       return;
