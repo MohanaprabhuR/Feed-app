@@ -225,7 +225,7 @@ export function ProfileView({
 
       <div className="flex gap-6 text-base">
         <Button variant="ghost" size="sm" className="h-auto px-0" asChild>
-          <Link href="/followers">
+          <Link href="/following?tab=followers">
             <span className="font-semibold">{user.followers}</span>{" "}
             <span className="text-muted-foreground">Followers</span>
           </Link>

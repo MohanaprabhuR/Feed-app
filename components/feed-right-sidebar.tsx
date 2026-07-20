@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { UserListItem } from "@/components/user-list-item";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserListSkeleton } from "@/components/skeletons";
 import { feedCardClass, feedCardTitleClass } from "@/lib/feed-layout";
@@ -84,9 +82,6 @@ export function FeedRightSidebar({
               No other members yet. Invite friends to join the feed.
             </p>
           )}
-          <Button variant="ghost" className="mt-2 w-full" size="sm" asChild>
-            <Link href="/search">View all recommendations</Link>
-          </Button>
         </CardContent>
       </Card>
     </aside>

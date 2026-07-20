@@ -88,26 +88,63 @@ export async function fetchSuggestedProfiles(
     }));
 }
 
+async function withFollowState(
+  supabase: SupabaseClient,
+  users: User[],
+  viewerId?: string,
+): Promise<User[]> {
+  if (!viewerId || users.length === 0) {
+    return users.map((user) => ({ ...user, isFollowing: false }));
+  }
+
+  const { data: follows } = await supabase
+    .from("follows")
+    .select("following_id")
+    .eq("follower_id", viewerId)
+    .in(
+      "following_id",
+      users.map((user) => user.id),
+    );
+
+  const followingIds = new Set(
+    (follows ?? []).map((row) => row.following_id as string),
+  );
+
+  return users.map((user) => ({
+    ...user,
+    isFollowing: followingIds.has(user.id),
+  }));
+}
+
+/** Registered profiles for search browse (empty query) or name/username match. */
 export async function searchProfiles(
   supabase: SupabaseClient,
   query: string,
-  options: { excludeUserId?: string; limit?: number } = {}
+  options: { excludeUserId?: string; limit?: number } = {},
 ): Promise<User[]> {
   const { excludeUserId, limit = 20 } = options;
   const trimmed = query.trim();
-  if (!trimmed) return [];
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .or(`name.ilike.%${trimmed}%,username.ilike.%${trimmed}%`)
-    .order("name", { ascending: true })
+  let request = supabase.from("profiles").select("*");
+
+  if (trimmed) {
+    request = request.or(
+      `name.ilike.%${trimmed}%,username.ilike.%${trimmed}%`,
+    );
+  }
+
+  const { data, error } = await request
+    .order(trimmed ? "name" : "created_at", {
+      ascending: Boolean(trimmed),
+    })
     .limit(limit + (excludeUserId ? 1 : 0));
 
   if (error || !data) return [];
 
-  return data
+  const users = data
     .filter((row) => row.id !== excludeUserId)
     .slice(0, limit)
     .map(profileToUser);
+
+  return withFollowState(supabase, users, excludeUserId);
 }

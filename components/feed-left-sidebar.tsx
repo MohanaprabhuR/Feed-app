@@ -34,7 +34,6 @@ import {
 const quickLinks = [
   { href: "/saved", label: "Saved items", icon: Bookmark },
   { href: "/following", label: "Following", icon: Users },
-  { href: "/followers", label: "Followers", icon: Users },
   { href: "/trending", label: "Newsletters", icon: Calendar },
 ];
 
@@ -83,7 +82,7 @@ export function FeedLeftSidebar() {
               <ItemTitle>1,240</ItemTitle>
             </Item>
             <Button variant="ghost" size="sm" className="h-auto px-0 text-sm" asChild>
-              <Link href="/followers">View all analytics</Link>
+              <Link href="/following?tab=followers">View all analytics</Link>
             </Button>
           </ItemGroup>
         </CardContent>
