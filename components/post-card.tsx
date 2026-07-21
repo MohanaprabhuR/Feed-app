@@ -24,6 +24,7 @@ import { SharePostDialog } from "@/components/share-post-dialog";
 import { EditPostDialog } from "@/components/edit-post-dialog";
 import { UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
+import { usePostReactionsRealtime } from "@/hooks/use-post-reactions-realtime";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,6 +105,11 @@ export function PostCard({
     setMyReaction(post.reaction ?? null);
     setIsSaved(Boolean(post.isSaved));
   }, [post.id, post.likes, post.isSaved, post.reaction, post.reactionSummary]);
+
+  usePostReactionsRealtime(post.id, user?.id, ({ likesCount, reactionSummary }) => {
+    setLikesCount(likesCount);
+    setReactionSummary(reactionSummary);
+  });
 
   async function handleToggleSave() {
     if (!user) {

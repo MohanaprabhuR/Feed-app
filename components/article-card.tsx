@@ -11,6 +11,7 @@ import {
   Newspaper,
 } from "lucide-react";
 import { getArticleExcerpt, getReadTimeMinutes } from "@/lib/articles";
+import { ArticleViewDialog } from "@/components/article-view-dialog";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { PostComments } from "@/components/post-comments";
 import { PostLikeButton } from "@/components/post-like-button";
@@ -22,6 +23,7 @@ import { ProfileTrigger } from "@/components/profile-trigger";
 import { SharePostDialog } from "@/components/share-post-dialog";
 import { EditPostDialog } from "@/components/edit-post-dialog";
 import { UserAvatar } from "@/components/user-avatar";
+import { usePostReactionsRealtime } from "@/hooks/use-post-reactions-realtime";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,6 +78,7 @@ export function ArticleCard({
     canManage ?? Boolean(user?.id && user.id === post.author.id);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(initialEditOpen);
   const [content, setContent] = useState(post.content);
   const [commentsCount, setCommentsCount] = useState(post.comments);
@@ -98,6 +101,11 @@ export function ArticleCard({
     setMyReaction(post.reaction ?? null);
     setIsSaved(Boolean(post.isSaved));
   }, [post.id, post.likes, post.isSaved, post.reaction, post.reactionSummary]);
+
+  usePostReactionsRealtime(post.id, user?.id, ({ likesCount, reactionSummary }) => {
+    setLikesCount(likesCount);
+    setReactionSummary(reactionSummary);
+  });
 
   async function handleToggleSave() {
     if (!user) {
@@ -159,8 +167,8 @@ export function ArticleCard({
                   Edit article
                 </DropdownMenuItem>
               ) : (
-                <DropdownMenuItem asChild>
-                  <Link href={`/articles/${post.id}`}>View article</Link>
+                <DropdownMenuItem onClick={() => setViewOpen(true)}>
+                  View article
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
@@ -188,7 +196,11 @@ export function ArticleCard({
       </CardHeader>
 
       <CardContent className={feedCardContentClass}>
-        <Link href={`/articles/${post.id}`} className="group block space-y-3">
+        <button
+          type="button"
+          onClick={() => setViewOpen(true)}
+          className="group block w-full space-y-3 text-left"
+        >
           {post.image && (
             <div className="relative aspect-2/1 overflow-hidden rounded-lg bg-muted">
               <Image
@@ -214,7 +226,7 @@ export function ArticleCard({
               {excerpt}
             </p>
           </div>
-        </Link>
+        </button>
       </CardContent>
 
       <CardFooter className={feedCardFooterClass}>
@@ -277,9 +289,9 @@ export function ArticleCard({
                 variant="outline"
                 size="sm"
                 className="h-auto px-2 py-0.5 text-xs"
-                asChild
+                onClick={() => setViewOpen(true)}
               >
-                <Link href={`/articles/${post.id}`}>Read more</Link>
+                Read more
               </Button>
             </>
           }
@@ -300,6 +312,14 @@ export function ArticleCard({
         sharePath={`/articles/${post.id}`}
         onShared={setSharesCount}
       />
+
+      {viewOpen && (
+        <ArticleViewDialog
+          article={{ ...post, content }}
+          open={viewOpen}
+          onOpenChange={setViewOpen}
+        />
+      )}
 
       {isOwnPost && editOpen && (
         <EditPostDialog

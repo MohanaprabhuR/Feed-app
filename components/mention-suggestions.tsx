@@ -81,14 +81,14 @@ export function MentionSuggestions({
       className="z-200 max-h-56 overflow-y-auto rounded-lg border bg-popover p-1 shadow-lg"
     >
       {loading && users.length === 0 ? (
-        <div className="space-y-1 p-1">
+        <div className="skeleton-stagger space-y-1 p-1">
           {Array.from({ length: 3 }).map((_, index) => (
             <div
               key={index}
               className="flex items-center gap-2 rounded-md px-2 py-2"
             >
               <Skeleton className="size-8 rounded-full" />
-              <div className="flex-1 space-y-1">
+              <div className="flex-1 space-y-1.5">
                 <Skeleton className="h-3 w-24" />
                 <Skeleton className="h-3 w-16" />
               </div>

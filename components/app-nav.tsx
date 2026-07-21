@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Home, MessageCircle, Search, Users } from "lucide-react";
+import { Bell, Home, Menu, MessageCircle, Search, Users, X } from "lucide-react";
+import { useCurrentUser } from "@/components/current-user-provider";
 import { MeMenu } from "@/components/me-menu";
+import { MeMenuPanel } from "@/components/me-menu-panel";
 import { FeedLogoMark } from "@/components/feed-logo";
 import { useMessaging } from "@/components/messaging-provider";
 import { useNotifications } from "@/components/notifications-provider";
@@ -12,6 +14,20 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/ui/header";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -112,31 +128,129 @@ function isNavActive(pathname: string, href: string) {
   return pathname === href || (href !== "/feed" && pathname.startsWith(href));
 }
 
-export function BottomNav() {
-  const pathname = usePathname();
-
-  if (hiddenOnRoutes.some((route) => pathname.startsWith(route))) {
-    return null;
-  }
+function MobileNavMenuItem({
+  href,
+  label,
+  icon: Icon,
+  active,
+  badge,
+}: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  active: boolean;
+  badge?: number;
+}) {
+  const { setOpenMobile } = useSidebar();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-background md:hidden">
-      <div className="mx-auto flex h-14 max-w-lg items-center justify-around px-2">
-        <NavItem
-          {...navItems[0]}
-          active={isNavActive(pathname, navItems[0].href)}
-        />
-        <NavItem
-          {...navItems[1]}
-          active={isNavActive(pathname, navItems[1].href)}
-        />
-        <MessagingNavItem />
-        <NotificationsNavItem
-          active={isNavActive(pathname, "/notifications")}
-        />
-        <MeMenu side="top" align="center" />
-      </div>
-    </nav>
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={active}>
+        <Link href={href} onClick={() => setOpenMobile(false)}>
+          <Icon />
+          <span>{label}</span>
+        </Link>
+      </SidebarMenuButton>
+      {badge ? (
+        <SidebarMenuBadge>{badge > 9 ? "9+" : badge}</SidebarMenuBadge>
+      ) : null}
+    </SidebarMenuItem>
+  );
+}
+
+function MobileMessagingMenuItem() {
+  const { expanded, toggleMessaging } = useMessaging();
+  const { setOpenMobile } = useSidebar();
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        type="button"
+        isActive={expanded}
+        onClick={() => {
+          toggleMessaging();
+          setOpenMobile(false);
+        }}
+      >
+        <MessageCircle />
+        <span>Messaging</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+function MobileNavSidebarContent() {
+  const pathname = usePathname();
+  const { user } = useCurrentUser();
+  const { unreadCount } = useNotifications();
+  const { setOpenMobile } = useSidebar();
+
+  return (
+    <Sidebar side="left" collapsible="offcanvas">
+      <SidebarHeader className="flex-row items-center justify-between border-b border-sidebar-border">
+        <span className="font-serif text-xl font-semibold">Menu</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          iconOnly
+          aria-label="Close menu"
+          onClick={() => setOpenMobile(false)}
+        >
+          <X />
+        </Button>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarMenu>
+            <MobileNavMenuItem
+              {...navItems[0]}
+              active={isNavActive(pathname, navItems[0].href)}
+            />
+            <MobileNavMenuItem
+              {...navItems[1]}
+              active={isNavActive(pathname, navItems[1].href)}
+            />
+            <MobileMessagingMenuItem />
+            <MobileNavMenuItem
+              href="/notifications"
+              label="Notifications"
+              icon={Bell}
+              active={isNavActive(pathname, "/notifications")}
+              badge={unreadCount > 0 ? unreadCount : undefined}
+            />
+            <MobileNavMenuItem
+              href="/search"
+              label="Search"
+              icon={Search}
+              active={isNavActive(pathname, "/search")}
+            />
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {user && (
+          <>
+            <SidebarSeparator className="mx-0" />
+            <MeMenuPanel user={user} onClose={() => setOpenMobile(false)} />
+          </>
+        )}
+      </SidebarContent>
+    </Sidebar>
+  );
+}
+
+function MobileNav() {
+  return (
+    <SidebarProvider defaultOpen={false} persistState={false} className="contents">
+      <SidebarTrigger
+        icon={Menu}
+        variant="ghost"
+        size="sm"
+        aria-label="Open menu"
+        className="size-9"
+      />
+      <MobileNavSidebarContent />
+    </SidebarProvider>
   );
 }
 
@@ -159,7 +273,7 @@ export function AppHeader() {
           <FeedLogoMark />
         </Link>
 
-        <div className="hidden max-w-[280px] flex-1 md:block">
+        <div className="hidden max-w-[280px] flex-1 lg:block">
           <Input
             type="search"
             size="sm"
@@ -171,7 +285,7 @@ export function AppHeader() {
           />
         </div>
 
-        <nav className="mx-auto hidden flex-1 items-center justify-center md:flex">
+        <nav className="mx-auto hidden flex-1 items-center justify-center lg:flex">
           <NavItem
             {...navItems[0]}
             active={isNavActive(pathname, navItems[0].href)}
@@ -187,17 +301,14 @@ export function AppHeader() {
           <MeMenu />
         </nav>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          className="md:hidden"
-          asChild
-        >
-          <Link href="/search">
-            <Search />
-          </Link>
-        </Button>
+        <div className="ml-auto flex items-center gap-1 lg:hidden">
+          <Button variant="ghost" size="sm" iconOnly asChild>
+            <Link href="/search">
+              <Search />
+            </Link>
+          </Button>
+          <MobileNav />
+        </div>
       </div>
     </Header>
   );

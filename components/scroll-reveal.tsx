@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/utils";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
 
 type ScrollRevealProps = {
   children: React.ReactNode;
@@ -9,59 +16,44 @@ type ScrollRevealProps = {
   delay?: number;
 };
 
-type RevealPhase = "idle" | "hidden" | "shown";
-
 export function ScrollReveal({
   children,
   className,
   delay = 0,
 }: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [phase, setPhase] = useState<RevealPhase>("idle");
 
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
+  useGSAP(
+    () => {
+      const element = ref.current;
+      if (!element) return;
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setPhase("shown");
-      return;
-    }
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        return;
+      }
 
-    const rect = element.getBoundingClientRect();
-    const inView = rect.top < window.innerHeight * 0.92 && rect.bottom > 0;
-
-    if (inView) {
-      setPhase("shown");
-      return;
-    }
-
-    setPhase("hidden");
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setPhase("shown");
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" },
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+      gsap.fromTo(
+        element,
+        { autoAlpha: 0, y: 16 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.55,
+          delay: delay / 1000,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: element,
+            start: "top 92%",
+            once: true,
+          },
+        },
+      );
+    },
+    { scope: ref, dependencies: [delay] },
+  );
 
   return (
-    <div
-      ref={ref}
-      className={cn(
-        phase === "hidden" && "scroll-reveal",
-        phase === "shown" && "scroll-reveal-visible",
-        className,
-      )}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
+    <div ref={ref} className={cn(className)}>
       {children}
     </div>
   );

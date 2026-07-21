@@ -274,6 +274,24 @@ export function CreatePostComposer({
   async function handlePost() {
     if (!user) return;
 
+    if (
+      showEventForm &&
+      eventDraft.endsAt &&
+      new Date(eventDraft.endsAt) <= new Date(eventDraft.startsAt)
+    ) {
+      toast.custom(() => (
+        <Alert variant="error">
+          <AlertContent>
+            <AlertTitle>Invalid event time</AlertTitle>
+            <AlertDescription>
+              End time must be after the start time.
+            </AlertDescription>
+          </AlertContent>
+        </Alert>
+      ));
+      return;
+    }
+
     const event = buildEventPayload();
     if (showEventForm && !event) {
       toast.custom(() => (
@@ -518,6 +536,11 @@ export function CreatePostComposer({
                           setEventDraft((d) => ({
                             ...d,
                             startsAt: next,
+                            // Drop a now-stale end so start > end can't linger.
+                            endsAt:
+                              d.endsAt && new Date(d.endsAt) <= new Date(next)
+                                ? ""
+                                : d.endsAt,
                           }))
                         }
                         disabled={loading}

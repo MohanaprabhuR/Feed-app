@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { appToast } from "@/lib/app-toast";
 import { getErrorMessage } from "@/lib/errors";
@@ -76,6 +77,7 @@ export function ProfileEditForm({
   const [lastName, setLastName] = useState(initial.lastName);
   const [email, setEmail] = useState(user.email ?? "");
   const [phone, setPhone] = useState(user.phone ?? "");
+  const [bio, setBio] = useState(user.bio ?? "");
   const [address, setAddress] = useState(user.address ?? "");
   const [city, setCity] = useState(user.city ?? "");
   const [state, setState] = useState(user.state ?? "");
@@ -170,6 +172,7 @@ export function ProfileEditForm({
           name: fullName,
           email: email.trim() || null,
           phone: phone.trim() || null,
+          bio: bio.trim() || null,
           address: address.trim() || null,
           city: city.trim() || null,
           state: state.trim() || null,
@@ -358,6 +361,20 @@ export function ProfileEditForm({
                     />
                   </Field>
                 </div>
+
+                <Field id="profile-bio" label="Bio">
+                  <Textarea
+                    id="profile-bio"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Tell people a bit about yourself"
+                    disabled={loading}
+                    maxLength={160}
+                  />
+                  <p className="text-right text-xs text-muted-foreground">
+                    {bio.length}/160
+                  </p>
+                </Field>
 
                 <Field id="profile-address" label="Address">
                   <Input

@@ -311,7 +311,7 @@ export function EditPostDialog({
       <DialogContent
         size="lg"
         className={cn(
-          "max-h-[min(90vh,720px)] gap-0 overflow-hidden p-0",
+          "flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0",
           isArticle ? "sm:max-w-3xl" : "sm:max-w-[552px]",
         )}
       >

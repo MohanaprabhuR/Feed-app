@@ -1,4 +1,4 @@
-import { AppHeader, BottomNav } from "@/components/app-nav";
+import { AppHeader } from "@/components/app-nav";
 import { cn } from "@/lib/utils";
 
 type AppShellProps = {
@@ -29,7 +29,7 @@ export function AppShell({
       <AppHeader />
       <main
         className={cn(
-          "mx-auto w-full flex-1 pb-20 md:pb-8",
+          "mx-auto w-full flex-1 pb-8",
           feedLayout && "max-w-[1128px]",
           feedLayout && !noPadding && "px-3 py-5 sm:px-5 sm:py-7",
           wide && !feedLayout && "max-w-6xl",
@@ -40,7 +40,6 @@ export function AppShell({
       >
         {children}
       </main>
-      <BottomNav />
     </div>
   );
 }

@@ -63,7 +63,6 @@ export default async function FeedPage({
       </div>
 
       <div className="mt-8 space-y-4 lg:hidden">
-        <FeedLeftSidebar />
         <FeedRightSidebar initialSuggestedUsers={initialSuggestedUsers} />
       </div>
     </AppShell>

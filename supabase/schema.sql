@@ -312,6 +312,86 @@ alter table public.post_likes
   add constraint post_likes_reaction_check
   check (reaction in ('like', 'celebrate', 'support', 'love', 'insightful', 'funny'));
 
+do $$
+begin
+  if exists (
+    select 1 from pg_publication where pubname = 'supabase_realtime'
+  ) then
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'post_likes'
+    ) then
+      alter publication supabase_realtime add table public.post_likes;
+    end if;
+  end if;
+end;
+$$;
+
+-- Atomically read-modify-write a reactor's reaction and hand back the post's
+-- current reaction + likes_count in one round trip, instead of the client
+-- doing a select-then-upsert-then-separate-count-read (a TOCTOU race under
+-- concurrent clicks). security invoker keeps the existing RLS policies
+-- (auth.uid() = user_id) in force.
+create or replace function public.set_post_reaction(
+  p_post_id uuid,
+  p_user_id uuid,
+  p_reaction text
+)
+returns table (reaction text, likes_count integer)
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_existing text;
+begin
+  select pl.reaction into v_existing
+  from public.post_likes pl
+  where pl.post_id = p_post_id and pl.user_id = p_user_id
+  for update;
+
+  if v_existing is not null and v_existing = p_reaction then
+    delete from public.post_likes
+    where post_id = p_post_id and user_id = p_user_id;
+
+    return query
+      select null::text, p.likes_count from public.posts p where p.id = p_post_id;
+    return;
+  end if;
+
+  insert into public.post_likes (post_id, user_id, reaction)
+  values (p_post_id, p_user_id, p_reaction)
+  on conflict (post_id, user_id)
+  do update set reaction = excluded.reaction;
+
+  return query
+    select p_reaction, p.likes_count from public.posts p where p.id = p_post_id;
+end;
+$$;
+
+create or replace function public.clear_post_reaction(
+  p_post_id uuid,
+  p_user_id uuid
+)
+returns integer
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  delete from public.post_likes
+  where post_id = p_post_id and user_id = p_user_id;
+
+  return (select likes_count from public.posts where id = p_post_id);
+end;
+$$;
+
+grant execute on function public.set_post_reaction(uuid, uuid, text) to authenticated;
+grant execute on function public.clear_post_reaction(uuid, uuid) to authenticated;
+
 alter table public.comments
   add column if not exists likes_count integer default 0 not null;
 

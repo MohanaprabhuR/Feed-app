@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronDown,
   ChevronLeft,
-  ChevronUp,
+  MessageCircle,
   MoreHorizontal,
   Paperclip,
   Search,
@@ -397,30 +397,37 @@ export function MessagingDock() {
     return null;
   }
 
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => openMessaging()}
+        aria-label="Open messaging"
+        className="fixed bottom-6 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-foreground text-background shadow-2xl transition-transform hover:scale-105"
+      >
+        <MessageCircle className="size-6" />
+      </button>
+    );
+  }
+
   return (
     <div
       className={cn(
         "fixed inset-x-0 z-50 flex flex-col border bg-background shadow-2xl",
-        "bottom-14 md:bottom-0 md:inset-x-auto md:right-4 md:border-b-0",
-        conversation && expanded ? "md:w-[420px]" : "md:w-[360px]",
-        expanded
-          ? "h-[min(78vh,640px)] md:rounded-t-xl"
-          : "h-12 md:rounded-t-xl",
+        "bottom-0 md:inset-x-auto md:right-4 md:border-b-0",
+        conversation ? "md:w-[420px]" : "md:w-[360px]",
+        "h-[min(78vh,640px)] md:rounded-t-xl",
       )}
     >
       {/* List / dock chrome — hide when in WhatsApp-style chat */}
-      {!(conversation && expanded) && (
+      {!conversation && (
         <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
           <button
             type="button"
             className="flex min-w-0 flex-1 items-center gap-2 text-left"
             onClick={() => {
-              if (expanded) {
-                setExpanded(false);
-                closeConversation();
-              } else {
-                openMessaging();
-              }
+              setExpanded(false);
+              closeConversation();
             }}
           >
             <span className="relative shrink-0">
@@ -453,24 +460,18 @@ export function MessagingDock() {
             variant="ghost"
             size="sm"
             iconOnly
-            aria-label={expanded ? "Minimize messaging" : "Expand messaging"}
+            aria-label="Minimize messaging"
             onClick={() => {
-              if (expanded) {
-                setExpanded(false);
-                closeConversation();
-              } else {
-                openMessaging();
-              }
+              setExpanded(false);
+              closeConversation();
             }}
           >
-            {expanded ? <ChevronDown /> : <ChevronUp />}
+            <ChevronDown />
           </Button>
         </div>
       )}
 
-      {expanded && (
-        <>
-          {conversation ? (
+      {conversation ? (
             <div className="flex min-h-0 flex-1 flex-col bg-[#efeae2] dark:bg-zinc-900">
               {/* WhatsApp-style chat header */}
               <div className="flex h-14 shrink-0 items-center gap-1 border-b border-black/5 bg-background px-1.5 shadow-sm">
@@ -767,8 +768,6 @@ export function MessagingDock() {
               </Tabs>
             </div>
           )}
-        </>
-      )}
     </div>
   );
 }

@@ -128,6 +128,22 @@ export async function fetchReactionSummaries(
   return map;
 }
 
+/** Current aggregate reaction state for a single post, for live sync. */
+export async function fetchReactionState(
+  supabase: SupabaseClient,
+  postId: string,
+): Promise<{ likesCount: number; reactionSummary: ReactionType[] }> {
+  const [likesCount, summaries] = await Promise.all([
+    getLikesCount(supabase, postId),
+    fetchReactionSummaries(supabase, [postId]),
+  ]);
+
+  return {
+    likesCount,
+    reactionSummary: summaries.get(postId) ?? [],
+  };
+}
+
 export async function fetchUserReactions(
   supabase: SupabaseClient,
   userId: string,
@@ -194,7 +210,92 @@ async function getLikesCount(supabase: SupabaseClient, postId: string) {
   return post.likes_count ?? 0;
 }
 
+function isMissingReactionFunctionError(message: string) {
+  const lower = message.toLowerCase();
+  return (
+    (lower.includes("set_post_reaction") ||
+      lower.includes("clear_post_reaction")) &&
+    (lower.includes("schema cache") ||
+      lower.includes("does not exist") ||
+      lower.includes("could not find"))
+  );
+}
+
+/**
+ * Sets a user's reaction on a post via the set_post_reaction Postgres
+ * function (supabase/migrate-reaction-transaction.sql), which does the
+ * check-then-upsert-then-count read atomically in a single round trip
+ * instead of the multi-step client logic in setReactionLegacy — that
+ * approach had a TOCTOU race where concurrent clicks on the same
+ * post/user could interleave and leave inconsistent state.
+ */
 export async function setReaction(
+  supabase: SupabaseClient,
+  postId: string,
+  userId: string,
+  reaction: ReactionType,
+): Promise<{ reaction: ReactionType | null; likesCount: number }> {
+  const { data, error } = await supabase
+    .rpc("set_post_reaction", {
+      p_post_id: postId,
+      p_user_id: userId,
+      p_reaction: reaction,
+    })
+    .single();
+
+  if (error) {
+    if (isMissingReactionFunctionError(error.message)) {
+      return setReactionLegacy(supabase, postId, userId, reaction);
+    }
+    if (isMissingReactionColumnError(error.message)) {
+      const legacy = await toggleLike(supabase, postId, userId);
+      return {
+        reaction: legacy.liked ? "like" : null,
+        likesCount: legacy.likesCount,
+      };
+    }
+    if (isMissingLikesTableError(error.message)) {
+      throw new Error(
+        "Likes need database setup. Run supabase/migrate-likes-comments.sql in Supabase → SQL Editor.",
+      );
+    }
+    throw error;
+  }
+
+  const row = data as { reaction: string | null; likes_count: number };
+  return {
+    reaction: row.reaction ? normalizeReaction(row.reaction) : null,
+    likesCount: row.likes_count ?? 0,
+  };
+}
+
+export async function clearReaction(
+  supabase: SupabaseClient,
+  postId: string,
+  userId: string,
+): Promise<{ reaction: null; likesCount: number }> {
+  const { data, error } = await supabase.rpc("clear_post_reaction", {
+    p_post_id: postId,
+    p_user_id: userId,
+  });
+
+  if (error) {
+    if (isMissingReactionFunctionError(error.message)) {
+      return clearReactionLegacy(supabase, postId, userId);
+    }
+    if (isMissingLikesTableError(error.message)) {
+      throw new Error(
+        "Likes need database setup. Run supabase/migrate-likes-comments.sql in Supabase → SQL Editor.",
+      );
+    }
+    throw error;
+  }
+
+  return { reaction: null, likesCount: (data as number) ?? 0 };
+}
+
+/** Pre-transaction fallback, used until migrate-reaction-transaction.sql is applied. */
+async function setReactionLegacy(
   supabase: SupabaseClient,
   postId: string,
   userId: string,
@@ -226,7 +327,7 @@ export async function setReaction(
 
   // Clicking the same reaction again removes it.
   if (existing && normalizeReaction(existing.reaction) === reaction) {
-    return clearReaction(supabase, postId, userId);
+    return clearReactionLegacy(supabase, postId, userId);
   }
 
   // Prefer upsert so create + change reaction both persist the type.
@@ -273,7 +374,7 @@ export async function setReaction(
   return { reaction, likesCount: await getLikesCount(supabase, postId) };
 }
 
-export async function clearReaction(
+async function clearReactionLegacy(
   supabase: SupabaseClient,
   postId: string,
   userId: string,

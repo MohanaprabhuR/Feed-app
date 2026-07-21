@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark, Calendar, ChevronRight, Users } from "lucide-react";
+import { Bookmark, ChevronRight, Users } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { ProfileTrigger } from "@/components/profile-trigger";
 import { UserAvatar } from "@/components/user-avatar";
@@ -16,13 +16,12 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
-import { SidebarProfileSkeleton } from "@/components/skeletons";
+import { SidebarProfileSkeleton, SidebarStatsSkeleton } from "@/components/skeletons";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 
 const quickLinks = [
   { href: "/saved", label: "Saved items", icon: Bookmark },
   { href: "/following", label: "Following", icon: Users },
-  { href: "/trending", label: "Newsletters", icon: Calendar },
 ];
 
 export function FeedLeftSidebar() {
@@ -60,24 +59,28 @@ export function FeedLeftSidebar() {
 
           <Separator className="my-4" />
 
-          <ItemGroup className="gap-1 text-sm">
-            <Item size="sm" className="justify-between p-0">
-              <ItemDescription>Profile viewers</ItemDescription>
-              <ItemTitle>128</ItemTitle>
-            </Item>
-            <Item size="sm" className="justify-between p-0">
-              <ItemDescription>Post impressions</ItemDescription>
-              <ItemTitle>1,240</ItemTitle>
-            </Item>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto px-0 text-sm"
-              asChild
-            >
-              <Link href="/following?tab=followers">View all analytics</Link>
-            </Button>
-          </ItemGroup>
+          {loading || !user ? (
+            <SidebarStatsSkeleton />
+          ) : (
+            <ItemGroup className="gap-1 text-sm">
+              <Item size="sm" className="justify-between p-0">
+                <ItemDescription>Profile viewers</ItemDescription>
+                <ItemTitle>128</ItemTitle>
+              </Item>
+              <Item size="sm" className="justify-between p-0">
+                <ItemDescription>Post impressions</ItemDescription>
+                <ItemTitle>1,240</ItemTitle>
+              </Item>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto px-0 text-sm"
+                asChild
+              >
+                <Link href="/following?tab=followers">View all analytics</Link>
+              </Button>
+            </ItemGroup>
+          )}
         </CardContent>
       </Card>
 

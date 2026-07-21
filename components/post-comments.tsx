@@ -15,8 +15,10 @@ import { UserAvatar } from "@/components/user-avatar";
 import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { MentionInput } from "@/components/mention-text-field";
-import { Skeleton } from "@/components/ui/skeleton";
-import { CommentListSkeleton } from "@/components/skeletons";
+import {
+  CommentComposerSkeleton,
+  CommentListSkeleton,
+} from "@/components/skeletons";
 import { appToast } from "@/lib/app-toast";
 import {
   createComment,
@@ -367,10 +369,7 @@ export function PostComments({
   return (
     <div className={cn("space-y-4 border-t px-4 py-3", className)}>
       {userLoading ? (
-        <div className="flex items-center gap-2">
-          <Skeleton className="size-8 rounded-full" />
-          <Skeleton className="h-10 flex-1 rounded-full" />
-        </div>
+        <CommentComposerSkeleton />
       ) : user ? (
         <form className="flex items-start gap-2" onSubmit={handleSubmit}>
           <UserAvatar
