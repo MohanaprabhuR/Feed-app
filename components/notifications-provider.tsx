@@ -10,11 +10,16 @@ import {
 } from "react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import {
+  requestNotificationPermission,
+  showBrowserNotification,
+} from "@/lib/browser-notifications";
+import {
   fetchUnreadNotificationCount,
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/client";
+import type { Notification } from "@/lib/types";
 
 type NotificationsContextValue = {
   unreadCount: number;
@@ -61,8 +66,14 @@ export function NotificationsProvider({
   }, [userId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load on mount
     void refreshUnreadCount();
   }, [refreshUnreadCount]);
+
+  useEffect(() => {
+    if (!userId) return;
+    void requestNotificationPermission();
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -78,8 +89,16 @@ export function NotificationsProvider({
           table: "notifications",
           filter: `recipient_id=eq.${userId}`,
         },
-        () => {
+        (payload) => {
           void refreshUnreadCount();
+
+          if (payload.eventType === "INSERT") {
+            const row = payload.new as {
+              type: Notification["type"];
+              message: string;
+            };
+            showBrowserNotification(row.type, row.message);
+          }
         },
       )
       .subscribe();
