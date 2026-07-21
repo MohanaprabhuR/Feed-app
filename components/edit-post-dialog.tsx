@@ -527,7 +527,30 @@ export function EditPostDialog({
             </div>
 
             {!isArticle && (
-            <div className="flex items-center justify-end gap-0.5 border-t px-4 py-3">
+            <div className="flex items-center justify-between gap-2 border-t px-4 py-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="hidden sm:inline-flex"
+                disabled={busy}
+                onClick={() =>
+                  toast.custom(() => (
+                    <Alert variant="information">
+                      <AlertContent>
+                        <AlertTitle>AI enhance coming soon</AlertTitle>
+                        <AlertDescription>
+                          You can enhance your post with AI.
+                        </AlertDescription>
+                      </AlertContent>
+                    </Alert>
+                  ))
+                }
+              >
+                ✨ Enhance post
+              </Button>
+
+              <div className="ml-auto flex items-center gap-0.5">
               <Button
                 type="button"
                 variant="ghost"
@@ -631,6 +654,7 @@ export function EditPostDialog({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
             </div>
             )}
 

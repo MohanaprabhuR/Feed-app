@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Notification } from "@/lib/types";
 
 const TITLES: Record<Notification["type"], string> = {
@@ -37,4 +38,37 @@ export function showBrowserNotification(
     icon: "/favicon.ico",
     tag: `feed-app-notification-${type}`,
   });
+}
+
+/**
+ * Builds the notification body the same way the in-app list does — actor's
+ * name prepended to the row's message (e.g. "liked your post" becomes
+ * "PrabhuDhivya R liked your post") — then shows it. The realtime payload
+ * only carries raw columns, so the actor's name needs a lookup.
+ */
+export async function notifyFromNotificationRow(
+  supabase: SupabaseClient,
+  row: {
+    type: Notification["type"];
+    message: string;
+    actor_id: string | null;
+  },
+) {
+  if (!canRequestNotificationPermission()) return;
+  if (Notification.permission !== "granted") return;
+
+  let actorName: string | null = null;
+  if (row.actor_id) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", row.actor_id)
+      .maybeSingle();
+    actorName = data?.name ?? null;
+  }
+
+  showBrowserNotification(
+    row.type,
+    actorName ? `${actorName} ${row.message}` : row.message,
+  );
 }

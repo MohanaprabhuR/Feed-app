@@ -10,8 +10,8 @@ import {
 } from "react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import {
+  notifyFromNotificationRow,
   requestNotificationPermission,
-  showBrowserNotification,
 } from "@/lib/browser-notifications";
 import {
   fetchUnreadNotificationCount,
@@ -96,8 +96,9 @@ export function NotificationsProvider({
             const row = payload.new as {
               type: Notification["type"];
               message: string;
+              actor_id: string | null;
             };
-            showBrowserNotification(row.type, row.message);
+            void notifyFromNotificationRow(supabase, row);
           }
         },
       )
