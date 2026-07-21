@@ -26,6 +26,7 @@ import {
   MessageThreadSkeleton,
 } from "@/components/skeletons";
 import { appToast } from "@/lib/app-toast";
+import { fetchFollowing } from "@/lib/follows";
 import { getErrorMessage } from "@/lib/errors";
 import {
   fetchConversations,
@@ -37,7 +38,6 @@ import {
   subscribeToInboxMessages,
   type DirectMessageRow,
 } from "@/lib/messages";
-import { fetchSuggestedProfiles } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
 import type { Conversation, Message, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -367,11 +367,10 @@ export function MessagingDock() {
     closeConversation();
     try {
       const supabase = createClient();
-      const suggested = await fetchSuggestedProfiles(supabase, {
-        excludeUserId: userId,
-        limit: 12,
+      const following = await fetchFollowing(supabase, userId, {
+        limit: 50,
       });
-      setPeople(suggested);
+      setPeople(following);
     } catch {
       setPeople([]);
     }
@@ -675,7 +674,8 @@ export function MessagingDock() {
               <div className="min-h-0 flex-1 divide-y overflow-y-auto">
                 {people.length === 0 ? (
                   <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No people to message yet.
+                    You&apos;re not following anyone yet. Follow people to
+                    start a chat.
                   </p>
                 ) : (
                   people.map((person) => (
