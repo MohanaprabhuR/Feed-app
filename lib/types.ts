@@ -33,6 +33,20 @@ export type PostEvent = {
   location?: string;
 };
 
+export type CelebrationOccasion =
+  | "new-job"
+  | "work-anniversary"
+  | "promotion"
+  | "certification"
+  | "retirement"
+  | "volunteering"
+  | "other";
+
+export type PostCelebration = {
+  occasion: CelebrationOccasion;
+  message?: string;
+};
+
 export type Post = {
   id: string;
   author: User;
@@ -46,6 +60,7 @@ export type Post = {
     name: string;
   };
   event?: PostEvent;
+  celebration?: PostCelebration;
   likes: number;
   comments: number;
   shares: number;

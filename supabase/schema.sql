@@ -95,6 +95,7 @@ create table if not exists public.posts (
   post_type text default 'post' not null,
   title text,
   event jsonb,
+  celebration jsonb,
   likes_count integer default 0 not null,
   comments_count integer default 0 not null,
   shares_count integer default 0 not null,

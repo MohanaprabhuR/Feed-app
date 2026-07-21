@@ -47,6 +47,8 @@ import {
 import { MentionTextarea } from "@/components/mention-text-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PostEventCard } from "@/components/post-event-card";
+import { DateTimePickerPopover } from "@/components/datetime-picker-popover";
 import { appToast } from "@/lib/app-toast";
 import { getErrorMessage } from "@/lib/errors";
 import {
@@ -57,8 +59,46 @@ import {
 } from "@/lib/post-media";
 import { deletePost, updatePost } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/client";
-import type { Post } from "@/lib/types";
+import type { Post, PostEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+function toDatetimeLocalValue(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function defaultEventStart() {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return toDatetimeLocalValue(d);
+}
+
+type EventDraft = {
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  location: string;
+};
+
+function eventDraftFromPost(post: Post): EventDraft {
+  if (!post.event) {
+    return {
+      title: "",
+      startsAt: defaultEventStart(),
+      endsAt: "",
+      location: "",
+    };
+  }
+  return {
+    title: post.event.title,
+    startsAt: toDatetimeLocalValue(new Date(post.event.startsAt)),
+    endsAt: post.event.endsAt
+      ? toDatetimeLocalValue(new Date(post.event.endsAt))
+      : "",
+    location: post.event.location ?? "",
+  };
+}
 
 type EditAttachment =
   | {
@@ -116,6 +156,10 @@ export function EditPostDialog({
   const [attachment, setAttachment] = useState<EditAttachment | null>(() =>
     existingAttachmentFromPost(post),
   );
+  const [showEventForm, setShowEventForm] = useState(Boolean(post.event));
+  const [eventDraft, setEventDraft] = useState<EventDraft>(() =>
+    eventDraftFromPost(post),
+  );
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +172,46 @@ export function EditPostDialog({
     setDraft(post.content);
     setTitleDraft(post.title ?? "");
     setAttachment(existingAttachmentFromPost(post));
+    setShowEventForm(Boolean(post.event));
+    setEventDraft(eventDraftFromPost(post));
     setError(null);
+  }
+
+  function openEventForm() {
+    setShowEventForm(true);
+    setEventDraft((current) => ({
+      ...current,
+      startsAt: current.startsAt || defaultEventStart(),
+    }));
+  }
+
+  function clearEvent() {
+    setShowEventForm(false);
+    setEventDraft({
+      title: "",
+      startsAt: defaultEventStart(),
+      endsAt: "",
+      location: "",
+    });
+  }
+
+  function buildEventPayload(): PostEvent | undefined {
+    if (!showEventForm) return undefined;
+    const title = eventDraft.title.trim();
+    if (!title || !eventDraft.startsAt) return undefined;
+
+    const startsAt = new Date(eventDraft.startsAt).toISOString();
+    const endsAt = eventDraft.endsAt
+      ? new Date(eventDraft.endsAt).toISOString()
+      : undefined;
+    const location = eventDraft.location.trim() || undefined;
+
+    return {
+      title,
+      startsAt,
+      ...(endsAt ? { endsAt } : {}),
+      ...(location ? { location } : {}),
+    };
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -217,9 +300,23 @@ export function EditPostDialog({
         setError("Article body is required.");
         return;
       }
-    } else if (!trimmed && !attachment) {
-      setError("Post must include text or an attachment.");
-      return;
+    } else {
+      if (
+        showEventForm &&
+        eventDraft.endsAt &&
+        new Date(eventDraft.endsAt) <= new Date(eventDraft.startsAt)
+      ) {
+        setError("Event end time must be after the start time.");
+        return;
+      }
+      if (showEventForm && (!eventDraft.title.trim() || !eventDraft.startsAt)) {
+        setError("Add an event title and start date/time.");
+        return;
+      }
+      if (!trimmed && !attachment && !showEventForm) {
+        setError("Post must include text or an attachment.");
+        return;
+      }
     }
 
     setSaving(true);
@@ -244,13 +341,19 @@ export function EditPostDialog({
         media = null;
       }
 
+      const eventForSave = showEventForm
+        ? buildEventPayload()
+        : post.event
+          ? null
+          : undefined;
+
       const updated = await updatePost(
         supabase,
         post.id,
         user.id,
         trimmed,
         media,
-        isArticle ? { title: trimmedTitle } : undefined,
+        isArticle ? { title: trimmedTitle } : { event: eventForSave },
       );
       onUpdated?.(updated);
       appToast.success(
@@ -471,6 +574,114 @@ export function EditPostDialog({
                 </div>
               )}
 
+              {showEventForm && !isArticle && (
+                <Card className="mb-3 overflow-hidden border shadow-sm">
+                  <div className="space-y-3 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium">Event details</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        onClick={clearEvent}
+                        disabled={busy}
+                        aria-label="Remove event"
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-event-title">Event name</Label>
+                      <Input
+                        id="edit-event-title"
+                        placeholder="Add a title"
+                        value={eventDraft.title}
+                        onChange={(e) =>
+                          setEventDraft((d) => ({
+                            ...d,
+                            title: e.target.value,
+                          }))
+                        }
+                        disabled={busy}
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-event-start">Start</Label>
+                        <DateTimePickerPopover
+                          id="edit-event-start"
+                          value={eventDraft.startsAt}
+                          onChange={(next) =>
+                            setEventDraft((d) => ({
+                              ...d,
+                              startsAt: next,
+                              // Drop a now-stale end so start > end can't linger.
+                              endsAt:
+                                d.endsAt && new Date(d.endsAt) <= new Date(next)
+                                  ? ""
+                                  : d.endsAt,
+                            }))
+                          }
+                          disabled={busy}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-event-end">End (optional)</Label>
+                        <DateTimePickerPopover
+                          id="edit-event-end"
+                          value={eventDraft.endsAt}
+                          onChange={(next) =>
+                            setEventDraft((d) => ({ ...d, endsAt: next }))
+                          }
+                          disabled={busy}
+                          placeholder="Select end"
+                          minValue={eventDraft.startsAt}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-event-location">
+                        Location (optional)
+                      </Label>
+                      <Input
+                        id="edit-event-location"
+                        placeholder="Add a venue or online link"
+                        value={eventDraft.location}
+                        onChange={(e) =>
+                          setEventDraft((d) => ({
+                            ...d,
+                            location: e.target.value,
+                          }))
+                        }
+                        disabled={busy}
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {showEventForm &&
+              !isArticle &&
+              eventDraft.title.trim() &&
+              eventDraft.startsAt ? (
+                <PostEventCard
+                  event={{
+                    title: eventDraft.title.trim(),
+                    startsAt: new Date(eventDraft.startsAt).toISOString(),
+                    ...(eventDraft.endsAt
+                      ? { endsAt: new Date(eventDraft.endsAt).toISOString() }
+                      : {}),
+                    ...(eventDraft.location.trim()
+                      ? { location: eventDraft.location.trim() }
+                      : {}),
+                  }}
+                  className="mb-3"
+                />
+              ) : null}
+
               {attachment && !isArticle && (
                 <Card className="relative mb-2 overflow-hidden">
                   {attachment.type === "image" && imagePreview && (
@@ -579,19 +790,10 @@ export function EditPostDialog({
                 size="sm"
                 iconOnly
                 disabled={busy}
-                onClick={() =>
-                  toast.custom(() => (
-                    <Alert variant="information">
-                      <AlertContent>
-                        <AlertTitle>Events coming soon</AlertTitle>
-                        <AlertDescription>
-                          You can create events for your post.
-                        </AlertDescription>
-                      </AlertContent>
-                    </Alert>
-                  ))
-                }
+                onClick={openEventForm}
                 aria-label="Create event"
+                aria-pressed={showEventForm}
+                className={cn(showEventForm && "bg-accent text-foreground")}
               >
                 <Calendar />
               </Button>
@@ -635,22 +837,9 @@ export function EditPostDialog({
                     <Paperclip className="size-4" />
                     Add a document
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      toast.custom(() => (
-                        <Alert variant="information">
-                          <AlertContent>
-                            <AlertTitle>Events coming soon</AlertTitle>
-                            <AlertDescription>
-                              You can create events for your post.
-                            </AlertDescription>
-                          </AlertContent>
-                        </Alert>
-                      ))
-                    }
-                  >
+                  <DropdownMenuItem onClick={openEventForm}>
                     <Calendar className="size-4" />
-                    Create an event
+                    {showEventForm ? "Edit event" : "Create an event"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

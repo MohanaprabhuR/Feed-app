@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import { MentionTextarea } from "@/components/mention-text-field";
+import { CELEBRATION_OCCASIONS } from "@/lib/celebrations";
 import { getErrorMessage } from "@/lib/errors";
 import {
   getAttachmentType,
@@ -55,14 +56,23 @@ import {
   type PostAttachmentType,
 } from "@/lib/post-media";
 import { createPost } from "@/lib/posts";
-import type { Post, PostEvent } from "@/lib/types";
+import type { CelebrationOccasion, Post, PostCelebration, PostEvent } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
 import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { PostEventCard } from "@/components/post-event-card";
+import { PostCelebrationCard } from "@/components/post-celebration-card";
 import { DateTimePickerPopover } from "@/components/datetime-picker-popover";
 import { ArticleEditorDialog } from "@/components/article-editor-dialog";
 
@@ -83,6 +93,11 @@ type EventDraft = {
   startsAt: string;
   endsAt: string;
   location: string;
+};
+
+type CelebrationDraft = {
+  occasion: CelebrationOccasion;
+  message: string;
 };
 
 const feedActions = [
@@ -141,6 +156,11 @@ export function CreatePostComposer({
     endsAt: "",
     location: "",
   });
+  const [showCelebrationForm, setShowCelebrationForm] = useState(false);
+  const [celebrationDraft, setCelebrationDraft] = useState<CelebrationDraft>({
+    occasion: CELEBRATION_OCCASIONS[0].value,
+    message: "",
+  });
 
   function insertEmoji(emoji: string) {
     const el = textareaRef.current;
@@ -160,10 +180,17 @@ export function CreatePostComposer({
   function openEventForm() {
     openModal();
     setShowEventForm(true);
+    setShowCelebrationForm(false);
     setEventDraft((current) => ({
       ...current,
       startsAt: current.startsAt || defaultEventStart(),
     }));
+  }
+
+  function openCelebrationForm() {
+    openModal();
+    setShowCelebrationForm(true);
+    setShowEventForm(false);
   }
 
   function openArticleEditor() {
@@ -183,6 +210,23 @@ export function CreatePostComposer({
       endsAt: "",
       location: "",
     });
+  }
+
+  function clearCelebration() {
+    setShowCelebrationForm(false);
+    setCelebrationDraft({
+      occasion: CELEBRATION_OCCASIONS[0].value,
+      message: "",
+    });
+  }
+
+  function buildCelebrationPayload(): PostCelebration | undefined {
+    if (!showCelebrationForm) return undefined;
+    const message = celebrationDraft.message.trim();
+    return {
+      occasion: celebrationDraft.occasion,
+      ...(message ? { message } : {}),
+    };
   }
 
   function buildEventPayload(): PostEvent | undefined {
@@ -222,6 +266,7 @@ export function CreatePostComposer({
   function resetComposer() {
     clearAttachment();
     clearEvent();
+    clearCelebration();
     setContent("");
     setOpen(false);
   }
@@ -307,7 +352,9 @@ export function CreatePostComposer({
       return;
     }
 
-    if (!content.trim() && !attachment && !event) return;
+    const celebration = buildCelebrationPayload();
+
+    if (!content.trim() && !attachment && !event && !celebration) return;
 
     setLoading(true);
 
@@ -330,6 +377,7 @@ export function CreatePostComposer({
         content,
         { image, video, file },
         event,
+        celebration,
       );
       await refresh();
 
@@ -337,12 +385,18 @@ export function CreatePostComposer({
         <Alert variant="success">
           <AlertContent>
             <AlertTitle>
-              {event ? "Event published!" : "Post published!"}
+              {event
+                ? "Event published!"
+                : celebration
+                  ? "Celebration published!"
+                  : "Post published!"}
             </AlertTitle>
             <AlertDescription>
               {event
                 ? "Your event is live on the feed."
-                : "You have published the post."}
+                : celebration
+                  ? "Your celebration is live on the feed."
+                  : "You have published the post."}
             </AlertDescription>
           </AlertContent>
         </Alert>
@@ -370,7 +424,8 @@ export function CreatePostComposer({
       !loading &&
       (content.trim() ||
         attachment ||
-        (showEventForm && eventDraft.title.trim() && eventDraft.startsAt)),
+        (showEventForm && eventDraft.title.trim() && eventDraft.startsAt) ||
+        showCelebrationForm),
   );
 
   return (
@@ -602,6 +657,80 @@ export function CreatePostComposer({
               />
             ) : null}
 
+            {showCelebrationForm && (
+              <Card className="mb-3 overflow-hidden border shadow-sm">
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">Celebrate an occasion</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      iconOnly
+                      onClick={clearCelebration}
+                      disabled={loading}
+                      aria-label="Remove celebration"
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="celebration-occasion">Occasion</Label>
+                    <Select
+                      value={celebrationDraft.occasion}
+                      onValueChange={(value) =>
+                        setCelebrationDraft((d) => ({
+                          ...d,
+                          occasion: value as CelebrationOccasion,
+                        }))
+                      }
+                      disabled={loading}
+                    >
+                      <SelectTrigger id="celebration-occasion">
+                        <SelectValue placeholder="Choose an occasion" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CELEBRATION_OCCASIONS.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.emoji} {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="celebration-message">
+                      Message (optional)
+                    </Label>
+                    <Textarea
+                      id="celebration-message"
+                      placeholder="Say a few words about it..."
+                      value={celebrationDraft.message}
+                      onChange={(e) =>
+                        setCelebrationDraft((d) => ({
+                          ...d,
+                          message: e.target.value,
+                        }))
+                      }
+                      disabled={loading}
+                      size="sm"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {showCelebrationForm ? (
+              <PostCelebrationCard
+                celebration={{
+                  occasion: celebrationDraft.occasion,
+                  ...(celebrationDraft.message.trim()
+                    ? { message: celebrationDraft.message.trim() }
+                    : {}),
+                }}
+              />
+            ) : null}
+
             {attachment && (
               <Card className="relative mb-2 overflow-hidden">
                 {attachment.type === "image" && attachment.previewUrl && (
@@ -719,19 +848,12 @@ export function CreatePostComposer({
                 variant="ghost"
                 size="sm"
                 iconOnly
-                onClick={() =>
-                  toast.custom(() => (
-                    <Alert variant="information">
-                      <AlertContent>
-                        <AlertTitle>Celebrate coming soon</AlertTitle>
-                        <AlertDescription>
-                          You can celebrate occasions for your post.
-                        </AlertDescription>
-                      </AlertContent>
-                    </Alert>
-                  ))
-                }
+                onClick={openCelebrationForm}
                 aria-label="Celebrate an occasion"
+                aria-pressed={showCelebrationForm}
+                className={cn(
+                  showCelebrationForm && "bg-accent text-foreground",
+                )}
               >
                 <Award />
               </Button>

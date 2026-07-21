@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getCelebrationMeta } from "@/lib/celebrations";
 import { splitPostMedia } from "@/lib/errors";
 import { profileToUser, type ProfileRow } from "@/lib/profile";
-import type { Post, PostEvent, PostType } from "@/lib/types";
+import type { Post, PostCelebration, PostEvent, PostType } from "@/lib/types";
 
 export type PostRow = {
   id: string;
@@ -11,6 +12,7 @@ export type PostRow = {
   post_type?: PostType | null;
   title?: string | null;
   event?: PostEvent | null;
+  celebration?: PostCelebration | null;
   likes_count: number;
   comments_count: number;
   shares_count: number;
@@ -23,6 +25,7 @@ type SchemaMode = "legacy" | "modern";
 
 let cachedSchemaMode: SchemaMode | null = null;
 let cachedEventColumn: boolean | null = null;
+let cachedCelebrationColumn: boolean | null = null;
 
 const postSelectBase = `
   id,
@@ -30,30 +33,6 @@ const postSelectBase = `
   image,
   post_type,
   title,
-  likes_count,
-  comments_count,
-  shares_count,
-  created_at,
-  author_id,
-  author:profiles!author_id (
-    id,
-    name,
-    username,
-    avatar,
-    bio,
-    followers_count,
-    following_count,
-    posts_count
-  )
-`;
-
-const postSelect = `
-  id,
-  content,
-  image,
-  post_type,
-  title,
-  event,
   likes_count,
   comments_count,
   shares_count,
@@ -130,6 +109,33 @@ function isMissingEventColumnError(message: string) {
   );
 }
 
+function isMissingCelebrationColumnError(message: string) {
+  return (
+    message.includes("celebration") &&
+    (message.includes("column") ||
+      message.includes("schema cache") ||
+      message.includes("Could not find"))
+  );
+}
+
+function normalizeCelebration(value: unknown): PostCelebration | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Record<string, unknown>;
+  const occasion =
+    typeof raw.occasion === "string" ? raw.occasion : undefined;
+  if (!occasion) return undefined;
+
+  const message =
+    typeof raw.message === "string" && raw.message.trim()
+      ? raw.message.trim()
+      : undefined;
+
+  return {
+    occasion: occasion as PostCelebration["occasion"],
+    ...(message ? { message } : {}),
+  };
+}
+
 function normalizeEvent(value: unknown): PostEvent | undefined {
   if (!value || typeof value !== "object") return undefined;
   const raw = value as Record<string, unknown>;
@@ -170,6 +176,7 @@ function withLegacyDefaults(row: PostRow): PostRow {
     post_type: row.post_type ?? "post",
     title: row.title ?? null,
     event: normalizeEvent(row.event) ?? null,
+    celebration: normalizeCelebration(row.celebration) ?? null,
   };
 }
 
@@ -187,6 +194,7 @@ export async function resolveSchemaMode(
 export function resetSchemaModeCache() {
   cachedSchemaMode = null;
   cachedEventColumn = null;
+  cachedCelebrationColumn = null;
 }
 
 async function resolveEventColumn(supabase: SupabaseClient): Promise<boolean> {
@@ -196,9 +204,30 @@ async function resolveEventColumn(supabase: SupabaseClient): Promise<boolean> {
   return cachedEventColumn;
 }
 
-function activeSelect(mode: SchemaMode, includeEvent: boolean) {
+async function resolveCelebrationColumn(
+  supabase: SupabaseClient,
+): Promise<boolean> {
+  if (cachedCelebrationColumn !== null) return cachedCelebrationColumn;
+  const { error } = await supabase.from("posts").select("celebration").limit(1);
+  cachedCelebrationColumn = !(
+    error && isMissingCelebrationColumnError(error.message)
+  );
+  return cachedCelebrationColumn;
+}
+
+function activeSelect(
+  mode: SchemaMode,
+  includeEvent: boolean,
+  includeCelebration: boolean,
+) {
   if (mode === "legacy") return legacyPostSelect;
-  return includeEvent ? postSelect : postSelectBase;
+  const extras = [
+    includeEvent ? "event" : null,
+    includeCelebration ? "celebration" : null,
+  ].filter((column): column is string => Boolean(column));
+  return extras.length
+    ? `${postSelectBase},\n  ${extras.join(",\n  ")}`
+    : postSelectBase;
 }
 
 async function queryPosts(
@@ -209,24 +238,35 @@ async function queryPosts(
   }>
 ) {
   const mode = await resolveSchemaMode(supabase);
-  const includeEvent =
+  let includeEvent =
     mode === "modern" ? await resolveEventColumn(supabase) : false;
-  const result = await buildQuery(activeSelect(mode, includeEvent));
-  if (result.error) {
-    if (includeEvent && isMissingEventColumnError(result.error.message)) {
-      cachedEventColumn = false;
-      const retry = await buildQuery(activeSelect(mode, false));
-      if (retry.error) throw retry.error;
-      return normalizeRows(retry.data as PostRow | PostRow[] | null).map(
+  let includeCelebration =
+    mode === "modern" ? await resolveCelebrationColumn(supabase) : false;
+
+  for (;;) {
+    const result = await buildQuery(
+      activeSelect(mode, includeEvent, includeCelebration),
+    );
+    if (!result.error) {
+      return normalizeRows(result.data as PostRow | PostRow[] | null).map(
         withLegacyDefaults,
       );
     }
+    if (
+      includeCelebration &&
+      isMissingCelebrationColumnError(result.error.message)
+    ) {
+      cachedCelebrationColumn = false;
+      includeCelebration = false;
+      continue;
+    }
+    if (includeEvent && isMissingEventColumnError(result.error.message)) {
+      cachedEventColumn = false;
+      includeEvent = false;
+      continue;
+    }
     throw result.error;
   }
-
-  return normalizeRows(result.data as PostRow | PostRow[] | null).map(
-    withLegacyDefaults,
-  );
 }
 
 export function formatRelativeTime(dateString: string): string {
@@ -275,6 +315,7 @@ export function postRowToPost(
 
   const media = splitPostMedia(normalized.image, normalized.video);
   const event = normalizeEvent(normalized.event);
+  const celebration = normalizeCelebration(normalized.celebration);
 
   return {
     id: normalized.id,
@@ -286,6 +327,7 @@ export function postRowToPost(
     video: media.video,
     file: media.file,
     event,
+    celebration,
     likes: normalized.likes_count ?? 0,
     comments: normalized.comments_count ?? 0,
     shares: normalized.shares_count ?? 0,
@@ -330,50 +372,62 @@ async function withLikedState(
   });
 }
 
+function flatPostColumns(
+  mode: SchemaMode,
+  includeEvent: boolean,
+  includeCelebration: boolean,
+) {
+  if (mode === "legacy") {
+    return "id, content, image, likes_count, comments_count, shares_count, created_at, author_id";
+  }
+  const columns = ["id", "content", "image", "post_type", "title"];
+  if (includeEvent) columns.push("event");
+  if (includeCelebration) columns.push("celebration");
+  columns.push(
+    "likes_count",
+    "comments_count",
+    "shares_count",
+    "created_at",
+    "author_id",
+  );
+  return columns.join(", ");
+}
+
 async function loadAllPostRows(reader: SupabaseClient) {
   // Prefer admin reader when available so a misconfigured RLS can't hide
   // other users' posts from the shared feed.
   const mode = await resolveSchemaMode(reader);
-  const includeEvent =
+  let includeEvent =
     mode === "modern" ? await resolveEventColumn(reader) : false;
+  let includeCelebration =
+    mode === "modern" ? await resolveCelebrationColumn(reader) : false;
 
-  const modernColumns = includeEvent
-    ? "id, content, image, post_type, title, event, likes_count, comments_count, shares_count, created_at, author_id"
-    : "id, content, image, post_type, title, likes_count, comments_count, shares_count, created_at, author_id";
+  for (;;) {
+    const result = await reader
+      .from("posts")
+      .select(flatPostColumns(mode, includeEvent, includeCelebration))
+      .order("created_at", { ascending: false });
 
-  const result =
-    mode === "modern"
-      ? await reader
-          .from("posts")
-          .select(modernColumns)
-          .order("created_at", { ascending: false })
-      : await reader
-          .from("posts")
-          .select(
-            "id, content, image, likes_count, comments_count, shares_count, created_at, author_id",
-          )
-          .order("created_at", { ascending: false });
-
-  if (result.error) {
+    if (!result.error) {
+      return normalizeRows(
+        (result.data as unknown as PostRow[] | null) ?? null,
+      ).map(withLegacyDefaults);
+    }
+    if (
+      includeCelebration &&
+      isMissingCelebrationColumnError(result.error.message)
+    ) {
+      cachedCelebrationColumn = false;
+      includeCelebration = false;
+      continue;
+    }
     if (includeEvent && isMissingEventColumnError(result.error.message)) {
       cachedEventColumn = false;
-      const retry = await reader
-        .from("posts")
-        .select(
-          "id, content, image, post_type, title, likes_count, comments_count, shares_count, created_at, author_id",
-        )
-        .order("created_at", { ascending: false });
-      if (retry.error) throw retry.error;
-      return normalizeRows(
-        (retry.data as unknown as PostRow[] | null) ?? null,
-      ).map(withLegacyDefaults);
+      includeEvent = false;
+      continue;
     }
     throw result.error;
   }
-
-  return normalizeRows(
-    (result.data as unknown as PostRow[] | null) ?? null,
-  ).map(withLegacyDefaults);
 }
 
 async function loadAuthorsById(
@@ -482,22 +536,32 @@ export async function createPost(
   content: string,
   media?: { image?: string; video?: string; file?: string },
   event?: PostEvent,
+  celebration?: PostCelebration,
 ) {
   const trimmed = content.trim();
   const normalizedEvent = event ? normalizeEvent(event) : undefined;
+  const normalizedCelebration = celebration
+    ? normalizeCelebration(celebration)
+    : undefined;
 
   if (
     !trimmed &&
     !media?.image &&
     !media?.video &&
     !media?.file &&
-    !normalizedEvent
+    !normalizedEvent &&
+    !normalizedCelebration
   ) {
-    throw new Error("Post must include text, an attachment, or an event.");
+    throw new Error(
+      "Post must include text, an attachment, an event, or a celebration.",
+    );
   }
 
   if (event && !normalizedEvent) {
     throw new Error("Event needs a title and start date/time.");
+  }
+  if (celebration && !normalizedCelebration) {
+    throw new Error("Choose an occasion to celebrate.");
   }
 
   const mediaUrl = media?.video ?? media?.image ?? media?.file ?? null;
@@ -506,16 +570,29 @@ export async function createPost(
   // UI treats rows with an `event` payload as event posts.
   const includeEvent =
     mode === "modern" ? await resolveEventColumn(supabase) : false;
+  const includeCelebration =
+    mode === "modern" ? await resolveCelebrationColumn(supabase) : false;
 
   if (normalizedEvent && !includeEvent) {
     throw new Error(
       "Events need database setup. Run supabase/migrate-post-events.sql in Supabase → SQL Editor.",
     );
   }
+  if (normalizedCelebration && !includeCelebration) {
+    throw new Error(
+      "Celebrations need database setup. Run supabase/migrate-post-celebrations.sql in Supabase → SQL Editor.",
+    );
+  }
+
+  const fallbackContent =
+    normalizedEvent?.title ??
+    (normalizedCelebration
+      ? getCelebrationMeta(normalizedCelebration.occasion).label
+      : "");
 
   const modernPayload: Record<string, unknown> = {
     author_id: authorId,
-    content: trimmed || (normalizedEvent ? normalizedEvent.title : ""),
+    content: trimmed || fallbackContent,
     image: mediaUrl,
     post_type: "post",
     title: normalizedEvent?.title ?? null,
@@ -523,8 +600,11 @@ export async function createPost(
   if (includeEvent) {
     modernPayload.event = normalizedEvent ?? null;
   }
+  if (includeCelebration) {
+    modernPayload.celebration = normalizedCelebration ?? null;
+  }
 
-  const select = activeSelect(mode, includeEvent);
+  const select = activeSelect(mode, includeEvent, includeCelebration);
 
   const { data, error } =
     mode === "modern"
@@ -537,7 +617,7 @@ export async function createPost(
           .from("posts")
           .insert({
             author_id: authorId,
-            content: trimmed || (normalizedEvent ? normalizedEvent.title : ""),
+            content: trimmed || fallbackContent,
             image: mediaUrl,
           })
           .select(legacyPostSelect)
@@ -548,6 +628,15 @@ export async function createPost(
       cachedEventColumn = false;
       throw new Error(
         "Events need database setup. Run supabase/migrate-post-events.sql in Supabase → SQL Editor.",
+      );
+    }
+    if (
+      normalizedCelebration &&
+      isMissingCelebrationColumnError(error.message)
+    ) {
+      cachedCelebrationColumn = false;
+      throw new Error(
+        "Celebrations need database setup. Run supabase/migrate-post-celebrations.sql in Supabase → SQL Editor.",
       );
     }
     throw error;
@@ -604,31 +693,53 @@ export async function updatePost(
   authorId: string,
   content: string,
   media?: { image?: string; video?: string; file?: string } | null,
-  options?: { title?: string },
+  options?: { title?: string; event?: PostEvent | null },
 ) {
   const trimmed = content.trim();
   const replacingMedia = media !== undefined;
   const hasNewMedia = Boolean(media?.image || media?.video || media?.file);
   const title =
     options?.title !== undefined ? options.title.trim() : undefined;
+  const normalizedEvent =
+    options?.event !== undefined && options.event
+      ? normalizeEvent(options.event)
+      : undefined;
 
   if (title !== undefined && !title) {
     throw new Error("Article title is required.");
   }
 
-  if (replacingMedia && !trimmed && !hasNewMedia) {
+  if (options?.event && !normalizedEvent) {
+    throw new Error("Event needs a title and start date/time.");
+  }
+
+  if (
+    replacingMedia &&
+    !trimmed &&
+    !hasNewMedia &&
+    options?.event === undefined
+  ) {
     throw new Error("Post must include text or an attachment.");
   }
 
   const mode = await resolveSchemaMode(supabase);
   const includeEvent =
     mode === "modern" ? await resolveEventColumn(supabase) : false;
-  const select = activeSelect(mode, includeEvent);
+  const includeCelebration =
+    mode === "modern" ? await resolveCelebrationColumn(supabase) : false;
+  const select = activeSelect(mode, includeEvent, includeCelebration);
+
+  if (options?.event && !includeEvent) {
+    throw new Error(
+      "Events need database setup. Run supabase/migrate-post-events.sql in Supabase → SQL Editor.",
+    );
+  }
 
   const payload: {
     content: string;
     image?: string | null;
     title?: string;
+    event?: PostEvent | null;
   } = {
     content: trimmed,
   };
@@ -643,6 +754,10 @@ export async function updatePost(
     payload.image = media.video ?? media.image ?? media.file ?? null;
   }
 
+  if (options?.event !== undefined && includeEvent) {
+    payload.event = normalizedEvent ?? null;
+  }
+
   const { data, error } = await supabase
     .from("posts")
     .update(payload)
@@ -651,7 +766,15 @@ export async function updatePost(
     .select(select)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    if (options?.event && isMissingEventColumnError(error.message)) {
+      cachedEventColumn = false;
+      throw new Error(
+        "Events need database setup. Run supabase/migrate-post-events.sql in Supabase → SQL Editor.",
+      );
+    }
+    throw error;
+  }
   if (!data) {
     throw new Error("You can only edit your own posts.");
   }

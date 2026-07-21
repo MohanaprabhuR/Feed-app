@@ -13,6 +13,8 @@ import {
 import { useCurrentUser } from "@/components/current-user-provider";
 import { PostComments } from "@/components/post-comments";
 import { PostEventCard } from "@/components/post-event-card";
+import { PostCelebrationCard } from "@/components/post-celebration-card";
+import { getCelebrationMeta } from "@/lib/celebrations";
 import { PostLikeButton } from "@/components/post-like-button";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import {
@@ -199,10 +201,18 @@ export function PostCard({
       </CardHeader>
       <CardContent className={feedCardContentClass}>
         {content.trim() &&
-        !(post.event && content.trim() === post.event.title) ? (
+        !(post.event && content.trim() === post.event.title) &&
+        !(
+          post.celebration &&
+          content.trim() ===
+            getCelebrationMeta(post.celebration.occasion).label
+        ) ? (
           <p className="text-base leading-relaxed">{content}</p>
         ) : null}
         {post.event ? <PostEventCard event={post.event} /> : null}
+        {post.celebration ? (
+          <PostCelebrationCard celebration={post.celebration} />
+        ) : null}
         {post.video ? (
           <video
             src={post.video}
