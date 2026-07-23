@@ -52,6 +52,7 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (loading) return;
     setError(null);
 
     const form = new FormData(e.currentTarget);
@@ -92,14 +93,17 @@ export default function RegisterPage() {
           existingProfile.name?.trim() || existingProfile.username || username;
 
         if (signIn.ok) {
-          toast.custom(() => (
-            <Alert variant="success">
-              <AlertContent>
-                <AlertTitle>Welcome back!</AlertTitle>
-                <AlertDescription>{`Welcome back, ${displayName}.`}</AlertDescription>
-              </AlertContent>
-            </Alert>
-          ));
+          toast.custom(
+            () => (
+              <Alert variant="success">
+                <AlertContent>
+                  <AlertTitle>Welcome back!</AlertTitle>
+                  <AlertDescription>{`Welcome back, ${displayName}.`}</AlertDescription>
+                </AlertContent>
+              </Alert>
+            ),
+            { id: "welcome-toast" },
+          );
           router.push("/feed");
           router.refresh();
           return;
@@ -137,14 +141,17 @@ export default function RegisterPage() {
           const signIn = await trySignIn(supabase, [email], input.password);
 
           if (signIn.ok) {
-            toast.custom(() => (
-              <Alert variant="success">
-                <AlertContent>
-                  <AlertTitle>Welcome back!</AlertTitle>
-                  <AlertDescription>{`Welcome back, ${username}.`}</AlertDescription>
-                </AlertContent>
-              </Alert>
-            ));
+            toast.custom(
+              () => (
+                <Alert variant="success">
+                  <AlertContent>
+                    <AlertTitle>Welcome back!</AlertTitle>
+                    <AlertDescription>{`Welcome back, ${username}.`}</AlertDescription>
+                  </AlertContent>
+                </Alert>
+              ),
+              { id: "welcome-toast" },
+            );
             router.push("/feed");
             router.refresh();
             return;
@@ -179,14 +186,17 @@ export default function RegisterPage() {
       }
 
       if (data.session) {
-        toast.custom(() => (
-          <Alert variant="success">
-            <AlertContent>
-              <AlertTitle>Account created!</AlertTitle>
-              <AlertDescription>Welcome to Feed App.</AlertDescription>
-            </AlertContent>
-          </Alert>
-        ));
+        toast.custom(
+          () => (
+            <Alert variant="success">
+              <AlertContent>
+                <AlertTitle>Account created!</AlertTitle>
+                <AlertDescription>{`Welcome to Feed App, ${input.name.trim() || username}.`}</AlertDescription>
+              </AlertContent>
+            </Alert>
+          ),
+          { id: "welcome-toast" },
+        );
         router.push("/feed");
         router.refresh();
         return;
@@ -195,14 +205,17 @@ export default function RegisterPage() {
       const signIn = await trySignIn(supabase, [email], input.password);
 
       if (signIn.ok) {
-        toast.custom(() => (
-          <Alert variant="success">
-            <AlertContent>
-              <AlertTitle>Account created!</AlertTitle>
-              <AlertDescription>Welcome to Feed App.</AlertDescription>
-            </AlertContent>
-          </Alert>
-        ));
+        toast.custom(
+          () => (
+            <Alert variant="success">
+              <AlertContent>
+                <AlertTitle>Account created!</AlertTitle>
+                <AlertDescription>{`Welcome to Feed App, ${input.name.trim() || username}.`}</AlertDescription>
+              </AlertContent>
+            </Alert>
+          ),
+          { id: "welcome-toast" },
+        );
         router.push("/feed");
         router.refresh();
         return;

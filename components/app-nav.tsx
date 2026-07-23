@@ -2,13 +2,29 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Home, Menu, MessageCircle, Search, Users, X } from "lucide-react";
+import {
+  Bell,
+  Bookmark,
+  CircleHelp,
+  FileText,
+  Globe,
+  Home,
+  LogOut,
+  Menu,
+  MessageCircle,
+  Search,
+  Settings,
+  UserRound,
+  Users,
+  X,
+} from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { MeMenu } from "@/components/me-menu";
-import { MeMenuPanel } from "@/components/me-menu-panel";
 import { FeedLogoMark } from "@/components/feed-logo";
 import { useMessaging } from "@/components/messaging-provider";
 import { useNotifications } from "@/components/notifications-provider";
+import { ThemeMenuRow } from "@/components/theme-switcher";
+import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/ui/header";
@@ -17,7 +33,9 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuBadge,
@@ -28,6 +46,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -181,25 +200,37 @@ function MobileMessagingMenuItem() {
 
 function MobileNavSidebarContent() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useCurrentUser();
   const { unreadCount } = useNotifications();
   const { setOpenMobile } = useSidebar();
 
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setOpenMobile(false);
+    router.push("/welcome");
+    router.refresh();
+  }
+
   return (
     <Sidebar side="left" collapsible="offcanvas">
-      <SidebarHeader className="flex-row items-center justify-between border-b border-sidebar-border">
-        <span className="font-serif text-xl font-semibold">Menu</span>
+      <SidebarHeader className="border-b border-sidebar-border px-2 py-2">
+        <FeedLogoMark className="size-8 text-base sm:size-8 sm:text-base" />
+        <span className="font-serif text-xl font-semibold">Feed</span>
         <Button
           type="button"
           variant="ghost"
           size="sm"
           iconOnly
           aria-label="Close menu"
+          className="ml-auto"
           onClick={() => setOpenMobile(false)}
         >
           <X />
         </Button>
       </SidebarHeader>
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
@@ -231,10 +262,82 @@ function MobileNavSidebarContent() {
         {user && (
           <>
             <SidebarSeparator className="mx-0" />
-            <MeMenuPanel user={user} onClose={() => setOpenMobile(false)} />
+            <SidebarGroup>
+              <SidebarGroupLabel>Account</SidebarGroupLabel>
+              <SidebarMenu>
+                <MobileNavMenuItem
+                  href="/profile"
+                  label="View profile"
+                  icon={UserRound}
+                  active={isNavActive(pathname, "/profile")}
+                />
+                <MobileNavMenuItem
+                  href="/settings"
+                  label="Settings & privacy"
+                  icon={Settings}
+                  active={isNavActive(pathname, "/settings")}
+                />
+                <MobileNavMenuItem
+                  href="/about"
+                  label="Help"
+                  icon={CircleHelp}
+                  active={isNavActive(pathname, "/about")}
+                />
+                <MobileNavMenuItem
+                  href="/settings/language"
+                  label="Language"
+                  icon={Globe}
+                  active={pathname === "/settings/language"}
+                />
+              </SidebarMenu>
+              <ThemeMenuRow />
+            </SidebarGroup>
+
+            <SidebarSeparator className="mx-0" />
+            <SidebarGroup>
+              <SidebarGroupLabel>Manage</SidebarGroupLabel>
+              <SidebarMenu>
+                <MobileNavMenuItem
+                  href="/my-posts"
+                  label="Posts & activity"
+                  icon={FileText}
+                  active={isNavActive(pathname, "/my-posts")}
+                />
+                <MobileNavMenuItem
+                  href="/saved"
+                  label="Saved items"
+                  icon={Bookmark}
+                  active={isNavActive(pathname, "/saved")}
+                />
+              </SidebarMenu>
+            </SidebarGroup>
           </>
         )}
       </SidebarContent>
+
+      {user && (
+        <SidebarFooter className="border-t border-sidebar-border">
+          <div className="flex min-w-0 items-center gap-2">
+            <UserAvatar src={user.avatar} name={user.name} size="sm" />
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="truncate text-sm font-semibold">{user.name}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                @{user.username}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              iconOnly
+              aria-label="Sign out"
+              onClick={() => void handleSignOut()}
+            >
+              <LogOut />
+            </Button>
+          </div>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }

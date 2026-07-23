@@ -27,6 +27,7 @@ function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (loading) return;
     setError(null);
 
     const form = new FormData(e.currentTarget);
@@ -67,14 +68,19 @@ function LoginForm() {
         return;
       }
 
-      toast.custom(() => (
-        <Alert variant="success">
-          <AlertContent>
-            <AlertTitle>Welcome back!</AlertTitle>
-            <AlertDescription>{`Welcome back, ${displayName}.`}</AlertDescription>
-          </AlertContent>
-        </Alert>
-      ));
+      // Stable id: sonner dedupes by id, so a double-fire updates the
+      // existing toast in place instead of stacking a second one.
+      toast.custom(
+        () => (
+          <Alert variant="success">
+            <AlertContent>
+              <AlertTitle>Welcome back!</AlertTitle>
+              <AlertDescription>{`Welcome back, ${displayName}.`}</AlertDescription>
+            </AlertContent>
+          </Alert>
+        ),
+        { id: "welcome-toast" },
+      );
       router.push(next);
       router.refresh();
     } catch {
