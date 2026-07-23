@@ -1,5 +1,56 @@
--- Run this in the Supabase SQL Editor (Dashboard → SQL)
--- Safe to re-run: uses IF NOT EXISTS / DROP IF EXISTS
+-- ============================================================================
+-- FeedApp — consolidated Supabase schema
+-- Run in the Supabase SQL Editor (Dashboard → SQL).
+-- Safe to re-run: idempotent via IF NOT EXISTS / DROP IF EXISTS / OR REPLACE.
+--
+-- Contents
+--   1.  Shared helpers & grants
+--   2.  Profiles (identity, 1:1 with auth.users)
+--   3.  Posts (posts / articles / events / celebrations)
+--   4.  Post reactions (post_likes + atomic reaction RPCs)
+--   5.  Comments (with one-level replies)
+--   6.  Comment reactions (comment_likes)
+--   7.  Follows (social graph)
+--   8.  Post shares (send a post to a person)
+--   9.  Saved posts (private bookmarks)
+--   10. Direct messaging (1:1 conversations)
+--   11. Notifications (likes, comments, messages, follows)
+--   12. Realtime (replica identity + publications)
+--   13. Storage (post-media bucket)
+--
+-- Conventions
+--   - RLS on every table: public SELECT for social data, writes gated by
+--     auth.uid() = <owner>. post_saves / post_shares / messaging are private.
+--   - Counter columns (likes_count, followers_count, ...) are denormalized
+--     and maintained by AFTER INSERT/DELETE triggers.
+--   - Trigger functions are SECURITY DEFINER with search_path pinned to
+--     public: they must bypass RLS to update other users' rows, and the
+--     pinned search_path blocks privilege-escalation via schema shadowing.
+-- ============================================================================
+
+
+-- ============================================================================
+-- 1. Shared helpers & grants
+-- ============================================================================
+
+-- Keep updated_at fresh on any row update (used by profiles and posts).
+create or replace function public.handle_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+-- Baseline read access (Supabase grants these by default; re-asserted here so
+-- a project with stripped grants still serves the public feed).
+grant usage on schema public to anon, authenticated;
+
+
+-- ============================================================================
+-- 2. Profiles
+-- One row per auth.users entry (same id, cascade-deleted with the account).
+-- ============================================================================
 
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
@@ -20,12 +71,15 @@ create table if not exists public.profiles (
   updated_at timestamptz default now() not null
 );
 
+-- Late-added columns for databases created before they existed.
 alter table public.profiles add column if not exists email text;
 alter table public.profiles add column if not exists phone text;
 alter table public.profiles add column if not exists address text;
 alter table public.profiles add column if not exists city text;
 alter table public.profiles add column if not exists state text;
 alter table public.profiles add column if not exists zip_code text;
+
+grant select on table public.profiles to anon, authenticated;
 
 alter table public.profiles enable row level security;
 
@@ -45,19 +99,12 @@ create policy "Users can update their own profile"
   on public.profiles for update
   using (auth.uid() = id);
 
-create or replace function public.handle_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
-
 drop trigger if exists profiles_updated_at on public.profiles;
 create trigger profiles_updated_at
   before update on public.profiles
   for each row execute function public.handle_updated_at();
 
+-- Auto-create a profile on signup, with a deterministic UI Faces avatar.
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
@@ -80,13 +127,19 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Backfill email for existing profiles (username login needs this)
+-- Backfill email for existing profiles (username login needs this).
 update public.profiles p
 set email = u.email
 from auth.users u
 where p.id = u.id and p.email is null;
 
--- Posts
+
+-- ============================================================================
+-- 3. Posts
+-- One table for all content types, discriminated by post_type. Events and
+-- celebrations ride along as jsonb payloads on regular posts.
+-- ============================================================================
+
 create table if not exists public.posts (
   id uuid default gen_random_uuid() primary key,
   author_id uuid references public.profiles(id) on delete cascade not null,
@@ -103,6 +156,13 @@ create table if not exists public.posts (
   updated_at timestamptz default now() not null,
   constraint posts_post_type_check check (post_type in ('post', 'article', 'event'))
 );
+
+comment on column public.posts.event is
+  'Optional event payload: { title, startsAt, endsAt?, location? }';
+comment on column public.posts.celebration is
+  'Optional celebration payload: { occasion, message? }';
+
+grant select on table public.posts to anon, authenticated;
 
 alter table public.posts enable row level security;
 
@@ -147,15 +207,31 @@ create trigger on_post_created
   after insert on public.posts
   for each row execute function public.handle_new_post();
 
-alter table public.posts replica identity full;
 
--- Post likes
+-- ============================================================================
+-- 4. Post reactions
+-- (post_id, user_id) PK = one reaction per user per post. likes_count on
+-- posts counts reactors, so changing a reaction type doesn't move the count.
+-- ============================================================================
+
 create table if not exists public.post_likes (
   post_id uuid references public.posts(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
+  reaction text default 'like' not null,
   created_at timestamptz default now() not null,
   primary key (post_id, user_id)
 );
+
+-- Late-added reaction column for databases created before it existed.
+alter table public.post_likes
+  add column if not exists reaction text default 'like' not null;
+
+alter table public.post_likes
+  drop constraint if exists post_likes_reaction_check;
+
+alter table public.post_likes
+  add constraint post_likes_reaction_check
+  check (reaction in ('like', 'celebrate', 'support', 'love', 'insightful', 'funny'));
 
 create index if not exists post_likes_user_id_idx on public.post_likes (user_id);
 create index if not exists post_likes_post_id_idx on public.post_likes (post_id);
@@ -221,22 +297,94 @@ create trigger on_post_like_deleted
   after delete on public.post_likes
   for each row execute function public.handle_post_like_delete();
 
--- Comments
+-- Atomically read-modify-write a reactor's reaction and hand back the post's
+-- current reaction + likes_count in one round trip, instead of the client
+-- doing a select-then-upsert-then-separate-count-read (a TOCTOU race under
+-- concurrent clicks). security invoker keeps the existing RLS policies
+-- (auth.uid() = user_id) in force.
+create or replace function public.set_post_reaction(
+  p_post_id uuid,
+  p_user_id uuid,
+  p_reaction text
+)
+returns table (reaction text, likes_count integer)
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_existing text;
+begin
+  select pl.reaction into v_existing
+  from public.post_likes pl
+  where pl.post_id = p_post_id and pl.user_id = p_user_id
+  for update;
+
+  if v_existing is not null and v_existing = p_reaction then
+    delete from public.post_likes
+    where post_id = p_post_id and user_id = p_user_id;
+
+    return query
+      select null::text, p.likes_count from public.posts p where p.id = p_post_id;
+    return;
+  end if;
+
+  insert into public.post_likes (post_id, user_id, reaction)
+  values (p_post_id, p_user_id, p_reaction)
+  on conflict (post_id, user_id)
+  do update set reaction = excluded.reaction;
+
+  return query
+    select p_reaction, p.likes_count from public.posts p where p.id = p_post_id;
+end;
+$$;
+
+create or replace function public.clear_post_reaction(
+  p_post_id uuid,
+  p_user_id uuid
+)
+returns integer
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  delete from public.post_likes
+  where post_id = p_post_id and user_id = p_user_id;
+
+  return (select likes_count from public.posts where id = p_post_id);
+end;
+$$;
+
+grant execute on function public.set_post_reaction(uuid, uuid, text) to authenticated;
+grant execute on function public.clear_post_reaction(uuid, uuid) to authenticated;
+
+
+-- ============================================================================
+-- 5. Comments
+-- Flat table with self-referencing parent_id for one-level replies. Only
+-- top-level comments count toward posts.comments_count.
+-- ============================================================================
+
 create table if not exists public.comments (
   id uuid default gen_random_uuid() primary key,
   post_id uuid references public.posts(id) on delete cascade not null,
   author_id uuid references public.profiles(id) on delete cascade not null,
   content text not null,
   parent_id uuid references public.comments(id) on delete cascade,
+  likes_count integer default 0 not null,
   created_at timestamptz default now() not null
 );
+
+-- Late-added counter for databases created before it existed.
+alter table public.comments
+  add column if not exists likes_count integer default 0 not null;
 
 create index if not exists comments_post_id_idx on public.comments (post_id);
 create index if not exists comments_author_id_idx on public.comments (author_id);
 create index if not exists comments_parent_id_idx on public.comments (parent_id);
 
 alter table public.comments enable row level security;
-
 
 drop policy if exists "Comments are viewable by everyone" on public.comments;
 create policy "Comments are viewable by everyone"
@@ -300,108 +448,31 @@ create trigger on_comment_deleted
   after delete on public.comments
   for each row execute function public.handle_comment_delete();
 
-alter table public.post_likes replica identity full;
-alter table public.comments replica identity full;
 
-alter table public.post_likes
-  add column if not exists reaction text default 'like' not null;
-
-alter table public.post_likes
-  drop constraint if exists post_likes_reaction_check;
-
-alter table public.post_likes
-  add constraint post_likes_reaction_check
-  check (reaction in ('like', 'celebrate', 'support', 'love', 'insightful', 'funny'));
-
-do $$
-begin
-  if exists (
-    select 1 from pg_publication where pubname = 'supabase_realtime'
-  ) then
-    if not exists (
-      select 1
-      from pg_publication_tables
-      where pubname = 'supabase_realtime'
-        and schemaname = 'public'
-        and tablename = 'post_likes'
-    ) then
-      alter publication supabase_realtime add table public.post_likes;
-    end if;
-  end if;
-end;
-$$;
-
--- Atomically read-modify-write a reactor's reaction and hand back the post's
--- current reaction + likes_count in one round trip, instead of the client
--- doing a select-then-upsert-then-separate-count-read (a TOCTOU race under
--- concurrent clicks). security invoker keeps the existing RLS policies
--- (auth.uid() = user_id) in force.
-create or replace function public.set_post_reaction(
-  p_post_id uuid,
-  p_user_id uuid,
-  p_reaction text
-)
-returns table (reaction text, likes_count integer)
-language plpgsql
-security invoker
-set search_path = public
-as $$
-declare
-  v_existing text;
-begin
-  select pl.reaction into v_existing
-  from public.post_likes pl
-  where pl.post_id = p_post_id and pl.user_id = p_user_id
-  for update;
-
-  if v_existing is not null and v_existing = p_reaction then
-    delete from public.post_likes
-    where post_id = p_post_id and user_id = p_user_id;
-
-    return query
-      select null::text, p.likes_count from public.posts p where p.id = p_post_id;
-    return;
-  end if;
-
-  insert into public.post_likes (post_id, user_id, reaction)
-  values (p_post_id, p_user_id, p_reaction)
-  on conflict (post_id, user_id)
-  do update set reaction = excluded.reaction;
-
-  return query
-    select p_reaction, p.likes_count from public.posts p where p.id = p_post_id;
-end;
-$$;
-
-create or replace function public.clear_post_reaction(
-  p_post_id uuid,
-  p_user_id uuid
-)
-returns integer
-language plpgsql
-security invoker
-set search_path = public
-as $$
-begin
-  delete from public.post_likes
-  where post_id = p_post_id and user_id = p_user_id;
-
-  return (select likes_count from public.posts where id = p_post_id);
-end;
-$$;
-
-grant execute on function public.set_post_reaction(uuid, uuid, text) to authenticated;
-grant execute on function public.clear_post_reaction(uuid, uuid) to authenticated;
-
-alter table public.comments
-  add column if not exists likes_count integer default 0 not null;
+-- ============================================================================
+-- 6. Comment reactions
+-- Same pattern as post reactions: (comment_id, user_id) PK, reaction enum,
+-- triggers keeping comments.likes_count in sync.
+-- ============================================================================
 
 create table if not exists public.comment_likes (
   comment_id uuid references public.comments(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
+  reaction text default 'like' not null,
   created_at timestamptz default now() not null,
   primary key (comment_id, user_id)
 );
+
+-- Late-added reaction column for databases created before it existed.
+alter table public.comment_likes
+  add column if not exists reaction text default 'like' not null;
+
+alter table public.comment_likes
+  drop constraint if exists comment_likes_reaction_check;
+
+alter table public.comment_likes
+  add constraint comment_likes_reaction_check
+  check (reaction in ('like', 'celebrate', 'support', 'love', 'insightful', 'funny'));
 
 create index if not exists comment_likes_user_id_idx on public.comment_likes (user_id);
 create index if not exists comment_likes_comment_id_idx on public.comment_likes (comment_id);
@@ -467,19 +538,12 @@ create trigger on_comment_like_deleted
   after delete on public.comment_likes
   for each row execute function public.handle_comment_like_delete();
 
-alter table public.comment_likes replica identity full;
 
-alter table public.comment_likes
-  add column if not exists reaction text default 'like' not null;
+-- ============================================================================
+-- 7. Follows
+-- Triggers update both profiles' counters symmetrically, clamped at 0.
+-- ============================================================================
 
-alter table public.comment_likes
-  drop constraint if exists comment_likes_reaction_check;
-
-alter table public.comment_likes
-  add constraint comment_likes_reaction_check
-  check (reaction in ('like', 'celebrate', 'support', 'love', 'insightful', 'funny'));
-
--- Follows
 create table if not exists public.follows (
   follower_id uuid references public.profiles(id) on delete cascade not null,
   following_id uuid references public.profiles(id) on delete cascade not null,
@@ -556,7 +620,13 @@ create trigger on_follow_deleted
   after delete on public.follows
   for each row execute function public.handle_follow_delete();
 
--- Post shares
+
+-- ============================================================================
+-- 8. Post shares
+-- Sending a post to a specific person. Private: only sender and recipient
+-- can see the share row.
+-- ============================================================================
+
 create table if not exists public.post_shares (
   id uuid default gen_random_uuid() primary key,
   post_id uuid references public.posts(id) on delete cascade not null,
@@ -599,13 +669,15 @@ $$;
 
 drop trigger if exists on_post_share_created on public.post_shares;
 create trigger on_post_share_created
-  after insert on public.post_shares 
+  after insert on public.post_shares
   for each row execute function public.handle_post_share_insert();
 
-alter table public.follows replica identity full;
-alter table public.post_shares replica identity full;
 
--- Saved posts
+-- ============================================================================
+-- 9. Saved posts
+-- Private bookmarks: RLS restricts every operation to the owner.
+-- ============================================================================
+
 create table if not exists public.post_saves (
   user_id uuid references public.profiles(id) on delete cascade not null,
   post_id uuid references public.posts(id) on delete cascade not null,
@@ -634,7 +706,13 @@ create policy "Users can unsave posts"
   on public.post_saves for delete
   using (auth.uid() = user_id);
 
--- Direct messaging
+
+-- ============================================================================
+-- 10. Direct messaging
+-- RLS funnels through is_conversation_member() (security definer) — a naive
+-- membership-checks-membership policy would recurse infinitely.
+-- ============================================================================
+
 create table if not exists public.conversations (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz default now() not null,
@@ -729,6 +807,7 @@ create policy "Members can send messages"
     and public.is_conversation_member(conversation_id)
   );
 
+-- Atomically find or create the 1:1 conversation with another profile.
 create or replace function public.get_or_create_direct_conversation(other_user_id uuid)
 returns uuid
 language plpgsql
@@ -777,6 +856,7 @@ $$;
 
 grant execute on function public.get_or_create_direct_conversation(uuid) to authenticated;
 
+-- Bump conversations.updated_at on every message so inboxes sort by recency.
 create or replace function public.touch_conversation_on_message()
 returns trigger
 language plpgsql
@@ -796,17 +876,12 @@ create trigger on_direct_message_created
   after insert on public.direct_messages
   for each row execute function public.touch_conversation_on_message();
 
-alter table public.direct_messages replica identity full;
 
-do $$
-begin
-  alter publication supabase_realtime add table public.direct_messages;
-exception
-  when duplicate_object then null;
-end $$;
-
--- In-app notifications for likes, comments, and messages.
--- Run in Supabase → SQL Editor. Safe to re-run.
+-- ============================================================================
+-- 11. Notifications
+-- Fan-out rows written by triggers on likes, comments, messages, follows.
+-- Private: only the recipient can read/update/delete.
+-- ============================================================================
 
 create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
@@ -849,7 +924,7 @@ create policy "Users can delete their own notifications"
   to authenticated
   using (auth.uid() = recipient_id);
 
--- Likes → notify post author
+-- Likes → notify post author (skip self-likes).
 create or replace function public.notify_on_post_like()
 returns trigger
 language plpgsql
@@ -891,7 +966,7 @@ create trigger on_post_like_notify
   after insert on public.post_likes
   for each row execute function public.notify_on_post_like();
 
--- Comments → notify post author (and parent comment author on replies)
+-- Comments → notify post author (and parent comment author on replies).
 create or replace function public.notify_on_comment()
 returns trigger
 language plpgsql
@@ -970,7 +1045,7 @@ create trigger on_comment_notify
   after insert on public.comments
   for each row execute function public.notify_on_comment();
 
--- Direct messages → notify other conversation members
+-- Direct messages → notify other conversation members.
 create or replace function public.notify_on_direct_message()
 returns trigger
 language plpgsql
@@ -1017,31 +1092,7 @@ create trigger on_direct_message_notify
   after insert on public.direct_messages
   for each row execute function public.notify_on_direct_message();
 
-alter table public.notifications replica identity full;
-
-do $$
-begin
-  if exists (
-    select 1 from pg_publication where pubname = 'supabase_realtime'
-  ) then
-    if not exists (
-      select 1
-      from pg_publication_tables
-      where pubname = 'supabase_realtime'
-        and schemaname = 'public'
-        and tablename = 'notifications'
-    ) then
-      alter publication supabase_realtime add table public.notifications;
-    end if;
-  end if;
-end;
-$$;
-
--- end notifications
-
--- Notify users when someone follows them.
--- Run after migrate-notifications.sql and migrate-follows-shares.sql.
-
+-- Follows → notify the followed user.
 create or replace function public.notify_on_follow()
 returns trigger
 language plpgsql
@@ -1074,3 +1125,81 @@ drop trigger if exists on_follow_notify on public.follows;
 create trigger on_follow_notify
   after insert on public.follows
   for each row execute function public.notify_on_follow();
+
+
+-- ============================================================================
+-- 12. Realtime
+-- replica identity full so change payloads carry every column; publication
+-- membership only for tables the app actually subscribes to (live reactions,
+-- chat delivery, notification badges).
+-- ============================================================================
+
+alter table public.posts replica identity full;
+alter table public.post_likes replica identity full;
+alter table public.comments replica identity full;
+alter table public.comment_likes replica identity full;
+alter table public.follows replica identity full;
+alter table public.post_shares replica identity full;
+alter table public.direct_messages replica identity full;
+alter table public.notifications replica identity full;
+
+do $$
+declare
+  t text;
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach t in array array['post_likes', 'direct_messages', 'notifications'] loop
+      if not exists (
+        select 1
+        from pg_publication_tables
+        where pubname = 'supabase_realtime'
+          and schemaname = 'public'
+          and tablename = t
+      ) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    end loop;
+  end if;
+end;
+$$;
+
+
+-- ============================================================================
+-- 13. Storage
+-- Public-read bucket for post media. Uploads for any authenticated user;
+-- update/delete restricted to files under the user's own folder
+-- (first path segment must equal auth.uid()).
+-- ============================================================================
+
+insert into storage.buckets (id, name, public)
+values ('post-media', 'post-media', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "Anyone can view post media" on storage.objects;
+create policy "Anyone can view post media"
+  on storage.objects for select
+  using (bucket_id = 'post-media');
+
+drop policy if exists "Authenticated users can upload post media" on storage.objects;
+create policy "Authenticated users can upload post media"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'post-media'
+    and auth.role() = 'authenticated'
+  );
+
+drop policy if exists "Users can update own post media" on storage.objects;
+create policy "Users can update own post media"
+  on storage.objects for update
+  using (
+    bucket_id = 'post-media'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "Users can delete own post media" on storage.objects;
+create policy "Users can delete own post media"
+  on storage.objects for delete
+  using (
+    bucket_id = 'post-media'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );

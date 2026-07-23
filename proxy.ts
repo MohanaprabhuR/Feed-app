@@ -14,6 +14,8 @@ const PUBLIC_ROUTES = [
 ] as const;
 
 const AUTH_ONLY_ROUTES = [
+  "/splash",
+  "/welcome",
   "/login",
   "/register",
   "/forgot-password",
@@ -73,7 +75,7 @@ function copyCookies(from: NextResponse, to: NextResponse) {
 
 function fallbackResponse(request: NextRequest, pathname: string) {
   if (pathname === "/") {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/splash", request.url));
   }
 
   if (!isPublicRoute(pathname)) {
@@ -138,7 +140,7 @@ export async function proxy(request: NextRequest) {
       return redirectWithCookies(
         request,
         supabaseResponse,
-        user ? "/feed" : "/login"
+        user ? "/feed" : "/splash"
       );
     }
 
@@ -154,10 +156,6 @@ export async function proxy(request: NextRequest) {
 
     return supabaseResponse;
   } catch {
-    if (pathname === "/") {
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
-
     return fallbackResponse(request, pathname);
   }
 }
