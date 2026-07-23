@@ -39,7 +39,13 @@ export default function RootLayout({
       className={`${timelessSans.variable} ${timelessSerif.variable} ${geistMono.variable} h-full min-h-dvh antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-dvh w-full flex-col font-sans">
+      {/* suppressHydrationWarning: browser extensions (Grammarly etc.) inject
+          attributes into <body> before React hydrates; suppression is one
+          element deep, so real mismatches in children still warn. */}
+      <body
+        className="flex min-h-dvh w-full flex-col font-sans"
+        suppressHydrationWarning
+      >
         <Providers>{children}</Providers>
       </body>
     </html>
