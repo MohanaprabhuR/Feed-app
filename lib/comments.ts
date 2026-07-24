@@ -325,6 +325,24 @@ export async function createComment(
 
   await ensureProfile(supabase, author);
 
+  if (parentId) {
+    const { data: parent, error: parentError } = await supabase
+      .from("comments")
+      .select("id, post_id, parent_id")
+      .eq("id", parentId)
+      .maybeSingle();
+
+    if (parentError) {
+      throw new Error(formatCommentError(parentError.message));
+    }
+    if (!parent || parent.post_id !== postId) {
+      throw new Error("Reply target was not found on this post.");
+    }
+    if (parent.parent_id) {
+      throw new Error("Only one level of replies is supported.");
+    }
+  }
+
   const { data, error } = await supabase
     .from("comments")
     .insert({

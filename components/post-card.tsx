@@ -106,7 +106,19 @@ export function PostCard({
     setReactionSummary(post.reactionSummary ?? []);
     setMyReaction(post.reaction ?? null);
     setIsSaved(Boolean(post.isSaved));
-  }, [post.id, post.likes, post.isSaved, post.reaction, post.reactionSummary]);
+    setContent(post.content);
+    setCommentsCount(post.comments);
+    setSharesCount(post.shares);
+  }, [
+    post.id,
+    post.likes,
+    post.isSaved,
+    post.reaction,
+    post.reactionSummary,
+    post.content,
+    post.comments,
+    post.shares,
+  ]);
 
   usePostReactionsRealtime(post.id, user?.id, ({ likesCount, reactionSummary }) => {
     setLikesCount(likesCount);
@@ -309,7 +321,7 @@ export function PostCard({
         postId={post.id}
         open={shareOpen}
         onOpenChange={setShareOpen}
-        sharePath={`/feed`}
+        sharePath={`/post/${post.id}/comments`}
         onShared={setSharesCount}
       />
 

@@ -124,18 +124,20 @@ export async function searchProfiles(
 ): Promise<User[]> {
   const { excludeUserId, limit = 20 } = options;
   const trimmed = query.trim();
+  // Strip PostgREST filter metacharacters so user input can't reshape .or().
+  const safeTerm = trimmed.replace(/[%_,.()\\]/g, " ").replace(/\s+/g, " ").trim();
 
   let request = supabase.from("profiles").select("*");
 
-  if (trimmed) {
+  if (safeTerm) {
     request = request.or(
-      `name.ilike.%${trimmed}%,username.ilike.%${trimmed}%`,
+      `name.ilike.%${safeTerm}%,username.ilike.%${safeTerm}%`,
     );
   }
 
   const { data, error } = await request
-    .order(trimmed ? "name" : "created_at", {
-      ascending: Boolean(trimmed),
+    .order(safeTerm ? "name" : "created_at", {
+      ascending: Boolean(safeTerm),
     })
     .limit(limit + (excludeUserId ? 1 : 0));
 

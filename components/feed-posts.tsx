@@ -52,8 +52,6 @@ async function loadFeedPosts(): Promise<Post[]> {
   return payload.posts ?? [];
 }
 
-let clientFeedFetchStarted = false;
-
 export function FeedPosts({
   initialPosts = [],
   serverLoaded = false,
@@ -110,8 +108,7 @@ export function FeedPosts({
   );
 
   useEffect(() => {
-    if (serverLoaded || clientFeedFetchStarted) return;
-    clientFeedFetchStarted = true;
+    if (serverLoaded) return;
     void loadPosts({ showLoading: true });
   }, [serverLoaded, loadPosts]);
 

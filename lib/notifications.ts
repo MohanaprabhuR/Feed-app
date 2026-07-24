@@ -66,7 +66,6 @@ export async function fetchNotifications(
         id,
         name,
         username,
-        email,
         bio,
         avatar,
         followers_count,

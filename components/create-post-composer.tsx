@@ -56,7 +56,12 @@ import {
   type PostAttachmentType,
 } from "@/lib/post-media";
 import { createPost } from "@/lib/posts";
-import type { CelebrationOccasion, Post, PostCelebration, PostEvent } from "@/lib/types";
+import type {
+  CelebrationOccasion,
+  Post,
+  PostCelebration,
+  PostEvent,
+} from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
@@ -421,11 +426,11 @@ export function CreatePostComposer({
 
   const canPost = Boolean(
     user &&
-      !loading &&
-      (content.trim() ||
-        attachment ||
-        (showEventForm && eventDraft.title.trim() && eventDraft.startsAt) ||
-        showCelebrationForm),
+    !loading &&
+    (content.trim() ||
+      attachment ||
+      (showEventForm && eventDraft.title.trim() && eventDraft.startsAt) ||
+      showCelebrationForm),
   );
 
   return (
@@ -533,13 +538,13 @@ export function CreatePostComposer({
           </div>
 
           <div
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-2"
             data-scroll-lock-scrollable=""
           >
             <MentionTextarea
               ref={textareaRef}
               autoFocus
-              variant="ghost"
+              variant="outline"
               size="md"
               placeholder={
                 showEventForm
@@ -638,9 +643,7 @@ export function CreatePostComposer({
               </Card>
             )}
 
-            {showEventForm &&
-            eventDraft.title.trim() &&
-            eventDraft.startsAt ? (
+            {showEventForm && eventDraft.title.trim() && eventDraft.startsAt ? (
               <PostEventCard
                 event={{
                   title: eventDraft.title.trim(),
@@ -781,7 +784,7 @@ export function CreatePostComposer({
 
             <EmojiPickerButton
               disabled={loading}
-              buttonClassName="mb-2 self-start"
+              buttonClassName="my-2 self-start"
               side="top"
               align="start"
               onSelect={insertEmoji}

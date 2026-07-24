@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
-import { cn } from "@/lib/utils";
 
 const languages = [
   { code: "en", label: "English", native: "English" },

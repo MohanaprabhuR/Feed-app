@@ -71,7 +71,7 @@ export default function ReportPostPage({
           className="w-full"
           variant="destructive"
           onClick={() => {
-            toast.custom((t) => (
+            toast.custom(() => (
               <Alert variant="success">
                 <AlertContent>
                   <AlertTitle>Report submitted</AlertTitle>

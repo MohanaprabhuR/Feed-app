@@ -76,11 +76,20 @@ export default function RegisterPage() {
     try {
       const supabase = createClient();
 
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("email, username, name")
-        .or(`username.eq.${username},email.eq.${email}`)
-        .maybeSingle();
+      const [{ data: byUsername }, { data: byEmail }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("email, username, name")
+          .eq("username", username)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("email, username, name")
+          .eq("email", email)
+          .maybeSingle(),
+      ]);
+
+      const existingProfile = byUsername ?? byEmail;
 
       if (existingProfile) {
         const signIn = await trySignIn(

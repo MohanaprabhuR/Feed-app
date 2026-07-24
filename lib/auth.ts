@@ -44,7 +44,13 @@ export function isAuthOnlyRoute(pathname: string) {
 }
 
 export function getSafeRedirectPath(next: string | null) {
-  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+  if (
+    !next ||
+    !next.startsWith("/") ||
+    next.startsWith("//") ||
+    next.includes("://") ||
+    next.includes("\\")
+  ) {
     return "/feed";
   }
   if (isAuthOnlyRoute(next)) {
