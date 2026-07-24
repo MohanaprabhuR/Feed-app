@@ -1,9 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
-import Link from "next/link";
+import { useState, type ReactNode } from "react";
 import { MessageCircle, Repeat2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ReactionsDialog } from "@/components/reactions-dialog";
 import { getReactionMeta } from "@/lib/likes";
 import type { ReactionType } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,7 @@ export function PostEngagementBar({
   onShare,
   className,
 }: PostEngagementBarProps) {
+  const [reactionsOpen, setReactionsOpen] = useState(false);
   const hasLikes = likesCount > 0;
   // Never show more type badges than total reactions (fixes 2 icons with count 1).
   const maxTypes = Math.min(3, Math.max(likesCount, 0));
@@ -85,13 +86,14 @@ export function PostEngagementBar({
         <div className="flex items-center gap-0.5">
           {likeControl}
           {hasLikes ? (
-            <Link
-              href={`/post/${postId}/likes`}
+            <button
+              type="button"
+              onClick={() => setReactionsOpen(true)}
               className="inline-flex items-center gap-1 pr-1 text-sm font-semibold text-foreground/80 hover:text-foreground hover:underline"
               aria-label={`${likesCount} reactions`}
             >
               <span className="tabular-nums tracking-tight">{likesCount}</span>
-            </Link>
+            </button>
           ) : null}
         </div>
 
@@ -146,8 +148,9 @@ export function PostEngagementBar({
 
       <div className="flex shrink-0 items-center gap-1.5">
         {hasLikes && shown.length > 0 ? (
-          <Link
-            href={`/post/${postId}/likes`}
+          <button
+            type="button"
+            onClick={() => setReactionsOpen(true)}
             className="flex items-center pl-1"
             aria-label="View reactions"
           >
@@ -160,10 +163,18 @@ export function PostEngagementBar({
                 <ReactionBadge type={type} overlap={index > 0} />
               </span>
             ))}
-          </Link>
+          </button>
         ) : null}
         {trailing}
       </div>
+
+      {hasLikes && (
+        <ReactionsDialog
+          postId={postId}
+          open={reactionsOpen}
+          onOpenChange={setReactionsOpen}
+        />
+      )}
     </div>
   );
 }
