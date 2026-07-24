@@ -23,8 +23,9 @@ import {
 } from "@/components/ui/item";
 import { ProfileSkeleton } from "@/components/skeletons";
 import { appToast } from "@/lib/app-toast";
+import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
-import { isFollowingUser, toggleFollow } from "@/lib/follows";
+import { isFollowingUser } from "@/lib/follows";
 import { fetchProfileById } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
@@ -146,13 +147,9 @@ export function ProfileView({
     setFollowPending(true);
 
     try {
-      const supabase = createClient();
-      const next = await toggleFollow(
-        supabase,
-        currentUser.id,
-        profileUser.id,
-        previousFollowing,
-      );
+      const next = previousFollowing
+        ? (await api.users.unfollow(profileUser.id)).following
+        : (await api.users.follow(profileUser.id)).following;
       setUser((current) =>
         current
           ? {

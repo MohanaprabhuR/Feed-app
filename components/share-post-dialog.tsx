@@ -28,7 +28,7 @@ import { appToast } from "@/lib/app-toast";
 import { getErrorMessage } from "@/lib/errors";
 import { fetchFollowing } from "@/lib/follows";
 import { fetchSuggestedProfiles, searchProfiles } from "@/lib/profile";
-import { sharePostWithUsers } from "@/lib/shares";
+import { api } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -156,10 +156,7 @@ export function SharePostDialog({
 
     setSharing(true);
     try {
-      const supabase = createClient();
-      const result = await sharePostWithUsers(supabase, postId, user.id, [
-        ...selectedIds,
-      ]);
+      const result = await api.posts.share(postId, [...selectedIds]);
       onShared?.(result.sharesCount);
       appToast.success(
         "Post shared",

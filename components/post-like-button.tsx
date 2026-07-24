@@ -1,8 +1,7 @@
 "use client";
 
 import { ReactionButton } from "@/components/reaction-button";
-import { clearReaction, setReaction } from "@/lib/likes";
-import { createClient } from "@/lib/supabase/client";
+import { api } from "@/lib/api-client";
 import type { ReactionType } from "@/lib/types";
 
 type PostLikeButtonProps = {
@@ -43,16 +42,10 @@ export function PostLikeButton({
         onReactionChange?.(reaction, likesCount);
       }}
       onReact={async (reaction) => {
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) throw new Error("Sign in to react.");
-
         const result =
           reaction === null
-            ? await clearReaction(supabase, postId, user.id)
-            : await setReaction(supabase, postId, user.id, reaction);
+            ? await api.posts.reactions.clear(postId)
+            : await api.posts.reactions.set(postId, reaction);
 
         onCountChange?.(result.likesCount);
         onReactionChange?.(result.reaction, result.likesCount);

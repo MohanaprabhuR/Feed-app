@@ -57,8 +57,7 @@ import {
   validatePostAttachment,
   type PostAttachmentType,
 } from "@/lib/post-media";
-import { deletePost, updatePost } from "@/lib/posts";
-import { createClient } from "@/lib/supabase/client";
+import { api } from "@/lib/api-client";
 import type { Post, PostEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -323,7 +322,6 @@ export function EditPostDialog({
     setError(null);
 
     try {
-      const supabase = createClient();
       let media:
         | { image?: string; video?: string; file?: string }
         | null
@@ -347,14 +345,13 @@ export function EditPostDialog({
           ? null
           : undefined;
 
-      const updated = await updatePost(
-        supabase,
-        post.id,
-        user.id,
-        trimmed,
+      const { post: updated } = await api.posts.update(post.id, {
+        content: trimmed,
         media,
-        isArticle ? { title: trimmedTitle } : { event: eventForSave },
-      );
+        ...(isArticle
+          ? { title: trimmedTitle }
+          : { event: eventForSave }),
+      });
       onUpdated?.(updated);
       appToast.success(
         isArticle ? "Article updated" : "Post updated",
@@ -380,8 +377,7 @@ export function EditPostDialog({
     setError(null);
 
     try {
-      const supabase = createClient();
-      await deletePost(supabase, post.id, user.id);
+      await api.posts.delete(post.id);
       onDeleted?.(post.id);
       appToast.success(
         isArticle ? "Article deleted" : "Post deleted",

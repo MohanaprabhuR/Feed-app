@@ -40,9 +40,8 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { appToast } from "@/lib/app-toast";
+import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
-import { toggleSavePost } from "@/lib/saves";
-import { createClient } from "@/lib/supabase/client";
 import type { Post, ReactionType } from "@/lib/types";
 import {
   feedCardClass,
@@ -116,14 +115,15 @@ export function ArticleCard({
 
     setSaving(true);
     try {
-      const supabase = createClient();
-      const next = await toggleSavePost(supabase, user.id, post.id, isSaved);
-      setIsSaved(next);
-      if (next) {
-        appToast.success("Article saved", "Find it anytime on Saved Posts.");
-      } else {
+      if (isSaved) {
+        await api.posts.unsave(post.id);
+        setIsSaved(false);
         appToast.success("Article removed", "Removed from your saved posts.");
         onUnsaved?.(post.id);
+      } else {
+        await api.posts.save(post.id);
+        setIsSaved(true);
+        appToast.success("Article saved", "Find it anytime on Saved Posts.");
       }
     } catch (err) {
       appToast.error(
