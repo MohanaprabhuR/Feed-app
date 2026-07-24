@@ -25,15 +25,8 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { appToast } from "@/lib/app-toast";
-import {
-  createComment,
-  fetchComments,
-  setCommentReaction,
-  toggleCommentLike,
-} from "@/lib/comments";
+import { api, ApiClientError } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
-import { fetchPostById } from "@/lib/posts";
-import { createClient } from "@/lib/supabase/client";
 import type { Comment, ReactionType, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -90,16 +83,10 @@ function CommentBlock({
   }
 
   async function handleReact(reaction: ReactionType | null) {
-    const supabase = createClient();
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-    if (!authUser) throw new Error("Sign in to react.");
-
     const result =
       reaction === null
-        ? await toggleCommentLike(supabase, comment.id, authUser.id)
-        : await setCommentReaction(supabase, comment.id, authUser.id, reaction);
+        ? await api.comments.reactions.clear(comment.id)
+        : await api.comments.reactions.set(comment.id, reaction);
 
     onUpdated(comment.id, (current) => ({
       ...current,
@@ -120,14 +107,10 @@ function CommentBlock({
 
     setSubmitting(true);
     try {
-      const supabase = createClient();
-      const created = await createComment(
-        supabase,
-        postId,
-        user,
-        replyContent,
-        comment.id,
-      );
+      const { comment: created } = await api.posts.comments.create(postId, {
+        content: replyContent,
+        parentId: comment.id,
+      });
       onUpdated(comment.id, (current) => ({
         ...current,
         replies: [...(current.replies ?? []), created],
@@ -245,7 +228,6 @@ export default function CommentsPage({
 }) {
   const { id } = use(params);
   const { user, loading: userLoading } = useCurrentUser();
-  const userId = user?.id;
   const [comments, setComments] = useState<Comment[]>([]);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
@@ -273,25 +255,23 @@ export default function CommentsPage({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const supabase = createClient();
-      const post = await fetchPostById(supabase, id);
-      if (!post) {
+      await api.posts.get(id);
+      const { comments: data } = await api.posts.comments.list(id);
+      setComments(data);
+      setMissingPost(false);
+      setError(null);
+    } catch (err) {
+      if (err instanceof ApiClientError && err.status === 404) {
         setMissingPost(true);
         setComments([]);
         setError(null);
         return;
       }
-
-      const data = await fetchComments(supabase, id, { userId });
-      setComments(data);
-      setMissingPost(false);
-      setError(null);
-    } catch (err) {
       setError(getErrorMessage(err, "Could not load comments."));
     } finally {
       setLoading(false);
     }
-  }, [id, userId]);
+  }, [id]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -308,8 +288,9 @@ export default function CommentsPage({
 
     setSubmitting(true);
     try {
-      const supabase = createClient();
-      const created = await createComment(supabase, id, user, content);
+      const { comment: created } = await api.posts.comments.create(id, {
+        content,
+      });
       setComments((current) => [...current, created]);
       setContent("");
       appToast.success("Comment posted");

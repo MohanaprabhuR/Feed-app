@@ -20,14 +20,8 @@ import {
   CommentListSkeleton,
 } from "@/components/skeletons";
 import { appToast } from "@/lib/app-toast";
-import {
-  createComment,
-  fetchComments,
-  setCommentReaction,
-  toggleCommentLike,
-} from "@/lib/comments";
+import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
-import { createClient } from "@/lib/supabase/client";
 import type { Comment, ReactionType, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -97,16 +91,10 @@ function CommentItem({
   }
 
   async function handleReact(reaction: ReactionType | null) {
-    const supabase = createClient();
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-    if (!authUser) throw new Error("Sign in to react.");
-
     const result =
       reaction === null
-        ? await toggleCommentLike(supabase, comment.id, authUser.id)
-        : await setCommentReaction(supabase, comment.id, authUser.id, reaction);
+        ? await api.comments.reactions.clear(comment.id)
+        : await api.comments.reactions.set(comment.id, reaction);
 
     onCommentUpdated(comment.id, (current) => ({
       ...current,
@@ -127,14 +115,10 @@ function CommentItem({
 
     setSubmitting(true);
     try {
-      const supabase = createClient();
-      const created = await createComment(
-        supabase,
-        postId,
-        user,
-        replyContent,
-        comment.id,
-      );
+      const { comment: created } = await api.posts.comments.create(postId, {
+        content: replyContent,
+        parentId: comment.id,
+      });
       onCommentUpdated(comment.id, (current) => ({
         ...current,
         replies: [...(current.replies ?? []), created],
@@ -275,7 +259,6 @@ export function PostComments({
   className,
 }: PostCommentsProps) {
   const { user, loading: userLoading } = useCurrentUser();
-  const userId = user?.id;
   const [comments, setComments] = useState<Comment[]>([]);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -304,8 +287,7 @@ export function PostComments({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const supabase = createClient();
-      const data = await fetchComments(supabase, postId, { userId });
+      const { comments: data } = await api.posts.comments.list(postId);
       setComments(data);
       onCountChange?.(data.length);
       setError(null);
@@ -315,7 +297,7 @@ export function PostComments({
     } finally {
       setLoading(false);
     }
-  }, [onCountChange, postId, userId]);
+  }, [onCountChange, postId]);
 
   useEffect(() => {
     if (!open || loaded) return;
@@ -344,8 +326,9 @@ export function PostComments({
 
     setSubmitting(true);
     try {
-      const supabase = createClient();
-      const created = await createComment(supabase, postId, user, content);
+      const { comment: created } = await api.posts.comments.create(postId, {
+        content,
+      });
       const nextComments = [...comments, created];
       setComments(nextComments);
       onCountChange?.(nextComments.length);

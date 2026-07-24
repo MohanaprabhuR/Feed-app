@@ -13,9 +13,8 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { appToast } from "@/lib/app-toast";
+import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
-import { toggleFollow } from "@/lib/follows";
-import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
 
 type UserListItemProps = {
@@ -54,13 +53,9 @@ export function UserListItem({
     setPending(true);
 
     try {
-      const supabase = createClient();
-      const next = await toggleFollow(
-        supabase,
-        currentUser.id,
-        user.id,
-        previous,
-      );
+      const next = previous
+        ? (await api.users.unfollow(user.id)).following
+        : (await api.users.follow(user.id)).following;
       setFollowing(next);
       onFollowChange?.(user.id, next);
       if (next) {

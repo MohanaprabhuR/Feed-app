@@ -55,14 +55,13 @@ import {
   validatePostAttachment,
   type PostAttachmentType,
 } from "@/lib/post-media";
-import { createPost } from "@/lib/posts";
+import { api } from "@/lib/api-client";
 import type {
   CelebrationOccasion,
   Post,
   PostCelebration,
   PostEvent,
 } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
 import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
@@ -364,7 +363,6 @@ export function CreatePostComposer({
     setLoading(true);
 
     try {
-      const supabase = createClient();
       let image: string | undefined;
       let video: string | undefined;
       let file: string | undefined;
@@ -376,14 +374,12 @@ export function CreatePostComposer({
         else file = uploaded.url;
       }
 
-      const created = await createPost(
-        supabase,
-        user.id,
+      const { post: created } = await api.posts.create({
         content,
-        { image, video, file },
+        media: { image, video, file },
         event,
         celebration,
-      );
+      });
       await refresh();
 
       toast.custom(() => (

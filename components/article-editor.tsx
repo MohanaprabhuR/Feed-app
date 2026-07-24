@@ -14,8 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { MentionTextarea } from "@/components/mention-text-field";
 import { uploadPostAttachment } from "@/lib/post-media";
-import { createArticle } from "@/lib/posts";
-import { createClient } from "@/lib/supabase/client";
+import { api } from "@/lib/api-client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import type { Post } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -80,7 +79,6 @@ export function ArticleEditor({ onPublished, onCancel }: ArticleEditorProps = {}
     setLoading(true);
 
     try {
-      const supabase = createClient();
       let coverImage: string | undefined;
 
       if (coverFile) {
@@ -91,7 +89,7 @@ export function ArticleEditor({ onPublished, onCancel }: ArticleEditorProps = {}
         coverImage = uploaded.url;
       }
 
-      const article = await createArticle(supabase, user.id, {
+      const { post: article } = await api.posts.createArticle({
         title,
         content,
         coverImage,

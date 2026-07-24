@@ -28,9 +28,8 @@ import {
 } from "@/components/ui/empty";
 import { PageBlockSkeleton } from "@/components/skeletons";
 import { appToast } from "@/lib/app-toast";
+import { api, ApiClientError } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
-import { deletePost, fetchPostById } from "@/lib/posts";
-import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
 
 export default function DeletePostPage({
@@ -64,14 +63,9 @@ export default function DeletePostPage({
 
       setLoading(true);
       try {
-        const supabase = createClient();
-        const data = await fetchPostById(supabase, id, { userId: user.id });
+        const { post: data } = await api.posts.get(id);
 
         if (!cancelled) {
-          if (!data) {
-            setMissing(true);
-            return;
-          }
           if (data.author.id !== user.id) {
             setForbidden(true);
             return;
@@ -80,6 +74,10 @@ export default function DeletePostPage({
         }
       } catch (err) {
         if (!cancelled) {
+          if (err instanceof ApiClientError && err.status === 404) {
+            setMissing(true);
+            return;
+          }
           setError(getErrorMessage(err, "Could not load post."));
         }
       } finally {
@@ -100,8 +98,7 @@ export default function DeletePostPage({
     setError(null);
 
     try {
-      const supabase = createClient();
-      await deletePost(supabase, post.id, user.id);
+      await api.posts.delete(post.id);
       appToast.success("Post deleted", "Your post has been removed.");
       router.push("/feed");
       router.refresh();
