@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserListItem } from "@/components/user-list-item";
 import { UserListSkeleton } from "@/components/skeletons";
 import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getErrorMessage } from "@/lib/errors";
 import { fetchLikers, getReactionMeta, REACTIONS } from "@/lib/likes";
 import { createClient } from "@/lib/supabase/client";
@@ -89,53 +90,62 @@ export function ReactionsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size="md"
-        className="max-h-[min(80vh,560px)] gap-0 overflow-hidden p-0"
+        className="flex h-[min(72vh,420px)] max-h-[min(80vh,480px)] flex-col gap-0 overflow-hidden p-0"
       >
-        <DialogHeader className="border-b px-4 py-3 pr-12">
+        <DialogHeader className="shrink-0 border-b px-4 py-3 pr-12">
           <DialogTitle>Reactions</DialogTitle>
         </DialogHeader>
 
-        {!loading && !error && hasReactions && (
-          <Tabs
-            value={tab}
-            onValueChange={setTab}
-            variant="underline"
-            className="border-b"
-          >
-            <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-3">
-              <TabsTrigger value={ALL_TAB} className="gap-1.5 px-3">
-                All
-                <span className="tabular-nums text-muted-foreground">
-                  {likers.length}
-                </span>
-              </TabsTrigger>
-              {reactionTabs.map((reaction) => (
-                <TabsTrigger
-                  key={reaction.type}
-                  value={reaction.type}
-                  className="gap-1.5 px-3"
-                  aria-label={`${reaction.label} ${reaction.count}`}
-                >
-                  <span
-                    className={cn(
-                      "flex size-5 items-center justify-center rounded-full text-xs leading-none",
-                      reaction.bg,
-                    )}
-                    aria-hidden
-                  >
-                    {reaction.emoji}
-                  </span>
+        {/* Fixed tab-row height so loading → loaded doesn't jump */}
+        <div className="flex h-11 shrink-0 items-center border-b">
+          {loading ? (
+            <div className="flex w-full items-center gap-2 px-3">
+              <Skeleton className="h-7 w-14 rounded-md" />
+              <Skeleton className="h-7 w-12 rounded-md" />
+              <Skeleton className="h-7 w-12 rounded-md" />
+            </div>
+          ) : !error && hasReactions ? (
+            <Tabs
+              value={tab}
+              onValueChange={setTab}
+              variant="underline"
+              className="w-full"
+            >
+              <TabsList className="h-11 w-full justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-3">
+                <TabsTrigger value={ALL_TAB} className="gap-1.5 px-3">
+                  All
                   <span className="tabular-nums text-muted-foreground">
-                    {reaction.count}
+                    {likers.length}
                   </span>
                 </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        )}
+                {reactionTabs.map((reaction) => (
+                  <TabsTrigger
+                    key={reaction.type}
+                    value={reaction.type}
+                    className="gap-1.5 px-3"
+                    aria-label={`${reaction.label} ${reaction.count}`}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-5 items-center justify-center rounded-full text-xs leading-none",
+                        reaction.bg,
+                      )}
+                      aria-hidden
+                    >
+                      {reaction.emoji}
+                    </span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {reaction.count}
+                    </span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          ) : null}
+        </div>
 
         <div className="min-h-0 flex-1 divide-y overflow-y-auto px-4">
-          {loading && <UserListSkeleton count={4} className="px-0" />}
+          {loading && <UserListSkeleton count={3} className="px-0" />}
 
           {error && (
             <Alert variant="error" className="my-4 w-full max-w-none">
@@ -151,27 +161,29 @@ export function ReactionsDialog({
             </p>
           )}
 
-          {filtered.map((user) => {
-            const meta = getReactionMeta(user.reaction);
-            return (
-              <UserListItem
-                key={user.id}
-                user={user}
-                subtitle={user.bio?.trim() || `@${user.username}`}
-                action={
-                  <span
-                    className={cn(
-                      "flex size-9 items-center justify-center rounded-full text-lg",
-                      meta.bg,
-                    )}
-                    title={meta.label}
-                  >
-                    {meta.emoji}
-                  </span>
-                }
-              />
-            );
-          })}
+          {!loading &&
+            !error &&
+            filtered.map((user) => {
+              const meta = getReactionMeta(user.reaction);
+              return (
+                <UserListItem
+                  key={user.id}
+                  user={user}
+                  subtitle={user.bio?.trim() || `@${user.username}`}
+                  action={
+                    <span
+                      className={cn(
+                        "flex size-9 items-center justify-center rounded-full text-lg",
+                        meta.bg,
+                      )}
+                      title={meta.label}
+                    >
+                      {meta.emoji}
+                    </span>
+                  }
+                />
+              );
+            })}
         </div>
       </DialogContent>
     </Dialog>
