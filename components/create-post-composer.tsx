@@ -382,6 +382,8 @@ export function CreatePostComposer({
       });
       await refresh();
 
+      const publisherName = user.name?.trim() || user.username || "You";
+
       toast.custom(() => (
         <Alert variant="success">
           <AlertContent>
@@ -394,10 +396,10 @@ export function CreatePostComposer({
             </AlertTitle>
             <AlertDescription>
               {event
-                ? "Your event is live on the feed."
+                ? `${publisherName} published an event.`
                 : celebration
-                  ? "Your celebration is live on the feed."
-                  : "You have published the post."}
+                  ? `${publisherName} published a celebration.`
+                  : `${publisherName} published the post.`}
             </AlertDescription>
           </AlertContent>
         </Alert>

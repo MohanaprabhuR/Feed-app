@@ -99,7 +99,9 @@ export function ArticleEditor({ onPublished, onCancel }: ArticleEditorProps = {}
         <Alert variant="success">
           <AlertContent>
             <AlertTitle>Article published!</AlertTitle>
-            <AlertDescription>You have published the article.</AlertDescription>
+            <AlertDescription>
+              {`${user.name?.trim() || user.username || "You"} published the article.`}
+            </AlertDescription>
           </AlertContent>
         </Alert>
       ));

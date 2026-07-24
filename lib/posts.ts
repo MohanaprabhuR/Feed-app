@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getCelebrationMeta } from "@/lib/celebrations";
+import { CELEBRATION_OCCASIONS, getCelebrationMeta } from "@/lib/celebrations";
 import { splitPostMedia } from "@/lib/errors";
 import { profileToUser, type ProfileRow } from "@/lib/profile";
 import type { Post, PostCelebration, PostEvent, PostType } from "@/lib/types";
@@ -122,8 +122,11 @@ function normalizeCelebration(value: unknown): PostCelebration | undefined {
   if (!value || typeof value !== "object") return undefined;
   const raw = value as Record<string, unknown>;
   const occasion =
-    typeof raw.occasion === "string" ? raw.occasion : undefined;
+    typeof raw.occasion === "string" ? raw.occasion.trim() : undefined;
   if (!occasion) return undefined;
+  if (!CELEBRATION_OCCASIONS.some((item) => item.value === occasion)) {
+    return undefined;
+  }
 
   const message =
     typeof raw.message === "string" && raw.message.trim()
@@ -564,7 +567,10 @@ export async function createPost(
     throw new Error("Choose an occasion to celebrate.");
   }
 
-  const mediaUrl = media?.video ?? media?.image ?? media?.file ?? null;
+  const mediaUrl =
+    [media?.video, media?.image, media?.file]
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .find(Boolean) || null;
   const mode = await resolveSchemaMode(supabase);
   // Keep DB post_type as "post" — many projects only allow ('post','article').
   // UI treats rows with an `event` payload as event posts.
