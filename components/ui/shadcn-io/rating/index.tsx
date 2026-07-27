@@ -2,7 +2,13 @@
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { type LucideProps, StarIcon } from "lucide-react";
-import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
+import type {
+  ComponentProps,
+  KeyboardEvent,
+  MouseEvent,
+  ReactElement,
+  ReactNode,
+} from "react";
 import {
   Children,
   cloneElement,
@@ -231,7 +237,7 @@ export const Rating = ({
         onMouseLeave={() => setHoverValue(null)}
         ref={containerRef}
         role="radiogroup"
-        {...(props as any)}
+        {...(props as ComponentProps<"div">)}
       >
         {Children.map(children, (child, index) => {
           if (!child) {

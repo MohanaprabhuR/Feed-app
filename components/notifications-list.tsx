@@ -77,6 +77,7 @@ export function NotificationsList() {
   }, [user, refreshUnreadCount]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load on mount
     void load();
   }, [load]);
 

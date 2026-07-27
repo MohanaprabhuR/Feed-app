@@ -540,6 +540,7 @@ function SortableOverlay(props: SortableOverlayProps) {
   const context = useSortableContext(OVERLAY_NAME);
 
   const [mounted, setMounted] = React.useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- portal container is only available after mount
   React.useLayoutEffect(() => setMounted(true), []);
 
   const container =

@@ -40,6 +40,7 @@ export function ThemeSwitcher({
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- flag client mount for hydration-safe theme UI
   useEffect(() => setMounted(true), []);
 
   return (
@@ -116,6 +117,7 @@ export function ThemeMenuRow({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- flag client mount for hydration-safe theme UI
   useEffect(() => setMounted(true), []);
 
   return (

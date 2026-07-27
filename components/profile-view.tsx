@@ -106,6 +106,7 @@ export function ProfileView({
   }, [userId, currentUser, onUserLoaded]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync mode when target user changes
     setProfileMode(initialMode);
   }, [userId, initialMode]);
 
