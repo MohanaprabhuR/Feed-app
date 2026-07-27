@@ -86,7 +86,14 @@ export type Comment = {
 
 export type Notification = {
   id: string;
-  type: "like" | "comment" | "message" | "follow" | "mention" | "system";
+  type:
+    | "like"
+    | "comment"
+    | "message"
+    | "follow"
+    | "mention"
+    | "system"
+    | "event";
   message: string;
   user?: User;
   postId?: string;

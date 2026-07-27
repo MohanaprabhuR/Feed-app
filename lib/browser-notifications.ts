@@ -8,6 +8,7 @@ const TITLES: Record<Notification["type"], string> = {
   follow: "New follower",
   mention: "New mention",
   system: "FeedApp",
+  event: "New event",
 };
 
 export function canRequestNotificationPermission() {

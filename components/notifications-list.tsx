@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
+  CalendarClock,
   Heart,
   MessageCircle,
   MessageSquareText,
@@ -37,6 +38,7 @@ const iconMap = {
   follow: UserPlus,
   mention: MessageSquareText,
   system: MessageCircle,
+  event: CalendarClock,
 } as const;
 
 export function NotificationsList() {

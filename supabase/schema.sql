@@ -894,7 +894,7 @@ create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   recipient_id uuid references public.profiles(id) on delete cascade not null,
   actor_id uuid references public.profiles(id) on delete set null,
-  type text not null check (type in ('like', 'comment', 'message', 'follow', 'mention', 'system')),
+  type text not null check (type in ('like', 'comment', 'message', 'follow', 'mention', 'system', 'event')),
   message text not null,
   post_id uuid references public.posts(id) on delete cascade,
   comment_id uuid references public.comments(id) on delete set null,
@@ -1132,6 +1132,45 @@ drop trigger if exists on_follow_notify on public.follows;
 create trigger on_follow_notify
   after insert on public.follows
   for each row execute function public.notify_on_follow();
+
+-- Event posts → notify the author's followers.
+-- Event posts are discriminated by a non-null `event` payload.
+create or replace function public.notify_on_event_post()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.event is null then
+    return new;
+  end if;
+
+  insert into public.notifications (
+    recipient_id,
+    actor_id,
+    type,
+    message,
+    post_id
+  )
+  select
+    f.follower_id,
+    new.author_id,
+    'event',
+    'posted a new event',
+    new.id
+  from public.follows f
+  where f.following_id = new.author_id
+    and f.follower_id <> new.author_id;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_event_post_notify on public.posts;
+create trigger on_event_post_notify
+  after insert on public.posts
+  for each row execute function public.notify_on_event_post();
 
 
 -- ============================================================================

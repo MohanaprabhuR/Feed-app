@@ -149,6 +149,9 @@ export function notificationHref(notification: Notification): string {
   if (notification.type === "like" && notification.postId) {
     return `/post/${notification.postId}/likes`;
   }
+  if (notification.type === "event" && notification.postId) {
+    return `/post/${notification.postId}/comments`;
+  }
   if (notification.postId) {
     return `/post/${notification.postId}/comments`;
   }
