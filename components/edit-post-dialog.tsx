@@ -464,9 +464,9 @@ export function EditPostDialog({
           </div>
         ) : (
           <>
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-3">
+            <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto px-4 py-3">
               {error && (
-                <Alert variant="error" className="mb-3 w-full max-w-none">
+                <Alert variant="error" className="w-full max-w-none">
                   <AlertContent>
                     <AlertDescription>{error}</AlertDescription>
                   </AlertContent>
@@ -551,7 +551,7 @@ export function EditPostDialog({
                   </div>
                 </div>
               ) : (
-                <div className="mb-3 flex gap-3">
+                <div className="flex gap-3">
                   <UserAvatar
                     src={post.author.avatar}
                     name={post.author.name}
@@ -571,7 +571,7 @@ export function EditPostDialog({
               )}
 
               {showEventForm && !isArticle && (
-                <Card className="mb-3 overflow-hidden border shadow-sm">
+                <Card padding="none" className="overflow-hidden border shadow-sm">
                   <div className="space-y-3 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium">Event details</p>
@@ -674,12 +674,11 @@ export function EditPostDialog({
                       ? { location: eventDraft.location.trim() }
                       : {}),
                   }}
-                  className="mb-3"
                 />
               ) : null}
 
               {attachment && !isArticle && (
-                <Card className="relative mb-2 overflow-hidden">
+                <Card className="relative overflow-hidden">
                   {attachment.type === "image" && imagePreview && (
                     <div className="relative aspect-video max-h-72 w-full">
                       <Image

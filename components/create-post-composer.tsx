@@ -536,7 +536,7 @@ export function CreatePostComposer({
           </div>
 
           <div
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-2"
+            className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 pt-4 pb-2"
             data-scroll-lock-scrollable=""
           >
             <MentionTextarea
@@ -555,7 +555,7 @@ export function CreatePostComposer({
             />
 
             {showEventForm && (
-              <Card className="mb-3 overflow-hidden border shadow-sm">
+              <Card padding="none" className="overflow-hidden border shadow-sm">
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium">Event details</p>
@@ -659,7 +659,7 @@ export function CreatePostComposer({
             ) : null}
 
             {showCelebrationForm && (
-              <Card className="mb-3 overflow-hidden border shadow-sm">
+              <Card padding="none" className="overflow-hidden border shadow-sm">
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium">Celebrate an occasion</p>
@@ -733,7 +733,7 @@ export function CreatePostComposer({
             ) : null}
 
             {attachment && (
-              <Card className="relative mb-2 overflow-hidden">
+              <Card className="relative overflow-hidden">
                 {attachment.type === "image" && attachment.previewUrl && (
                   <div className="relative aspect-video max-h-72 w-full">
                     <Image
