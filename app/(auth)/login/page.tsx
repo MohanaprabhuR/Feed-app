@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { AuthLayout } from "@/components/auth-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   formatAuthError,
@@ -125,10 +126,9 @@ function LoginForm() {
               Forgot password?
             </Link>
           </div>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             size="lg"
             variant="outline"
             placeholder="Enter password"

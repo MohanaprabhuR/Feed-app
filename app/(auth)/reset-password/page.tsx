@@ -7,7 +7,7 @@ import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { AuthLayout } from "@/components/auth-layout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Alert,
@@ -120,10 +120,9 @@ export default function ResetPasswordPage() {
         )}
         <div className="space-y-2">
           <Label htmlFor="password">New password</Label>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             size="lg"
             variant="outline"
             placeholder="Enter new password"
@@ -135,10 +134,9 @@ export default function ResetPasswordPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="confirm">Confirm password</Label>
-          <Input
+          <PasswordInput
             id="confirm"
             name="confirm"
-            type="password"
             size="lg"
             variant="outline"
             placeholder="Confirm new password"

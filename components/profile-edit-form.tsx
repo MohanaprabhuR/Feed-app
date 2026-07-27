@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -444,9 +445,8 @@ export function ProfileEditForm({
                 onSubmit={handleChangePassword}
               >
                 <Field id="profile-new-password" label="New Password">
-                  <Input
+                  <PasswordInput
                     id="profile-new-password"
-                    type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
@@ -456,9 +456,8 @@ export function ProfileEditForm({
                   />
                 </Field>
                 <Field id="profile-confirm-password" label="Confirm Password">
-                  <Input
+                  <PasswordInput
                     id="profile-confirm-password"
-                    type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm new password"
