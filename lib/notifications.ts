@@ -141,7 +141,7 @@ export async function markAllNotificationsRead(
 
 export function notificationHref(notification: Notification): string {
   if (notification.type === "message" && notification.conversationId) {
-    return `/messages?c=${notification.conversationId}`;
+    return `/messages/${notification.conversationId}`;
   }
   if (notification.type === "comment" && notification.postId) {
     return `/post/${notification.postId}/comments`;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   ChevronLeft,
@@ -54,7 +54,29 @@ export function MessagingDock() {
 }
 
 export function MessagingPagePanel() {
-  return <MessagingSurface mode="page" />;
+  return (
+    <>
+      <MessagingQueryRedirect />
+      <MessagingSurface mode="page" />
+    </>
+  );
+}
+
+/** Redirect legacy `/messages?c=` links to `/messages/[id]`. */
+function MessagingQueryRedirect() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (pathname !== "/messages") return;
+    const queryId = searchParams.get("c");
+    if (queryId) {
+      router.replace(`/messages/${queryId}`);
+    }
+  }, [pathname, router, searchParams]);
+
+  return null;
 }
 
 function UnreadBadge({ count }: { count: number }) {
@@ -99,6 +121,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const [setupError, setSetupError] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const [people, setPeople] = useState<User[]>([]);
+  const [threadNotFound, setThreadNotFound] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = useCallback(async () => {
@@ -136,8 +159,13 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
       try {
         const supabase = createClient();
         await markConversationRead(supabase, id, userId);
-      } catch {
-        // Keep UI read state even if persistence fails.
+      } catch (err) {
+        setSetupError(
+          getErrorMessage(
+            err,
+            "Unread state may not persist until messaging read policy is applied.",
+          ),
+        );
       }
     },
     [clearUnread, userId],
@@ -147,14 +175,18 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
     if (mode !== "page") return;
 
     const parts = pathname.split("/").filter(Boolean);
-    const id = parts.length > 1 ? parts[1] : null;
-    openMessaging(id);
+    const pathId = parts.length > 1 ? parts[1] : null;
+    openMessaging(pathId);
+  }, [mode, openMessaging, pathname]);
+
+  useEffect(() => {
+    if (mode !== "page") return;
     return () => {
       setComposeOpen(false);
       closeConversation();
       setExpanded(false);
     };
-  }, [closeConversation, mode, openMessaging, pathname, setExpanded]);
+  }, [closeConversation, mode, setExpanded]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- refresh inbox when panel opens or dock mounts */
   useEffect(() => {
@@ -216,10 +248,32 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
 
     async function loadThread() {
       setLoadingThread(true);
+      setThreadNotFound(false);
       try {
         const supabase = createClient();
         const messages = await fetchMessages(supabase, conversationId!);
         if (cancelled) return;
+        if (messages.length === 0) {
+          const { count, error: countError } = await supabase
+            .from("direct_messages")
+            .select("id", { count: "exact", head: true })
+            .eq("conversation_id", conversationId!);
+          if (countError) throw countError;
+          if (count === 0) {
+            // Empty thread is valid; only treat as missing when membership is gone.
+            const { data: membership, error: membershipError } = await supabase
+              .from("conversation_members")
+              .select("conversation_id")
+              .eq("conversation_id", conversationId!)
+              .eq("user_id", userId!)
+              .maybeSingle();
+            if (membershipError) throw membershipError;
+            if (!membership) {
+              setThreadNotFound(true);
+              return;
+            }
+          }
+        }
         setThreadMessages((current) => ({
           ...current,
           [conversationId!]: messages,
@@ -227,6 +281,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
         await markRead(conversationId!);
       } catch (err) {
         if (cancelled) return;
+        setThreadNotFound(true);
         appToast.error(
           "Could not load messages",
           getErrorMessage(err, "Try again."),
@@ -276,6 +331,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
       void (async () => {
         try {
           const latest = await fetchMessages(supabase, conversationId);
+          let hasNewPeerMessage = false;
           setThreadMessages((current) => {
             const existing = current[conversationId] ?? [];
             if (
@@ -284,8 +340,18 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
             ) {
               return current;
             }
+            const existingIds = new Set(existing.map((msg) => msg.id));
+            hasNewPeerMessage = latest.some(
+              (msg) =>
+                !existingIds.has(msg.id) &&
+                msg.senderId !== userId &&
+                msg.senderId !== "me",
+            );
             return { ...current, [conversationId]: latest };
           });
+          if (hasNewPeerMessage) {
+            void markRead(conversationId);
+          }
         } catch {
           // Keep chat usable if polling fails (realtime may still work).
         }
@@ -495,10 +561,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
     return null;
   }
 
-  if (!expanded) {
-    if (mode === "page") {
-      return null;
-    }
+  if (!expanded && mode !== "page") {
     return (
       <button
         type="button"
@@ -834,9 +897,31 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
             </form>
           </div>
         </div>
-      ) : conversationId ? (
+      ) : conversationId && threadNotFound ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+          <MessageCircle className="size-10 text-muted-foreground/50" />
+          <p className="text-base font-semibold">Conversation not found</p>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            This chat may have been removed or you don&apos;t have access.
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={closeThreadView}>
+            Back to messages
+          </Button>
+        </div>
+      ) : conversationId && (loadingThread || loadingList) && !conversation ? (
         <div className="flex min-h-0 flex-1 flex-col p-3">
           <MessageThreadSkeleton />
+        </div>
+      ) : conversationId && !conversation ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+          <MessageCircle className="size-10 text-muted-foreground/50" />
+          <p className="text-base font-semibold">Conversation unavailable</p>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            Could not load this chat. Try again from your inbox.
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={closeThreadView}>
+            Back to messages
+          </Button>
         </div>
       ) : mode === "page" ? (
         <div className="flex flex-col items-center gap-2 px-6 text-center">

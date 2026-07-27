@@ -129,23 +129,60 @@ export async function fetchConversations(
   }
 
   const lastByConversation = new Map<string, MessageRow>();
-  const unreadByConversation = new Map<string, number>();
   for (const row of (recentMessages ?? []) as MessageRow[]) {
     if (!lastByConversation.has(row.conversation_id)) {
       lastByConversation.set(row.conversation_id, row);
     }
-
-    if (row.sender_id === userId) continue;
-    const lastReadAt = lastReadByConversation.get(row.conversation_id);
-    if (!lastReadAt) continue;
-    if (new Date(row.created_at).getTime() <= new Date(lastReadAt).getTime()) {
-      continue;
-    }
-    unreadByConversation.set(
-      row.conversation_id,
-      (unreadByConversation.get(row.conversation_id) ?? 0) + 1,
-    );
   }
+
+  const unreadByConversation = new Map<string, number>();
+  await Promise.all(
+    conversationIds.map(async (convId) => {
+      const lastReadAt =
+        lastReadByConversation.get(convId) ?? new Date(0).toISOString();
+      const { count, error: countError } = await supabase
+        .from("direct_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("conversation_id", convId)
+        .neq("sender_id", userId)
+        .gt("created_at", lastReadAt);
+
+      if (countError) {
+        if (isMissingMessagingSchemaError(countError.message)) {
+          throw missingMessagingSetupError();
+        }
+        throw countError;
+      }
+      if (count && count > 0) {
+        unreadByConversation.set(convId, count);
+      }
+    }),
+  );
+
+  // Fill in last message for threads missing from the bulk fetch (row cap).
+  await Promise.all(
+    conversationIds
+      .filter((convId) => !lastByConversation.has(convId))
+      .map(async (convId) => {
+        const { data, error: lastError } = await supabase
+          .from("direct_messages")
+          .select("id, conversation_id, sender_id, content, created_at")
+          .eq("conversation_id", convId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastError) {
+          if (isMissingMessagingSchemaError(lastError.message)) {
+            throw missingMessagingSetupError();
+          }
+          throw lastError;
+        }
+        if (data) {
+          lastByConversation.set(convId, data as MessageRow);
+        }
+      }),
+  );
 
   return ((conversations ?? []) as { id: string; updated_at: string }[])
     .map((conv) => {
@@ -171,17 +208,24 @@ export async function markConversationRead(
   conversationId: string,
   userId: string,
 ) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("conversation_members")
     .update({ last_read_at: new Date().toISOString() })
     .eq("conversation_id", conversationId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .select("conversation_id");
 
   if (error) {
     if (isMissingMessagingSchemaError(error.message)) {
       throw missingMessagingSetupError();
     }
     throw error;
+  }
+
+  if (!data?.length) {
+    throw new Error(
+      "Could not mark conversation as read. Run supabase/migrate-message-read.sql in Supabase → SQL Editor.",
+    );
   }
 }
 
