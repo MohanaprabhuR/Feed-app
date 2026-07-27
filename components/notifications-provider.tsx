@@ -6,20 +6,25 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useCurrentUser } from "@/components/current-user-provider";
+import { notificationToast } from "@/lib/app-toast";
 import {
-  notifyFromNotificationRow,
   requestNotificationPermission,
+  showBrowserNotification,
 } from "@/lib/browser-notifications";
 import {
   fetchUnreadNotificationCount,
   markAllNotificationsRead,
   markNotificationRead,
+  notificationHref,
+  notificationRowToNotification,
+  type NotificationRow,
 } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/client";
-import type { Notification } from "@/lib/types";
 
 type NotificationsContextValue = {
   unreadCount: number;
@@ -48,7 +53,18 @@ export function NotificationsProvider({
 }) {
   const { user } = useCurrentUser();
   const userId = user?.id;
+  const router = useRouter();
+  const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Read latest router/pathname inside the realtime callback without
+  // re-subscribing the channel on every navigation.
+  const routerRef = useRef(router);
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    routerRef.current = router;
+    pathnameRef.current = pathname;
+  }, [router, pathname]);
 
   const refreshUnreadCount = useCallback(async () => {
     if (!userId) {
@@ -64,6 +80,42 @@ export function NotificationsProvider({
       setUnreadCount(0);
     }
   }, [userId]);
+
+  // Fire a browser notification + WhatsApp-style in-app toast for a freshly
+  // inserted notification row. Refs keep this stable so the realtime channel
+  // never re-subscribes on navigation.
+  const announceIncomingNotification = useCallback(
+    async (row: NotificationRow) => {
+      const supabase = createClient();
+
+      let actorName: string | null = null;
+      let actorAvatar: string | undefined;
+      if (row.actor_id) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("name, avatar")
+          .eq("id", row.actor_id)
+          .maybeSingle();
+        actorName = (data?.name as string | undefined) ?? null;
+        actorAvatar = (data?.avatar as string | undefined) ?? undefined;
+      }
+
+      const body = actorName ? `${actorName} ${row.message}` : row.message;
+      // OS-level notification (only when the tab has permission granted).
+      showBrowserNotification(row.type, body);
+
+      // In-app toast — skip while the user is already on the notifications page.
+      if (pathnameRef.current === "/notifications") return;
+      const href = notificationHref(notificationRowToNotification(row));
+      notificationToast({
+        title: actorName ?? "FeedApp",
+        message: row.message,
+        avatar: actorAvatar,
+        onClick: () => routerRef.current.push(href),
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load on mount
@@ -93,12 +145,7 @@ export function NotificationsProvider({
           void refreshUnreadCount();
 
           if (payload.eventType === "INSERT") {
-            const row = payload.new as {
-              type: Notification["type"];
-              message: string;
-              actor_id: string | null;
-            };
-            void notifyFromNotificationRow(supabase, row);
+            void announceIncomingNotification(payload.new as NotificationRow);
           }
         },
       )
@@ -112,7 +159,7 @@ export function NotificationsProvider({
       window.clearInterval(timer);
       void supabase.removeChannel(channel);
     };
-  }, [userId, refreshUnreadCount]);
+  }, [userId, refreshUnreadCount, announceIncomingNotification]);
 
   const markRead = useCallback(
     async (notificationId: string) => {
