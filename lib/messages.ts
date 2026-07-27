@@ -60,7 +60,7 @@ export async function fetchConversations(
 ): Promise<Conversation[]> {
   const { data: memberships, error: membershipError } = await supabase
     .from("conversation_members")
-    .select("conversation_id")
+    .select("conversation_id, last_read_at")
     .eq("user_id", userId);
 
   if (membershipError) {
@@ -74,6 +74,14 @@ export async function fetchConversations(
     (row) => row.conversation_id as string,
   );
   if (conversationIds.length === 0) return [];
+
+  const lastReadByConversation = new Map<string, string>();
+  for (const row of memberships ?? []) {
+    lastReadByConversation.set(
+      row.conversation_id as string,
+      (row.last_read_at as string) ?? new Date(0).toISOString(),
+    );
+  }
 
   const { data: conversations, error: conversationsError } = await supabase
     .from("conversations")
@@ -121,10 +129,22 @@ export async function fetchConversations(
   }
 
   const lastByConversation = new Map<string, MessageRow>();
+  const unreadByConversation = new Map<string, number>();
   for (const row of (recentMessages ?? []) as MessageRow[]) {
     if (!lastByConversation.has(row.conversation_id)) {
       lastByConversation.set(row.conversation_id, row);
     }
+
+    if (row.sender_id === userId) continue;
+    const lastReadAt = lastReadByConversation.get(row.conversation_id);
+    if (!lastReadAt) continue;
+    if (new Date(row.created_at).getTime() <= new Date(lastReadAt).getTime()) {
+      continue;
+    }
+    unreadByConversation.set(
+      row.conversation_id,
+      (unreadByConversation.get(row.conversation_id) ?? 0) + 1,
+    );
   }
 
   return ((conversations ?? []) as { id: string; updated_at: string }[])
@@ -139,10 +159,30 @@ export async function fetchConversations(
         lastMessageAt: last
           ? formatRelativeTime(last.created_at)
           : formatRelativeTime(conv.updated_at),
-        unread: 0,
+        unread: unreadByConversation.get(conv.id) ?? 0,
       } satisfies Conversation;
     })
     .filter((conv): conv is Conversation => Boolean(conv));
+}
+
+/** Mark a conversation as read for the current user. */
+export async function markConversationRead(
+  supabase: SupabaseClient,
+  conversationId: string,
+  userId: string,
+) {
+  const { error } = await supabase
+    .from("conversation_members")
+    .update({ last_read_at: new Date().toISOString() })
+    .eq("conversation_id", conversationId)
+    .eq("user_id", userId);
+
+  if (error) {
+    if (isMissingMessagingSchemaError(error.message)) {
+      throw missingMessagingSetupError();
+    }
+    throw error;
+  }
 }
 
 export async function fetchMessages(
@@ -221,8 +261,14 @@ export function subscribeToConversationMessages(
   conversationId: string,
   onMessage: (message: Message, row: MessageRow) => void,
 ) {
+  // Use a unique channel name per subscription call to avoid cases where
+  // the Supabase client reuses an already-subscribed realtime channel.
+  const channelName = `direct-messages:${conversationId}:${Date.now()}:${Math.random()
+    .toString(16)
+    .slice(2)}`;
+
   const channel = supabase
-    .channel(`direct-messages:${conversationId}`)
+    .channel(channelName)
     .on(
       "postgres_changes",
       {
@@ -249,8 +295,14 @@ export function subscribeToInboxMessages(
   supabase: SupabaseClient,
   onInsert: (row: MessageRow) => void,
 ) {
+  // Use a unique channel name per subscription call to avoid cases where
+  // the Supabase client reuses an already-subscribed realtime channel.
+  const channelName = `direct-messages-inbox:${Date.now()}:${Math.random()
+    .toString(16)
+    .slice(2)}`;
+
   const channel = supabase
-    .channel("direct-messages-inbox")
+    .channel(channelName)
     .on(
       "postgres_changes",
       {

@@ -10,17 +10,14 @@ import {
   Paperclip,
   Search,
   Send,
-  Settings2,
   Smile,
   SquarePen,
 } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { useMessaging } from "@/components/messaging-provider";
 import { CurrentUserAvatar, UserAvatar } from "@/components/user-avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ConversationListSkeleton,
   MessageThreadSkeleton,
@@ -32,6 +29,7 @@ import {
   fetchConversations,
   fetchMessages,
   getOrCreateDirectConversation,
+  markConversationRead,
   messageRowToMessage,
   sendMessage,
   subscribeToConversationMessages,
@@ -52,8 +50,31 @@ const hiddenOnRoutes = [
 ];
 
 export function MessagingDock() {
+  return <MessagingSurface mode="dock" />;
+}
+
+export function MessagingPagePanel() {
+  return <MessagingSurface mode="page" />;
+}
+
+function UnreadBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-semibold leading-none text-white">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isMessagesRoute =
+    pathname === "/messages" || pathname.startsWith("/messages/");
+  // Both dock + page panels share the same Messaging context, so realtime
+  // subscriptions must only run on the active surface.
+  const shouldSubscribe =
+    mode === "page" ? true : mode === "dock" && !isMessagesRoute;
   const { user } = useCurrentUser();
   const userId = user?.id;
   const {
@@ -68,7 +89,6 @@ export function MessagingDock() {
   } = useMessaging();
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
-  const [tab, setTab] = useState("focused");
   const [conversationList, setConversationList] = useState<Conversation[]>([]);
   const [threadMessages, setThreadMessages] = useState<
     Record<string, Message[]>
@@ -101,21 +121,50 @@ export function MessagingDock() {
     }
   }, [userId]);
 
+  const clearUnread = useCallback((id: string) => {
+    setConversationList((current) =>
+      current.map((conv) =>
+        conv.id === id && conv.unread > 0 ? { ...conv, unread: 0 } : conv,
+      ),
+    );
+  }, []);
+
+  const markRead = useCallback(
+    async (id: string) => {
+      if (!userId) return;
+      clearUnread(id);
+      try {
+        const supabase = createClient();
+        await markConversationRead(supabase, id, userId);
+      } catch {
+        // Keep UI read state even if persistence fails.
+      }
+    },
+    [clearUnread, userId],
+  );
+
   useEffect(() => {
-    if (!pathname.startsWith("/messages")) return;
+    if (mode !== "page") return;
 
     const parts = pathname.split("/").filter(Boolean);
     const id = parts.length > 1 ? parts[1] : null;
     openMessaging(id);
-    router.replace("/feed");
-  }, [pathname, openMessaging, router]);
+    return () => {
+      setComposeOpen(false);
+      closeConversation();
+      setExpanded(false);
+    };
+  }, [closeConversation, mode, openMessaging, pathname, setExpanded]);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- refresh inbox/thread when dock opens */
+  /* eslint-disable react-hooks/set-state-in-effect -- refresh inbox when panel opens or dock mounts */
   useEffect(() => {
-    if (!expanded || !userId) return;
-    void loadConversations();
-  }, [expanded, userId, loadConversations]);
+    if (!userId) return;
+    if (mode === "dock" || expanded) {
+      void loadConversations();
+    }
+  }, [expanded, userId, loadConversations, mode]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
   useEffect(() => {
     if (!expanded || !userId || !pendingPeerUserId) return;
 
@@ -132,6 +181,9 @@ export function MessagingDock() {
         clearPendingPeer();
         openConversation(id);
         await loadConversations();
+        if (mode === "page") {
+          router.push(`/messages/${id}`);
+        }
       } catch (err) {
         if (cancelled) return;
         clearPendingPeer();
@@ -153,10 +205,12 @@ export function MessagingDock() {
     clearPendingPeer,
     openConversation,
     loadConversations,
+    mode,
+    router,
   ]);
 
   useEffect(() => {
-    if (!conversationId || !userId) return;
+    if (!shouldSubscribe || !conversationId || !userId) return;
 
     let cancelled = false;
 
@@ -170,6 +224,7 @@ export function MessagingDock() {
           ...current,
           [conversationId!]: messages,
         }));
+        await markRead(conversationId!);
       } catch (err) {
         if (cancelled) return;
         appToast.error(
@@ -213,6 +268,7 @@ export function MessagingDock() {
           if (!active) return next;
           return [active, ...next.filter((conv) => conv.id !== conversationId)];
         });
+        void markRead(conversationId);
       },
     );
 
@@ -241,10 +297,12 @@ export function MessagingDock() {
       unsubscribe();
       window.clearInterval(poll);
     };
-  }, [conversationId, userId]);
+  }, [conversationId, userId, shouldSubscribe, markRead]);
 
   useEffect(() => {
-    if (!expanded || !userId) return;
+    if (!shouldSubscribe || !userId) return;
+    // Dock keeps listening while collapsed so the FAB unread badge stays live.
+    if (mode === "page" && !expanded) return;
 
     const supabase = createClient();
     const unsubscribe = subscribeToInboxMessages(
@@ -279,22 +337,30 @@ export function MessagingDock() {
     return () => {
       unsubscribe();
     };
-  }, [expanded, userId, conversationId, loadConversations]);
+  }, [
+    expanded,
+    userId,
+    conversationId,
+    loadConversations,
+    shouldSubscribe,
+    mode,
+  ]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = conversationList.filter((conv) => {
+    return conversationList.filter((conv) => {
       if (!q) return true;
       return (
         conv.user.name.toLowerCase().includes(q) ||
         conv.lastMessage.toLowerCase().includes(q)
       );
     });
-    if (tab === "other") {
-      return list.filter((conv) => conv.unread === 0);
-    }
-    return list;
-  }, [conversationList, query, tab]);
+  }, [conversationList, query]);
+
+  const totalUnread = useMemo(
+    () => conversationList.reduce((sum, conv) => sum + conv.unread, 0),
+    [conversationList],
+  );
 
   const conversation = conversationId
     ? conversationList.find((c) => c.id === conversationId)
@@ -354,7 +420,11 @@ export function MessagingDock() {
   function selectConversation(id: string) {
     setDraft("");
     setComposeOpen(false);
+    clearUnread(id);
     openConversation(id);
+    if (mode === "page") {
+      router.push(`/messages/${id}`);
+    }
   }
 
   async function openCompose() {
@@ -365,6 +435,9 @@ export function MessagingDock() {
     openMessaging();
     setComposeOpen(true);
     closeConversation();
+    if (mode === "page") {
+      router.push("/messages");
+    }
     try {
       const supabase = createClient();
       const following = await fetchFollowing(supabase, userId, {
@@ -384,6 +457,9 @@ export function MessagingDock() {
       setComposeOpen(false);
       await loadConversations();
       openConversation(id);
+      if (mode === "page") {
+        router.push(`/messages/${id}`);
+      }
     } catch (err) {
       appToast.error(
         "Could not start chat",
@@ -392,11 +468,37 @@ export function MessagingDock() {
     }
   }
 
-  if (hiddenOnRoutes.some((route) => pathname.startsWith(route))) {
+  function closePanel() {
+    setComposeOpen(false);
+    closeConversation();
+    if (mode === "page") {
+      setExpanded(false);
+      router.push("/feed");
+      return;
+    }
+    setExpanded(false);
+  }
+
+  function closeThreadView() {
+    setDraft("");
+    closeConversation();
+    if (mode === "page") {
+      router.push("/messages");
+    }
+  }
+
+  if (mode === "dock" && hiddenOnRoutes.some((route) => pathname.startsWith(route))) {
+    return null;
+  }
+
+  if (mode === "dock" && isMessagesRoute) {
     return null;
   }
 
   if (!expanded) {
+    if (mode === "page") {
+      return null;
+    }
     return (
       <button
         type="button"
@@ -405,369 +507,378 @@ export function MessagingDock() {
         className="fixed bottom-6 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-foreground text-background shadow-2xl transition-transform hover:scale-105"
       >
         <MessageCircle className="size-6" />
+        {totalUnread > 0 ? (
+          <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[11px] font-semibold text-white">
+            {totalUnread > 99 ? "99+" : totalUnread}
+          </span>
+        ) : null}
       </button>
     );
   }
 
-  return (
+  const showListPane = mode === "page" || !conversation;
+  const showChatPane =
+    mode === "page" || Boolean(conversation) || Boolean(conversationId);
+
+  const inboxPane = (
     <div
       className={cn(
-        "fixed inset-x-0 z-50 flex flex-col border bg-background shadow-2xl",
-        "bottom-0 md:inset-x-auto md:right-4 md:border-b-0",
-        conversation ? "md:w-[420px]" : "md:w-[360px]",
-        "h-[min(78vh,640px)] md:rounded-t-xl",
+        "flex min-h-0 flex-col bg-background",
+        mode === "page" &&
+          "w-full border-r md:w-[360px] md:shrink-0 lg:w-[380px]",
+        mode === "page" && conversation && "hidden md:flex",
+        mode === "dock" && "min-h-0 flex-1",
       )}
     >
-      {/* List / dock chrome — hide when in WhatsApp-style chat */}
-      {!conversation && (
-        <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+      <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+        {mode === "dock" ? (
           <button
             type="button"
             className="flex min-w-0 flex-1 items-center gap-2 text-left"
-            onClick={() => {
-              setExpanded(false);
-              closeConversation();
-            }}
+            onClick={closePanel}
           >
             <span className="relative shrink-0">
               <CurrentUserAvatar size="sm" />
               <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background bg-emerald-500" />
             </span>
             <span className="truncate text-sm font-semibold">Messaging</span>
+            <UnreadBadge count={totalUnread} />
           </button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            iconOnly
-            aria-label="More"
-          >
-            <MoreHorizontal />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            iconOnly
-            aria-label="Compose"
-            onClick={() => void openCompose()}
-          >
-            <SquarePen />
-          </Button>
+        ) : (
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="truncate text-base font-semibold">Messaging</span>
+            <UnreadBadge count={totalUnread} />
+          </div>
+        )}
+        <Button type="button" variant="ghost" size="sm" iconOnly aria-label="More">
+          <MoreHorizontal />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          iconOnly
+          aria-label="Compose"
+          onClick={() => void openCompose()}
+        >
+          <SquarePen />
+        </Button>
+        {mode === "dock" ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             iconOnly
             aria-label="Minimize messaging"
-            onClick={() => {
-              setExpanded(false);
-              closeConversation();
-            }}
+            onClick={closePanel}
           >
             <ChevronDown />
           </Button>
+        ) : null}
+      </div>
+
+      {composeOpen ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex items-center gap-2 border-b px-3 py-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setComposeOpen(false)}
+            >
+              Cancel
+            </Button>
+            <p className="text-sm font-semibold">New message</p>
+          </div>
+          <div className="min-h-0 flex-1 divide-y overflow-y-auto">
+            {people.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                You&apos;re not following anyone yet. Follow people to start a
+                chat.
+              </p>
+            ) : (
+              people.map((person) => (
+                <button
+                  key={person.id}
+                  type="button"
+                  onClick={() => void startChatWith(person)}
+                  className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/50"
+                >
+                  <UserAvatar
+                    src={person.avatar}
+                    name={person.name}
+                    size="sm"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{person.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      @{person.username}
+                    </p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col">
+          {setupError && (
+            <p className="border-b px-3 py-2 text-xs text-destructive">
+              {setupError}
+            </p>
+          )}
+          <div className="px-3 pt-3 pb-2">
+            <Input
+              type="search"
+              size="sm"
+              placeholder="Search messages"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              prefix={<Search className="size-4 text-muted-foreground" />}
+            />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <ConversationList
+              items={filtered}
+              loading={loadingList}
+              activeId={conversationId}
+              onSelect={selectConversation}
+            />
+          </div>
         </div>
       )}
+    </div>
+  );
 
+  const chatPane = (
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col",
+        mode === "page" && !conversation && !conversationId && "hidden md:flex",
+        mode === "page" &&
+          !conversation &&
+          !conversationId &&
+          "items-center justify-center bg-muted/20",
+        mode === "dock" && !conversation && !conversationId && "hidden",
+      )}
+    >
       {conversation ? (
-            <div className="flex min-h-0 flex-1 flex-col bg-[#efeae2] dark:bg-zinc-900">
-              {/* WhatsApp-style chat header */}
-              <div className="flex h-14 shrink-0 items-center gap-1 border-b border-black/5 bg-background px-1.5 shadow-sm">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  aria-label="Back to conversations"
-                  onClick={closeConversation}
-                >
-                  <ChevronLeft />
-                </Button>
-                <UserAvatar
-                  src={conversation.user.avatar}
-                  name={conversation.user.name}
-                  size="sm"
-                  userId={conversation.user.id}
-                />
-                <div className="min-w-0 flex-1 px-1">
-                  <p className="truncate text-sm font-semibold leading-tight">
-                    {conversation.user.name}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    tap for contact info
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  aria-label="More"
-                >
-                  <MoreHorizontal />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  aria-label="Minimize"
-                  onClick={() => {
-                    setExpanded(false);
-                    closeConversation();
-                  }}
-                >
-                  <ChevronDown />
-                </Button>
-              </div>
-
-              {/* Chat wallpaper + bubbles */}
-              <div
-                className="relative flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-3"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle at 1px 1px, color-mix(in oklab, var(--foreground) 8%, transparent) 1px, transparent 0)",
-                  backgroundSize: "18px 18px",
-                }}
+        <div className="flex min-h-0 flex-1 flex-col bg-[#efeae2] dark:bg-zinc-900">
+          <div className="flex h-14 shrink-0 items-center gap-1 border-b border-black/5 bg-background px-1.5 shadow-sm">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              iconOnly
+              aria-label="Back to conversations"
+              className={mode === "page" ? "md:hidden" : undefined}
+              onClick={closeThreadView}
+            >
+              <ChevronLeft />
+            </Button>
+            <UserAvatar
+              src={conversation.user.avatar}
+              name={conversation.user.name}
+              size="sm"
+              userId={conversation.user.id}
+            />
+            <div className="min-w-0 flex-1 px-1">
+              <p className="truncate text-sm font-semibold leading-tight">
+                {conversation.user.name}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                @{conversation.user.username}
+              </p>
+            </div>
+            <Button type="button" variant="ghost" size="sm" iconOnly aria-label="More">
+              <MoreHorizontal />
+            </Button>
+            {mode === "dock" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                iconOnly
+                aria-label="Minimize"
+                onClick={closePanel}
               >
-                {loadingThread && chatMessages.length === 0 && (
-                  <MessageThreadSkeleton className="px-1" />
-                )}
-                {chatMessages.map((msg, index) => {
-                  const isMe =
-                    msg.senderId === "me" ||
-                    Boolean(user?.id && msg.senderId === user.id);
-                  const next = chatMessages[index + 1];
-                  const nextIsMe =
-                    next &&
-                    (next.senderId === "me" ||
-                      Boolean(user?.id && next.senderId === user.id));
-                  // WhatsApp: avatar only on the last bubble in a consecutive streak
-                  const showAvatar = !next || nextIsMe !== isMe;
+                <ChevronDown />
+              </Button>
+            ) : null}
+          </div>
 
-                  return (
-                    <div
-                      key={msg.id}
+          <div
+            className="relative flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-3"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 1px 1px, color-mix(in oklab, var(--foreground) 8%, transparent) 1px, transparent 0)",
+              backgroundSize: "18px 18px",
+            }}
+          >
+            {loadingThread && chatMessages.length === 0 && (
+              <MessageThreadSkeleton className="px-1" />
+            )}
+            {chatMessages.map((msg, index) => {
+              const isMe =
+                msg.senderId === "me" ||
+                Boolean(user?.id && msg.senderId === user.id);
+              const next = chatMessages[index + 1];
+              const nextIsMe =
+                next &&
+                (next.senderId === "me" ||
+                  Boolean(user?.id && next.senderId === user.id));
+              const showAvatar = !next || nextIsMe !== isMe;
+
+              return (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    "flex items-end gap-1.5",
+                    isMe ? "justify-end" : "justify-start",
+                  )}
+                >
+                  {!isMe && (
+                    <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center">
+                      {showAvatar ? (
+                        <UserAvatar
+                          src={conversation.user.avatar}
+                          name={conversation.user.name}
+                          size="sm"
+                          className="size-7!"
+                        />
+                      ) : null}
+                    </span>
+                  )}
+                  <div
+                    className={cn(
+                      "max-w-[78%] px-3 py-2 text-sm leading-relaxed shadow-sm",
+                      isMe
+                        ? "rounded-2xl rounded-br-md bg-foreground text-background"
+                        : "rounded-2xl rounded-bl-md bg-background text-foreground",
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap wrap-break-word">
+                      {msg.content}
+                    </p>
+                    <p
                       className={cn(
-                        "flex items-end gap-1.5",
-                        isMe ? "justify-end" : "justify-start",
+                        "mt-1 text-right text-[11px] leading-none",
+                        isMe ? "text-background/60" : "text-muted-foreground",
                       )}
                     >
-                      {!isMe && (
-                        <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center">
-                          {showAvatar ? (
-                            <UserAvatar
-                              src={conversation.user.avatar}
-                              name={conversation.user.name}
-                              size="sm"
-                              className="size-7!"
-                            />
-                          ) : null}
-                        </span>
-                      )}
-                      <div
-                        className={cn(
-                          "max-w-[78%] px-3 py-2 text-sm leading-relaxed shadow-sm",
-                          isMe
-                            ? "rounded-2xl rounded-br-md bg-foreground text-background"
-                            : "rounded-2xl rounded-bl-md bg-background text-foreground",
-                        )}
-                      >
-                        <p className="whitespace-pre-wrap wrap-break-word">
-                          {msg.content}
-                        </p>
-                        <p
-                          className={cn(
-                            "mt-1 text-right text-[11px] leading-none",
-                            isMe
-                              ? "text-background/60"
-                              : "text-muted-foreground",
-                          )}
-                        >
-                          {msg.createdAt}
-                        </p>
-                      </div>
-                      {isMe && (
-                        <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center">
-                          {showAvatar ? (
-                            <CurrentUserAvatar size="sm" className="size-7!" />
-                          ) : null}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* WhatsApp-style composer */}
-              <div className="shrink-0 border-t border-black/5 bg-background/95 px-2 py-2 backdrop-blur">
-                <form
-                  className="flex items-end gap-1.5"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void handleSend();
-                  }}
-                >
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    iconOnly
-                    className="mb-0.5 shrink-0 text-muted-foreground"
-                    aria-label="Emoji"
-                  >
-                    <Smile />
-                  </Button>
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <Input
-                      placeholder="Type a message"
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      size="sm"
-                      autoComplete="off"
-                      disabled={sending}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      iconOnly
-                      className="shrink-0 text-muted-foreground"
-                      aria-label="Attach"
-                    >
-                      <Paperclip />
-                    </Button>
+                      {msg.createdAt}
+                    </p>
                   </div>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    iconOnly
-                    aria-label="Send"
-                    disabled={!draft.trim() || sending}
-                    loading={sending}
-                    className="mb-0.5 size-10 shrink-0 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40"
-                  >
-                    <Send className="size-4" />
-                  </Button>
-                </form>
-              </div>
-            </div>
-          ) : conversationId ? (
-            <div className="flex min-h-0 flex-1 flex-col p-3">
-              <MessageThreadSkeleton />
-            </div>
-          ) : composeOpen ? (
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex items-center gap-2 border-b px-3 py-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setComposeOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <p className="text-sm font-semibold">New message</p>
-              </div>
-              <div className="min-h-0 flex-1 divide-y overflow-y-auto">
-                {people.length === 0 ? (
-                  <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    You&apos;re not following anyone yet. Follow people to
-                    start a chat.
-                  </p>
-                ) : (
-                  people.map((person) => (
-                    <button
-                      key={person.id}
-                      type="button"
-                      onClick={() => void startChatWith(person)}
-                      className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/50"
-                    >
-                      <UserAvatar
-                        src={person.avatar}
-                        name={person.name}
-                        size="sm"
-                      />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">
-                          {person.name}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          @{person.username}
-                        </p>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="flex min-h-0 flex-1 flex-col">
-              {setupError && (
-                <p className="border-b px-3 py-2 text-xs text-destructive">
-                  {setupError}
-                </p>
-              )}
-              <div className="flex items-center gap-2 px-3 pt-3">
+                  {isMe && (
+                    <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center">
+                      {showAvatar ? (
+                        <CurrentUserAvatar size="sm" className="size-7!" />
+                      ) : null}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+            <div ref={chatEndRef} />
+          </div>
+
+          <div className="shrink-0 border-t border-black/5 bg-background/95 px-2 py-2 backdrop-blur">
+            <form
+              className="flex items-end gap-1.5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleSend();
+              }}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                iconOnly
+                className="mb-0.5 shrink-0 text-muted-foreground"
+                aria-label="Emoji"
+              >
+                <Smile />
+              </Button>
+              <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Input
-                  type="search"
+                  placeholder="Type a message"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
                   size="sm"
-                  placeholder="Search messages"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  prefix={<Search className="size-4 text-muted-foreground" />}
+                  autoComplete="off"
+                  disabled={sending}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   iconOnly
-                  aria-label="Filter messages"
+                  className="shrink-0 text-muted-foreground"
+                  aria-label="Attach"
                 >
-                  <Settings2 />
+                  <Paperclip />
                 </Button>
               </div>
-
-              <Tabs
-                value={tab}
-                onValueChange={setTab}
-                variant="underline"
-                className="mt-2 flex min-h-0 flex-1 flex-col gap-0"
+              <Button
+                type="submit"
+                size="sm"
+                iconOnly
+                aria-label="Send"
+                disabled={!draft.trim() || sending}
+                loading={sending}
+                className="mb-0.5 size-10 shrink-0 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40"
               >
-                <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-3">
-                  <TabsTrigger value="focused" className="px-3">
-                    Focused
-                  </TabsTrigger>
-                  <TabsTrigger value="other" className="px-3">
-                    Other
-                  </TabsTrigger>
-                </TabsList>
+                <Send className="size-4" />
+              </Button>
+            </form>
+          </div>
+        </div>
+      ) : conversationId ? (
+        <div className="flex min-h-0 flex-1 flex-col p-3">
+          <MessageThreadSkeleton />
+        </div>
+      ) : mode === "page" ? (
+        <div className="flex flex-col items-center gap-2 px-6 text-center">
+          <MessageCircle className="size-10 text-muted-foreground/50" />
+          <p className="text-base font-semibold">Select a message</p>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            Choose a conversation from the list, or start a new one.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => void openCompose()}
+          >
+            <SquarePen className="size-4" />
+            New message
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
 
-                <TabsContent
-                  value="focused"
-                  className="mt-0 min-h-0 flex-1 overflow-y-auto data-[state=inactive]:hidden"
-                >
-                  <ConversationList
-                    items={filtered}
-                    loading={loadingList}
-                    onSelect={selectConversation}
-                  />
-                </TabsContent>
-                <TabsContent
-                  value="other"
-                  className="mt-0 min-h-0 flex-1 overflow-y-auto data-[state=inactive]:hidden"
-                >
-                  <ConversationList
-                    items={filtered}
-                    loading={loadingList}
-                    onSelect={selectConversation}
-                  />
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
+  return (
+    <div
+      className={cn(
+        mode === "page"
+          ? "flex h-[calc(100dvh-3.5rem)] w-full overflow-hidden border bg-background sm:h-[calc(100dvh-5.5rem)] sm:rounded-xl sm:shadow-sm"
+          : "fixed inset-x-0 bottom-0 z-50 flex h-[min(78vh,640px)] flex-col border bg-background shadow-2xl md:inset-x-auto md:right-4 md:w-[420px] md:border-b-0 md:rounded-t-xl",
+      )}
+    >
+      {mode === "page" ? (
+        <div className="flex min-h-0 flex-1">
+          {showListPane ? inboxPane : null}
+          {showChatPane ? chatPane : null}
+        </div>
+      ) : (
+        <>
+          {showListPane ? inboxPane : null}
+          {showChatPane ? chatPane : null}
+        </>
+      )}
     </div>
   );
 }
@@ -775,10 +886,12 @@ export function MessagingDock() {
 function ConversationList({
   items,
   loading,
+  activeId,
   onSelect,
 }: {
   items: Conversation[];
   loading?: boolean;
+  activeId?: string | null;
   onSelect: (id: string) => void;
 }) {
   if (loading) {
@@ -795,39 +908,68 @@ function ConversationList({
 
   return (
     <div className="divide-y">
-      {items.map((conv) => (
-        <button
-          key={conv.id}
-          type="button"
-          onClick={() => onSelect(conv.id)}
-          className="flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50"
-        >
-          <span className="relative shrink-0">
-            <UserAvatar
-              src={conv.user.avatar}
-              name={conv.user.name}
-              size="sm"
-            />
-            <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background bg-emerald-500" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm font-semibold">{conv.user.name}</p>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {conv.lastMessageAt}
-              </span>
+      {items.map((conv) => {
+        const active = activeId === conv.id;
+        const hasUnread = conv.unread > 0;
+        return (
+          <button
+            key={conv.id}
+            type="button"
+            onClick={() => onSelect(conv.id)}
+            className={cn(
+              "relative flex w-full items-start gap-3 px-3 py-3 text-left transition-colors",
+              active ? "bg-muted/70" : "hover:bg-muted/40",
+            )}
+          >
+            {active ? (
+              <span className="absolute inset-y-0 left-0 w-0.5 bg-emerald-600" />
+            ) : null}
+            <span className="relative shrink-0">
+              <UserAvatar
+                src={conv.user.avatar}
+                name={conv.user.name}
+                size="sm"
+              />
+              <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background bg-emerald-500" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <p
+                  className={cn(
+                    "truncate text-sm",
+                    hasUnread ? "font-semibold text-foreground" : "font-medium",
+                  )}
+                >
+                  {conv.user.name}
+                </p>
+                <span
+                  className={cn(
+                    "shrink-0 text-xs",
+                    hasUnread
+                      ? "font-semibold text-emerald-600"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {conv.lastMessageAt}
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-center gap-2">
+                <p
+                  className={cn(
+                    "min-w-0 flex-1 truncate text-sm",
+                    hasUnread
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {conv.lastMessage}
+                </p>
+                <UnreadBadge count={conv.unread} />
+              </div>
             </div>
-            <div className="mt-0.5 flex items-center gap-2">
-              <p className="truncate text-sm text-muted-foreground">
-                {conv.lastMessage}
-              </p>
-              {conv.unread > 0 && (
-                <Badge className="ml-auto shrink-0">{conv.unread}</Badge>
-              )}
-            </div>
-          </div>
-        </button>
-      ))}
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -21,7 +21,6 @@ import {
 import { useCurrentUser } from "@/components/current-user-provider";
 import { MeMenu } from "@/components/me-menu";
 import { FeedLogoMark } from "@/components/feed-logo";
-import { useMessaging } from "@/components/messaging-provider";
 import { useNotifications } from "@/components/notifications-provider";
 import { ThemeMenuRow } from "@/components/theme-switcher";
 import { UserAvatar } from "@/components/user-avatar";
@@ -106,26 +105,14 @@ function NavItem({
   );
 }
 
-function MessagingNavItem() {
-  const { expanded, toggleMessaging } = useMessaging();
-
+function MessagesNavItem({ active }: { active: boolean }) {
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      onClick={toggleMessaging}
-      aria-pressed={expanded}
-      className={cn(
-        "relative flex min-w-[72px] h-auto flex-col items-center gap-1 px-1.5 py-1.5 text-2xs font-medium",
-        expanded ? "text-foreground" : "text-muted-foreground",
-      )}
-    >
-      <MessageCircle className="size-5" />
-      <span className="max-w-[72px] truncate">Messaging</span>
-      {expanded && (
-        <Separator className="h-0.5 w-full max-w-14 bg-foreground" />
-      )}
-    </Button>
+    <NavItem
+      href="/messages"
+      label="Messages"
+      icon={MessageCircle}
+      active={active}
+    />
   );
 }
 
@@ -177,24 +164,14 @@ function MobileNavMenuItem({
   );
 }
 
-function MobileMessagingMenuItem() {
-  const { expanded, toggleMessaging } = useMessaging();
-  const { setOpenMobile } = useSidebar();
-
+function MobileMessagesMenuItem() {
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        type="button"
-        isActive={expanded}
-        onClick={() => {
-          toggleMessaging();
-          setOpenMobile(false);
-        }}
-      >
-        <MessageCircle />
-        <span>Messaging</span>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <MobileNavMenuItem
+      href="/messages"
+      label="Messages"
+      icon={MessageCircle}
+      active={isNavActive(usePathname(), "/messages")}
+    />
   );
 }
 
@@ -242,7 +219,7 @@ function MobileNavSidebarContent() {
               {...navItems[1]}
               active={isNavActive(pathname, navItems[1].href)}
             />
-            <MobileMessagingMenuItem />
+            <MobileMessagesMenuItem />
             <MobileNavMenuItem
               href="/notifications"
               label="Notifications"
@@ -397,7 +374,7 @@ export function AppHeader() {
             {...navItems[1]}
             active={isNavActive(pathname, navItems[1].href)}
           />
-          <MessagingNavItem />
+          <MessagesNavItem active={isNavActive(pathname, "/messages")} />
           <NotificationsNavItem
             active={isNavActive(pathname, "/notifications")}
           />

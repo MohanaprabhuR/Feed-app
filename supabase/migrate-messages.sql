@@ -81,6 +81,13 @@ create policy "Users can join conversations as themselves"
   to authenticated
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update their own membership" on public.conversation_members;
+create policy "Users can update their own membership"
+  on public.conversation_members for update
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 drop policy if exists "Members can view messages" on public.direct_messages;
 create policy "Members can view messages"
   on public.direct_messages for select
