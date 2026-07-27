@@ -110,9 +110,3 @@ export type Message = {
   content: string;
   createdAt: string;
 };
-
-export type TrendingTopic = {
-  id: string;
-  tag: string;
-  posts: number;
-};

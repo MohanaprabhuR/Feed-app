@@ -2,7 +2,6 @@
 
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useCurrentUser } from "@/components/current-user-provider";
@@ -249,13 +248,6 @@ export default function SearchPage() {
             )}
           </TabsContent>
         </Tabs>
-
-        <Link
-          href="/trending"
-          className="block text-center text-sm text-muted-foreground hover:text-foreground hover:underline"
-        >
-          View trending topics →
-        </Link>
       </div>
     </AppShell>
   );

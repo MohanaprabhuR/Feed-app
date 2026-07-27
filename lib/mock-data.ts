@@ -4,7 +4,6 @@ import type {
   Message,
   Notification,
   Post,
-  TrendingTopic,
   User,
 } from "./types";
 
@@ -280,14 +279,6 @@ export const messages: Record<string, Message[]> = {
     },
   ],
 };
-
-export const trendingTopics: TrendingTopic[] = [
-  { id: "t1", tag: "DesignSystems", posts: 12400 },
-  { id: "t2", tag: "MorningRoutine", posts: 8900 },
-  { id: "t3", tag: "TechNews", posts: 45200 },
-  { id: "t4", tag: "FoodPhotography", posts: 6700 },
-  { id: "t5", tag: "WeekendVibes", posts: 15600 },
-];
 
 export const blockedUsers: User[] = [
   {
