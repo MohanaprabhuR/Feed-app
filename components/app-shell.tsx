@@ -30,7 +30,7 @@ export function AppShell({
       <main
         className={cn(
           "mx-auto w-full flex-1 pb-8",
-          feedLayout && "max-w-[1128px]",
+          feedLayout && "max-w-282",
           feedLayout && !noPadding && "px-3 py-5 sm:px-5 sm:py-7",
           wide && !feedLayout && "max-w-6xl",
           !wide && !feedLayout && "max-w-2xl md:max-w-3xl",

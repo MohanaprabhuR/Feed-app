@@ -34,7 +34,7 @@ export function MeMenu({
         variant="ghost"
         disabled
         className={cn(
-          "flex min-w-[64px] h-auto flex-col items-center gap-0.5 px-1 py-1 text-[11px] text-muted-foreground",
+          "flex min-w-16 h-auto flex-col items-center gap-0.5 px-1 py-1 text-2xs text-muted-foreground",
           className
         )}
       >
@@ -52,7 +52,7 @@ export function MeMenu({
         <Button
           variant="ghost"
           className={cn(
-            "flex min-w-[64px] h-auto flex-col items-center gap-0.5 px-1 py-1 text-[11px] text-muted-foreground",
+            "flex min-w-16 h-auto flex-col items-center gap-0.5 px-1 py-1 text-2xs text-muted-foreground",
             open && "text-foreground",
             className
           )}

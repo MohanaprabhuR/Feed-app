@@ -17,8 +17,8 @@ function EngagementFooterSkeleton() {
       <div className={feedCardStatsClass}>
         <div className="flex items-center gap-2">
           <div className="flex items-center -space-x-1.5">
-            <Skeleton className="size-[18px] rounded-full ring-2 ring-card" />
-            <Skeleton className="size-[18px] rounded-full ring-2 ring-card" />
+            <Skeleton className="size-4.5 rounded-full ring-2 ring-card" />
+            <Skeleton className="size-4.5 rounded-full ring-2 ring-card" />
           </div>
           <Skeleton className="h-3.5 w-8" />
         </div>
@@ -30,7 +30,7 @@ function EngagementFooterSkeleton() {
             key={index}
             className={cn(
               "h-8 rounded-md",
-              index === 0 ? "w-[72px]" : "w-10",
+              index === 0 ? "w-18" : "w-10",
             )}
           />
         ))}
@@ -100,7 +100,7 @@ export function ComposerSkeleton({ className }: { className?: string }) {
         <div className="flex items-center justify-between gap-2 border-t pt-3">
           <div className="flex flex-1 items-center justify-around gap-1">
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-8 w-[88px] rounded-md" />
+              <Skeleton key={index} className="h-8 w-22 rounded-md" />
             ))}
           </div>
         </div>
@@ -139,10 +139,10 @@ export function SidebarProfileSkeleton({
 }) {
   return (
     <div className={cn("flex flex-col items-center text-center", className)}>
-      <Skeleton className="size-[4.5rem] rounded-full ring-4 ring-card" />
+      <Skeleton className="size-18 rounded-full ring-4 ring-card" />
       <Skeleton className="mt-3 h-5 w-32" />
-      <Skeleton className="mt-2 h-4 w-full max-w-[200px]" />
-      <Skeleton className="mt-1.5 h-4 w-4/5 max-w-[180px]" />
+      <Skeleton className="mt-2 h-4 w-full max-w-50" />
+      <Skeleton className="mt-1.5 h-4 w-4/5 max-w-45" />
     </div>
   );
 }
@@ -185,7 +185,7 @@ export function SidebarLeftSkeleton({ className }: { className?: string }) {
               )}
             >
               <Skeleton className="size-9 shrink-0 rounded-md" />
-              <Skeleton className="h-4 flex-1 max-w-[120px]" />
+              <Skeleton className="h-4 flex-1 max-w-30" />
               <Skeleton className="size-4 shrink-0 rounded-sm" />
             </div>
           ))}
@@ -281,7 +281,7 @@ export function UserRowSkeleton({ className }: { className?: string }) {
         <Skeleton className="h-4 w-32 max-w-full" />
         <Skeleton className="h-3 w-24" />
       </div>
-      <Skeleton className="h-8 w-[76px] shrink-0 rounded-md" />
+      <Skeleton className="h-8 w-19 shrink-0 rounded-md" />
     </div>
   );
 }
@@ -406,7 +406,7 @@ export function ConversationRowSkeleton({
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-3 w-10" />
         </div>
-        <Skeleton className="h-3 w-3/4 max-w-[220px]" />
+        <Skeleton className="h-3 w-3/4 max-w-55" />
       </div>
     </div>
   );

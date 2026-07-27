@@ -18,7 +18,7 @@ const EmojiPicker = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[350px] w-[350px] items-center justify-center text-sm text-muted-foreground">
+      <div className="flex h-87.5 w-87.5 items-center justify-center text-sm text-muted-foreground">
         Loading emojis…
       </div>
     ),

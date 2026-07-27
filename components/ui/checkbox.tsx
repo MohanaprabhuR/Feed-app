@@ -13,13 +13,13 @@ export interface CheckboxProps extends React.ComponentProps<
 }
 
 const checkboxSizeMap = {
-  sm: "size-[14px]",
+  sm: "size-3.5",
   md: "size-4",
 };
 
 const labelSizeMap = {
   sm: "text-base  p-1.5",
-  md: "text-lg  px-2 py-[7px]",
+  md: "text-lg  px-2 py-1.75",
 };
 
 function Checkbox({

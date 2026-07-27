@@ -25,14 +25,14 @@ function AdvancedCell({
   ...props
 }: AdvancedCellProps) {
   const sizeClasses = {
-    xs: "max-w-[88px]",
-    sm: "max-w-[104px]",
-    md: "max-w-[120px]",
-    lg: "max-w-[136px]",
-    xl: "max-w-[144px]",
-    "2xl": "max-w-[168px]",
-    "3xl": "max-w-[184px]",
-    "4xl": "max-w-[216px]",
+    xs: "max-w-22",
+    sm: "max-w-26",
+    md: "max-w-30",
+    lg: "max-w-34",
+    xl: "max-w-36",
+    "2xl": "max-w-42",
+    "3xl": "max-w-46",
+    "4xl": "max-w-54",
     auto: "w-fit",
   }[size];
 

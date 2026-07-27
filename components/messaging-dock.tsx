@@ -82,7 +82,7 @@ function MessagingQueryRedirect() {
 function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-semibold leading-none text-white">
+    <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-2xs font-semibold leading-none text-white">
       {count > 99 ? "99+" : count}
     </span>
   );
@@ -553,7 +553,10 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
     }
   }
 
-  if (mode === "dock" && hiddenOnRoutes.some((route) => pathname.startsWith(route))) {
+  if (
+    mode === "dock" &&
+    hiddenOnRoutes.some((route) => pathname.startsWith(route))
+  ) {
     return null;
   }
 
@@ -571,7 +574,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
       >
         <MessageCircle className="size-6" />
         {totalUnread > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[11px] font-semibold text-white">
+          <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-2xs font-semibold text-white">
             {totalUnread > 99 ? "99+" : totalUnread}
           </span>
         ) : null}
@@ -588,7 +591,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
       className={cn(
         "flex min-h-0 flex-col bg-background",
         mode === "page" &&
-          "w-full border-r md:w-[360px] md:shrink-0 lg:w-[380px]",
+          "w-full border-r md:w-90 md:shrink-0 lg:w-95",
         mode === "page" && conversation && "hidden md:flex",
         mode === "dock" && "min-h-0 flex-1",
       )}
@@ -613,7 +616,13 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
             <UnreadBadge count={totalUnread} />
           </div>
         )}
-        <Button type="button" variant="ghost" size="sm" iconOnly aria-label="More">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          iconOnly
+          aria-label="More"
+        >
           <MoreHorizontal />
         </Button>
         <Button
@@ -673,7 +682,9 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                     size="sm"
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{person.name}</p>
+                    <p className="truncate text-sm font-semibold">
+                      {person.name}
+                    </p>
                     <p className="truncate text-xs text-muted-foreground">
                       @{person.username}
                     </p>
@@ -753,7 +764,13 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                 @{conversation.user.username}
               </p>
             </div>
-            <Button type="button" variant="ghost" size="sm" iconOnly aria-label="More">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              iconOnly
+              aria-label="More"
+            >
               <MoreHorizontal />
             </Button>
             {mode === "dock" ? (
@@ -825,7 +842,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                     </p>
                     <p
                       className={cn(
-                        "mt-1 text-right text-[11px] leading-none",
+                        "mt-1 text-right text-2xs leading-none",
                         isMe ? "text-background/60" : "text-muted-foreground",
                       )}
                     >
@@ -904,7 +921,12 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
           <p className="max-w-xs text-sm text-muted-foreground">
             This chat may have been removed or you don&apos;t have access.
           </p>
-          <Button type="button" variant="outline" size="sm" onClick={closeThreadView}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={closeThreadView}
+          >
             Back to messages
           </Button>
         </div>
@@ -919,7 +941,12 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
           <p className="max-w-xs text-sm text-muted-foreground">
             Could not load this chat. Try again from your inbox.
           </p>
-          <Button type="button" variant="outline" size="sm" onClick={closeThreadView}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={closeThreadView}
+          >
             Back to messages
           </Button>
         </div>
@@ -950,7 +977,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
       className={cn(
         mode === "page"
           ? "flex h-[calc(100dvh-3.5rem)] w-full overflow-hidden border bg-background sm:h-[calc(100dvh-5.5rem)] sm:rounded-xl sm:shadow-sm"
-          : "fixed inset-x-0 bottom-0 z-50 flex h-[min(78vh,640px)] flex-col border bg-background shadow-2xl md:inset-x-auto md:right-4 md:w-[420px] md:border-b-0 md:rounded-t-xl",
+          : "fixed inset-x-0 bottom-0 z-50 flex h-[min(78vh,640px)] flex-col border bg-background shadow-2xl md:inset-x-auto md:right-4 md:w-105 md:border-b-0 md:rounded-t-xl",
       )}
     >
       {mode === "page" ? (

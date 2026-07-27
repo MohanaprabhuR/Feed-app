@@ -227,7 +227,7 @@ export function ReactionButton({
                 className="relative flex flex-col items-center"
               >
                 {active && (
-                  <span className="absolute -top-7 rounded-md bg-foreground px-2 py-0.5 text-[11px] font-medium text-background whitespace-nowrap">
+                  <span className="absolute -top-7 rounded-md bg-foreground px-2 py-0.5 text-2xs font-medium text-background whitespace-nowrap">
                     {item.label}
                   </span>
                 )}

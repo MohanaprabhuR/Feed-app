@@ -17,7 +17,7 @@ type InputProps = Omit<
 };
 
 const baseStyles =
-  "w-full min-w-0 transition-[color,box-shadow,border]  placeholder:text-primary/50 file:inline-flex file:pr-1 file:border-r file:border-r-[1px] file:border-primary/20 file:bg-transparent aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:focus-visible:outline-destructive dark:aria-invalid:focus-visible:outline-destructive [&:-webkit-autofill]:bg-autofill [&:-webkit-autofill]:text-accent-foreground disabled:bg-primary/3 disabled:border-none disabled:text-primary/20 disabled:cursor-not-allowed disabled:pointer-events-none ";
+  "w-full min-w-0 transition-[color,box-shadow,border]  placeholder:text-primary/50 file:inline-flex file:pr-1 file:border-r file:border-r-0.25 file:border-primary/20 file:bg-transparent aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:focus-visible:outline-destructive dark:aria-invalid:focus-visible:outline-destructive [&:-webkit-autofill]:bg-autofill [&:-webkit-autofill]:text-accent-foreground disabled:bg-primary/3 disabled:border-none disabled:text-primary/20 disabled:cursor-not-allowed disabled:pointer-events-none ";
 
 const variantBaseMap: Record<VariantType, string> = {
   default:
@@ -58,13 +58,13 @@ const sizeMap = {
   md: {
     input:
       "text-base font-normal rounded-lg tracking-4 leading-tight px-2.5 py-2 h-8",
-    prefix: "pl-[34px]",
-    suffix: "pr-[34px]",
+    prefix: "pl-8.5",
+    suffix: "pr-8.5",
     iconOffset: "left-2.5 right-2.5",
   },
   lg: {
     input:
-      "text-lg font-normal rounded-xl tracking-4 leading-tight px-3 py-[11px] h-10",
+      "text-lg font-normal rounded-xl tracking-4 leading-tight px-3 py-2.75 h-10",
     prefix: "pl-9",
     suffix: "pr-9",
     iconOffset: "left-3 right-3",
@@ -82,7 +82,7 @@ const iconSizeMap = {
   sm: "size-4",
   md: "size-4",
   lg: "size-4",
-  xl: "size-[18px]",
+  xl: "size-4.5",
 };
 
 function Input({

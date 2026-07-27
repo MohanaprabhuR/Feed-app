@@ -411,7 +411,7 @@ export function EditPostDialog({
         size="lg"
         className={cn(
           "flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0",
-          isArticle ? "sm:max-w-3xl" : "sm:max-w-[552px]",
+          isArticle ? "sm:max-w-3xl" : "sm:max-w-138",
         )}
       >
         <DialogHeader className="border-b px-4 py-3 pr-12">

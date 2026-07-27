@@ -208,11 +208,11 @@ export function DateTimePickerPopover({
       <PopoverContent
         side="bottom"
         align="start"
-        className="w-[560px] flex flex-col overflow-hidden p-0"
+        className="w-140 flex flex-col overflow-hidden p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-1 min-h-0">
-          <div className="flex flex-col min-w-[320px]">
+          <div className="flex flex-col min-w-80">
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -249,7 +249,7 @@ export function DateTimePickerPopover({
 
           <Divider orientation="vertical" className="self-stretch" />
 
-          <div className="flex min-w-[240px] flex-1 items-center px-3">
+          <div className="flex min-w-60 flex-1 items-center px-3">
             <div className="w-full rounded-2xl">
               <div className="text-lg font-normal tracking-4 text-foreground">
                 Time
@@ -260,7 +260,7 @@ export function DateTimePickerPopover({
                   onValueChange={setHour12}
                   disabled={disabled}
                 >
-                  <SelectTrigger className="w-[72px] rounded-xl" size="sm">
+                  <SelectTrigger className="w-18 rounded-xl" size="sm">
                     <SelectValue placeholder="01" />
                   </SelectTrigger>
                   <SelectContent>
@@ -277,7 +277,7 @@ export function DateTimePickerPopover({
                   onValueChange={setMinute}
                   disabled={disabled}
                 >
-                  <SelectTrigger className="w-[72px] rounded-xl" size="sm">
+                  <SelectTrigger className="w-18 rounded-xl" size="sm">
                     <SelectValue placeholder="00" />
                   </SelectTrigger>
                   <SelectContent>
@@ -294,7 +294,7 @@ export function DateTimePickerPopover({
                   onValueChange={(next) => setPeriod(next as "AM" | "PM")}
                   disabled={disabled}
                 >
-                  <SelectTrigger className="w-[88px] rounded-xl" size="sm">
+                  <SelectTrigger className="w-22 rounded-xl" size="sm">
                     <SelectValue placeholder="AM" />
                   </SelectTrigger>
                   <SelectContent>

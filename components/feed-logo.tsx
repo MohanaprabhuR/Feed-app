@@ -8,7 +8,7 @@ export function FeedLogoMark({ className }: FeedLogoMarkProps) {
   return (
     <span
       className={cn(
-        "relative flex size-10 items-center justify-center overflow-hidden rounded-[0.7rem] sm:size-11",
+        "relative flex size-10 items-center justify-center overflow-hidden rounded-xl sm:size-11",
         "border border-white/25 bg-foreground/75 font-sans text-lg font-bold tracking-tight text-background",
         "shadow-[inset_0_1px_0_0_rgba(255,255,255,0.22),0_4px_14px_rgba(0,0,0,0.14)]",
         "backdrop-blur-md supports-backdrop-filter:bg-foreground/55",
@@ -32,7 +32,7 @@ export function FeedMark({ className }: FeedMarkProps) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
       <FeedLogoMark />
-      <span className="font-serif text-2xl font-semibold tracking-tight text-foreground sm:text-[1.7rem]">
+      <span className="font-serif text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
         Feed
       </span>
     </div>

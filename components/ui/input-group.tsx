@@ -250,9 +250,9 @@ function InputGroupTextarea({
   };
 
   const sizeClasses = {
-    sm: "min-h-[72px] px-2 py-1.5 text-sm",
-    md: "min-h-[102px] px-3 py-2.5 text-base",
-    lg: "min-h-[126px] px-3.5 py-3 text-lg rounded-xl",
+    sm: "min-h-18 px-2 py-1.5 text-sm",
+    md: "min-h-25.5 px-3 py-2.5 text-base",
+    lg: "min-h-31.5 px-3.5 py-3 text-lg rounded-xl",
   };
 
   return (

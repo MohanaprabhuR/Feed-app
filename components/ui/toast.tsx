@@ -22,7 +22,7 @@ function Toast({
       role="alert"
       className={cn(
         "relative shadow-2xl text-background bg-accent-foreground px-4 py-2.5  rounded-xl  items-center flex w-full  flex-1 has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] grid-cols-[0_1fr] has-[>svg]:gap-x-2.5 gap-x-2.5 gap-y-0.5 [&>svg]:size-4 [&>svg]:text-current",
-        longText && "px-4 py-[11px] ",
+        longText && "px-4 py-2.75 ",
         className
       )}
       {...props}

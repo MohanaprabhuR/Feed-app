@@ -9,23 +9,23 @@ type RadioSize = "sm" | "md";
 type LabelPadding = "sm" | "md";
 
 const radioSizeMap: Record<RadioSize, string> = {
-  sm: "w-[14px] h-[14px]",
+  sm: "w-3.5 h-3.5",
   md: "w-4 h-4",
 };
 
 const iconSizeMap: Record<RadioSize, string> = {
   sm: "w-1.5 h-1.5",
-  md: "w-[7px] h-[7px]",
+  md: "w-1.75 h-1.75",
 };
 
 const defaultLabelMap: Record<RadioSize, string> = {
   sm: "p-1.5 text-base",
-  md: "px-2 py-[7px] text-lg",
+  md: "px-2 py-1.75 text-lg",
 };
 
 const labelPaddingMap: Record<LabelPadding, string> = {
   sm: "p-1.5",
-  md: "px-2 py-[7px]",
+  md: "px-2 py-1.75",
 };
 
 function RadioGroup({

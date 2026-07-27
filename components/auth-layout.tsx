@@ -25,12 +25,12 @@ function AuthBrandPanel() {
         <FeedMark />
 
         <div className="mt-10 max-w-lg">
-          <h2 className="text-[2rem] font-semibold leading-tight tracking-tight text-foreground xl:text-[2.35rem]">
+          <h2 className="text-4xl font-semibold leading-tight tracking-tight text-foreground xl:text-5xl">
             Share updates, follow people, and stay in the conversation
           </h2>
         </div>
 
-        <div className="relative mx-auto mt-12 w-full max-w-[420px] flex-1">
+        <div className="relative mx-auto mt-12 w-full max-w-105 flex-1">
           <div className="auth-preview-stack relative space-y-3">
             <div className="auth-preview-float auth-preview-float--1">
               <div className="auth-preview-card auth-preview-card--1 rounded-2xl border border-black/5 bg-background p-4 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)]">
@@ -137,10 +137,10 @@ export function AuthLayout({
         </div>
 
         <div
-          className={cn("mx-auto w-full max-w-[420px] space-y-7", className)}
+          className={cn("mx-auto w-full max-w-105 space-y-7", className)}
         >
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-[2rem]">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               {title}
             </h1>
             {subtitle ? (

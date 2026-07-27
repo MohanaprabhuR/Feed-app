@@ -38,16 +38,16 @@ function Switch({
 
   const sizes = {
     sm: {
-      root: "h-4 w-[26px] p-0.5",
+      root: "h-4 w-6.5 p-0.5",
       thumb:
         "size-3 translate-x-[calc(100%-(2px))] data-[state=unchecked]:translate-x-0",
       wrapper: "gap-x-2 p-1.5 text-base tracking-4 leading-tight",
       description: "text-base tracking-4 leading-tight",
     },
     md: {
-      root: "h-5 w-8 p-[3px]",
+      root: "h-5 w-8 p-0.75",
       thumb:
-        "size-[14px] translate-x-[calc(100%-(2px))] data-[state=unchecked]:translate-x-0",
+        "size-3.5 translate-x-[calc(100%-(2px))] data-[state=unchecked]:translate-x-0",
       wrapper: "gap-x-2.5 px-2 py-1.5 text-lg leading-tight tracking-4",
       description: "text-lg leading-tight tracking-4",
     },

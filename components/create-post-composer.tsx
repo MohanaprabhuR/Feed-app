@@ -513,7 +513,7 @@ export function CreatePostComposer({
       >
         <DialogContent
           size="lg"
-          className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[552px]"
+          className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-138"
         >
           <DialogTitle className="sr-only">Create a post</DialogTitle>
 

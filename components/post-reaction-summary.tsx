@@ -34,7 +34,7 @@ function ReactionBadge({
   return (
     <span
       className={cn(
-        "relative flex size-[18px] items-center justify-center rounded-full text-[11px] leading-none ring-2 ring-background",
+        "relative flex size-4.5 items-center justify-center rounded-full text-2xs leading-none ring-2 ring-background",
         meta.bg,
         overlap && "-ml-1.5",
       )}

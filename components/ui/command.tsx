@@ -45,7 +45,7 @@ function CommandDialog({
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
       <DialogContent className="overflow-hidden p-0 sm:max-w-lg [&>button:last-child]:hidden">
-        <Command className="[&_[cmdk-group-heading]]:text-muted-foreground tracking-4 leading-normal max-h-[100svh] **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2">
+        <Command className="[&_[cmdk-group-heading]]:text-muted-foreground tracking-4 leading-normal max-h-svh **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2">
           {children}
         </Command>
       </DialogContent>
@@ -156,7 +156,7 @@ function CommandShortcut({
     <kbd
       data-slot="command-shortcut"
       className={cn(
-        "bg-background  tracking-4 leading-normal text-muted-foreground/70 ms-auto -me-1 inline-flex h-5 max-h-full items-center rounded border px-1 font-[inherit] text-[0.625rem] font-medium",
+        "bg-background  tracking-4 leading-normal text-muted-foreground/70 ms-auto -me-1 inline-flex h-5 max-h-full items-center rounded border px-1 font-[inherit] text-2xs font-medium",
         className
       )}
       {...props}

@@ -81,7 +81,7 @@ function NavItem({
       asChild
       variant="ghost"
       className={cn(
-        "relative flex min-w-[72px] h-auto flex-col items-center gap-1 px-1.5 py-1.5 text-2xs font-medium",
+        "relative flex min-w-18 h-auto flex-col items-center gap-1 px-1.5 py-1.5 text-2xs font-medium",
         active ? "text-foreground" : "text-muted-foreground",
       )}
     >
@@ -96,7 +96,7 @@ function NavItem({
             {badge > 9 ? "9+" : badge}
           </Badge>
         ) : null}
-        <span className="max-w-[72px] truncate">{label}</span>
+        <span className="max-w-18 truncate">{label}</span>
         {active && (
           <Separator className="h-0.5 w-full max-w-14 bg-foreground" />
         )}
@@ -344,16 +344,16 @@ export function AppHeader() {
 
   return (
     <Header className="sticky top-0 z-40 h-14 w-full border-b bg-background/95 px-3 backdrop-blur supports-backdrop-filter:bg-background/80 sm:px-5">
-      <div className="mx-auto flex h-full w-full max-w-[1128px] items-center gap-3">
+      <div className="mx-auto flex h-full w-full max-w-282 items-center gap-3">
         <Link
           href="/feed"
           aria-label="Feed home"
-          className="inline-flex shrink-0 rounded-[0.7rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <FeedLogoMark />
         </Link>
 
-        <div className="hidden max-w-[280px] flex-1 lg:block">
+        <div className="hidden max-w-70 flex-1 lg:block">
           <Input
             type="search"
             size="sm"

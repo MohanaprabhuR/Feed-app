@@ -63,7 +63,7 @@ export function PostEventCard({
     >
       <div className="flex gap-3 p-4">
         <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <span className="text-[10px] font-semibold uppercase leading-none">
+          <span className="text-2xs font-semibold uppercase leading-none">
             {new Date(event.startsAt).toLocaleString(EVENT_DATE_LOCALE, {
               month: "short",
             })}

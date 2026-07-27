@@ -10,7 +10,7 @@ export default function MessagesLayout({
 }) {
   return (
     <AppShell noPadding feedLayout>
-      <div className="mx-auto w-full max-w-[1128px] sm:px-5 sm:py-5">
+      <div className="mx-auto w-full max-w-282 sm:px-5 sm:py-5">
         <Suspense fallback={null}>
           <MessagingPagePanel />
         </Suspense>

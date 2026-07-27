@@ -33,7 +33,7 @@ export function MeMenuPanel({ user, onClose }: MeMenuPanelProps) {
   }
 
   return (
-    <div className="w-[300px] max-w-full p-2">
+    <div className="w-75 max-w-full p-2">
       <Item size="sm">
         <UserAvatar src={user.avatar} name={user.name} size="sm" />
         <ItemContent>
