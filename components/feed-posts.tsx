@@ -24,6 +24,7 @@ import {
   PAGE_LOAD_MIN_DELAY_MS,
   withMinimumDelay,
 } from "@/lib/minimum-delay";
+import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
@@ -111,6 +112,30 @@ export function FeedPosts({
     if (serverLoaded) return;
     void loadPosts({ showLoading: true });
   }, [serverLoaded, loadPosts]);
+
+  // Live feed: when anyone else publishes a post, refetch so it appears
+  // without a manual refresh. The current user's own post is already added
+  // optimistically by handlePosted, so skip those events.
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("feed-posts")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "posts" },
+        (payload) => {
+          const authorId = (payload.new as { author_id?: string } | null)
+            ?.author_id;
+          if (authorId && authorId === user?.id) return;
+          void loadPosts();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id, loadPosts]);
 
   return (
     <div className="min-w-0 space-y-3">

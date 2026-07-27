@@ -1148,7 +1148,7 @@ declare
   t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['post_likes', 'direct_messages', 'notifications'] loop
+    foreach t in array array['posts', 'post_likes', 'direct_messages', 'notifications'] loop
       if not exists (
         select 1
         from pg_publication_tables
