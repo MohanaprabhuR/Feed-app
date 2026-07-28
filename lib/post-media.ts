@@ -63,21 +63,6 @@ export function validatePostAttachment(file: File): string | null {
   return null;
 }
 
-function getFileExtension(file: File) {
-  const fromName = file.name.split(".").pop()?.toLowerCase();
-  if (fromName) return fromName;
-
-  if (file.type === "image/jpeg") return "jpg";
-  if (file.type === "image/png") return "png";
-  if (file.type === "image/gif") return "gif";
-  if (file.type === "image/webp") return "webp";
-  if (file.type === "video/mp4") return "mp4";
-  if (file.type === "video/webm") return "webm";
-  if (file.type === "video/quicktime") return "mov";
-  if (file.type === "application/pdf") return "pdf";
-  return "bin";
-}
-
 function sanitizeFileName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_");
 }

@@ -27,7 +27,9 @@ export function usePostReactionsRealtime(
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel(`post-likes:${postId}`)
+      .channel(
+        `post-likes:${postId}:${Date.now()}:${Math.random().toString(16).slice(2)}`,
+      )
       .on(
         "postgres_changes",
         {

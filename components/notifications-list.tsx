@@ -10,7 +10,6 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
-import { useMessaging } from "@/components/messaging-provider";
 import { useNotifications } from "@/components/notifications-provider";
 import { UserAvatar } from "@/components/user-avatar";
 import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
@@ -44,7 +43,6 @@ const iconMap = {
 export function NotificationsList() {
   const { user, loading: userLoading } = useCurrentUser();
   const { markRead, markAllRead, refreshUnreadCount } = useNotifications();
-  const { openMessaging } = useMessaging();
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,10 +93,6 @@ export function NotificationsList() {
       } catch {
         // Still navigate even if mark-read fails.
       }
-    }
-
-    if (notification.type === "message" && notification.conversationId) {
-      openMessaging(notification.conversationId);
     }
   }
 
@@ -183,9 +177,7 @@ export function NotificationsList() {
           return (
             <Link
               key={notification.id}
-              href={
-                notification.type === "message" ? "/feed" : href
-              }
+              href={href}
               onClick={() => void handleOpen(notification)}
               className={cn(
                 "flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-muted/50 sm:px-5",

@@ -5,7 +5,6 @@ import { Bookmark, ChevronRight, Users } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { ProfileTrigger } from "@/components/profile-trigger";
 import { UserAvatar } from "@/components/user-avatar";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Item,
@@ -16,7 +15,10 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
-import { SidebarProfileSkeleton, SidebarStatsSkeleton } from "@/components/skeletons";
+import {
+  SidebarProfileSkeleton,
+  SidebarStatsSkeleton,
+} from "@/components/skeletons";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 
 const quickLinks = [
@@ -71,14 +73,13 @@ export function FeedLeftSidebar() {
                 <ItemDescription>Post impressions</ItemDescription>
                 <ItemTitle>1,240</ItemTitle>
               </Item>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-auto px-0 text-sm"
-                asChild
+
+              <Link
+                href="/following?tab=followers"
+                className="text-sm hover:underline text-foreground hover:text-primary mt-3"
               >
-                <Link href="/following?tab=followers">View all analytics</Link>
-              </Button>
+                View all analytics
+              </Link>
             </ItemGroup>
           )}
         </CardContent>

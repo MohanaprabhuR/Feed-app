@@ -4,7 +4,6 @@ import { Slot } from "@radix-ui/react-slot";
 import { ChevronRight, Ellipsis } from "lucide-react";
 import { cn } from "@/lib/utils";
 type BreadcrumbSize = "sm" | "md";
-type SeparatorType = "chevron" | "slash";
 
 const BreadcrumbContext = React.createContext<{ size: BreadcrumbSize }>({
   size: "sm",

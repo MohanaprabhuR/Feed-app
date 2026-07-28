@@ -35,14 +35,12 @@ export type ProfileMode = "view" | "edit" | "general";
 type ProfileViewProps = {
   userId: string;
   initialMode?: ProfileMode;
-  onModeChange?: (mode: ProfileMode) => void;
   onUserLoaded?: (user: User | null) => void;
 };
 
 export function ProfileView({
   userId,
   initialMode = "view",
-  onModeChange,
   onUserLoaded,
 }: ProfileViewProps) {
   const router = useRouter();
@@ -52,11 +50,6 @@ export function ProfileView({
   const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [followPending, setFollowPending] = useState(false);
-
-  function setProfileMode(next: ProfileMode) {
-    setMode(next);
-    onModeChange?.(next);
-  }
 
   useEffect(() => {
     let cancelled = false;
@@ -106,8 +99,10 @@ export function ProfileView({
   }, [userId, currentUser, onUserLoaded]);
 
   useEffect(() => {
+    // Sync internal mode to the prop when the target user changes. Uses setMode
+    // (not setProfileMode) so re-syncing to a prop doesn't re-notify the parent.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sync mode when target user changes
-    setProfileMode(initialMode);
+    setMode(initialMode);
   }, [userId, initialMode]);
 
   if (userLoading) {

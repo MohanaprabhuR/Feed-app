@@ -73,17 +73,6 @@ export interface ButtonProps
   showIcon?: boolean;
 }
 
-const iconSizeMap: Record<
-  NonNullable<ButtonProps["size"]>,
-  { width: number; height: number }
-> = {
-  sm: { width: 16, height: 16 },
-  md: { width: 18, height: 18 },
-  lg: { width: 20, height: 20 },
-  xl: { width: 24, height: 24 },
-  "2xl": { width: 24, height: 24 },
-};
-
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {

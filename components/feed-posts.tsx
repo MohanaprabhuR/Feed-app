@@ -119,7 +119,7 @@ export function FeedPosts({
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel("feed-posts")
+      .channel(`feed-posts:${Date.now()}:${Math.random().toString(16).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "posts" },

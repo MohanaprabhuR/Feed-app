@@ -81,6 +81,11 @@ export function NotificationsProvider({
     }
   }, [userId]);
 
+  const refreshUnreadCountRef = useRef(refreshUnreadCount);
+  useEffect(() => {
+    refreshUnreadCountRef.current = refreshUnreadCount;
+  }, [refreshUnreadCount]);
+
   // Fire a browser notification + WhatsApp-style in-app toast for a freshly
   // inserted notification row. Refs keep this stable so the realtime channel
   // never re-subscribes on navigation.
@@ -111,7 +116,15 @@ export function NotificationsProvider({
         title: actorName ?? "FeedApp",
         message: row.message,
         avatar: actorAvatar,
-        onClick: () => routerRef.current.push(href),
+        onClick: () => {
+          // Reading via the toast clears the unread state everywhere: the DB
+          // update fires a realtime UPDATE that refreshes the bell badge, and
+          // the notifications list reloads it as read.
+          void markNotificationRead(supabase, row.id, row.recipient_id)
+            .then(() => refreshUnreadCountRef.current())
+            .catch(() => {});
+          routerRef.current.push(href);
+        },
       });
     },
     [],
@@ -132,7 +145,9 @@ export function NotificationsProvider({
 
     const supabase = createClient();
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(
+        `notifications:${userId}:${Date.now()}:${Math.random().toString(16).slice(2)}`,
+      )
       .on(
         "postgres_changes",
         {
