@@ -380,7 +380,8 @@ export function CreatePostComposer({
         event,
         celebration,
       });
-      await refresh();
+      // Profile counters are nice-to-have; don't fail a successful publish.
+      void refresh().catch(() => {});
 
       const publisherName = user.name?.trim() || user.username || "You";
 

@@ -1,7 +1,8 @@
 "use client";
 
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useCurrentUser } from "@/components/current-user-provider";
@@ -50,23 +51,33 @@ async function searchFeedPosts(query: string): Promise<Post[]> {
     const content = post.content?.toLowerCase() ?? "";
     const authorName = post.author?.name?.toLowerCase() ?? "";
     const authorUsername = post.author?.username?.toLowerCase() ?? "";
+    const eventTitle = post.event?.title?.toLowerCase() ?? "";
     return (
       content.includes(trimmed) ||
       authorName.includes(trimmed) ||
-      authorUsername.includes(trimmed)
+      authorUsername.includes(trimmed) ||
+      eventTitle.includes(trimmed)
     );
   });
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const { user } = useCurrentUser();
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q")?.trim() ?? "";
+  const [query, setQuery] = useState(initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [users, setUsers] = useState<User[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const next = searchParams.get("q")?.trim() ?? "";
+    setQuery(next);
+    setDebouncedQuery(next);
+  }, [searchParams]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -109,146 +120,160 @@ export default function SearchPage() {
   const showPostsLoading = loadingPosts;
 
   return (
+    <div className={cn(pageColumnClass, pageStackClass)}>
+      <Input
+        type="search"
+        size="lg"
+        variant="outline"
+        placeholder="Search users, posts..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        prefix={<Search className="size-4 text-muted-foreground" />}
+      />
+
+      {error ? (
+        <p className="px-1 text-sm text-destructive">{error}</p>
+      ) : null}
+
+      <Tabs defaultValue="all">
+        <TabsList className="w-full">
+          <TabsTrigger value="all" className="flex-1">
+            All
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex-1">
+            Users
+          </TabsTrigger>
+          <TabsTrigger value="posts" className="flex-1">
+            Posts
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-4 space-y-6">
+          {!debouncedQuery ? (
+            <Empty className="border bg-card py-14">
+              <EmptyContent>
+                <EmptyTitle>Search Feed</EmptyTitle>
+                <EmptyDescription>
+                  Find registered people and posts by name, username, or
+                  keywords.
+                </EmptyDescription>
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <h3 className="px-1 text-sm font-medium text-muted-foreground">
+                  Users
+                </h3>
+                {showUsersLoading ? (
+                  <div className={cn(pageListClass, "px-4")}>
+                    <UserListSkeleton count={3} />
+                  </div>
+                ) : users.length > 0 ? (
+                  <div className={cn(pageListClass, "px-4")}>
+                    {users.map((matchedUser) => (
+                      <UserListItem key={matchedUser.id} user={matchedUser} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="px-1 text-sm text-muted-foreground">
+                    No users matched.
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <h3 className="px-1 text-sm font-medium text-muted-foreground">
+                  Posts
+                </h3>
+                {showPostsLoading ? (
+                  <FeedListSkeleton count={2} />
+                ) : posts.length > 0 ? (
+                  <div className={pageStackClass}>
+                    {posts.map((post, index) => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        revealDelay={Math.min(index * 60, 300)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="px-1 text-sm text-muted-foreground">
+                    No posts matched.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="users" className="mt-4">
+          {showUsersLoading ? (
+            <div className={cn(pageListClass, "px-4")}>
+              <UserListSkeleton count={5} />
+            </div>
+          ) : users.length > 0 ? (
+            <div className={cn(pageListClass, "px-4")}>
+              {users.map((matchedUser) => (
+                <UserListItem key={matchedUser.id} user={matchedUser} />
+              ))}
+            </div>
+          ) : (
+            <Empty className="border bg-card py-14">
+              <EmptyContent>
+                <EmptyTitle>No users found</EmptyTitle>
+                <EmptyDescription>
+                  {debouncedQuery
+                    ? "Try a different name or username."
+                    : "No registered users yet."}
+                </EmptyDescription>
+              </EmptyContent>
+            </Empty>
+          )}
+        </TabsContent>
+
+        <TabsContent value="posts" className="mt-4 space-y-4">
+          {showPostsLoading ? (
+            <FeedListSkeleton count={3} />
+          ) : posts.length > 0 ? (
+            posts.map((post, index) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                revealDelay={Math.min(index * 60, 300)}
+              />
+            ))
+          ) : (
+            <Empty className="border bg-card py-14">
+              <EmptyContent>
+                <EmptyTitle>No posts found</EmptyTitle>
+                <EmptyDescription>
+                  {debouncedQuery
+                    ? "Try different keywords."
+                    : "No posts yet."}
+                </EmptyDescription>
+              </EmptyContent>
+            </Empty>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
     <AppShell noPadding feedLayout>
       <PageHeader title="Search" backHref="/feed" />
-      <div className={cn(pageColumnClass, pageStackClass)}>
-        <Input
-          type="search"
-          size="lg"
-          variant="outline"
-          placeholder="Search users, posts..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          prefix={<Search className="size-4 text-muted-foreground" />}
-        />
-
-        {error ? (
-          <p className="px-1 text-sm text-destructive">{error}</p>
-        ) : null}
-
-        <Tabs defaultValue="all">
-          <TabsList className="w-full">
-            <TabsTrigger value="all" className="flex-1">
-              All
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex-1">
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="posts" className="flex-1">
-              Posts
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="all" className="mt-4 space-y-6">
-            {!debouncedQuery ? (
-              <Empty className="border bg-card py-14">
-                <EmptyContent>
-                  <EmptyTitle>Search Feed</EmptyTitle>
-                  <EmptyDescription>
-                    Find registered people and posts by name, username, or
-                    keywords.
-                  </EmptyDescription>
-                </EmptyContent>
-              </Empty>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <h3 className="px-1 text-sm font-medium text-muted-foreground">
-                    Users
-                  </h3>
-                  {showUsersLoading ? (
-                    <div className={cn(pageListClass, "px-4")}>
-                      <UserListSkeleton count={3} />
-                    </div>
-                  ) : users.length > 0 ? (
-                    <div className={cn(pageListClass, "px-4")}>
-                      {users.map((matchedUser) => (
-                        <UserListItem key={matchedUser.id} user={matchedUser} />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="px-1 text-sm text-muted-foreground">
-                      No users matched.
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <h3 className="px-1 text-sm font-medium text-muted-foreground">
-                    Posts
-                  </h3>
-                  {showPostsLoading ? (
-                    <FeedListSkeleton count={2} />
-                  ) : posts.length > 0 ? (
-                    <div className={pageStackClass}>
-                      {posts.map((post, index) => (
-                        <PostCard
-                          key={post.id}
-                          post={post}
-                          revealDelay={Math.min(index * 60, 300)}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="px-1 text-sm text-muted-foreground">
-                      No posts matched.
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="users" className="mt-4">
-            {showUsersLoading ? (
-              <div className={cn(pageListClass, "px-4")}>
-                <UserListSkeleton count={5} />
-              </div>
-            ) : users.length > 0 ? (
-              <div className={cn(pageListClass, "px-4")}>
-                {users.map((matchedUser) => (
-                  <UserListItem key={matchedUser.id} user={matchedUser} />
-                ))}
-              </div>
-            ) : (
-              <Empty className="border bg-card py-14">
-                <EmptyContent>
-                  <EmptyTitle>No users found</EmptyTitle>
-                  <EmptyDescription>
-                    {debouncedQuery
-                      ? "Try a different name or username."
-                      : "No registered users yet."}
-                  </EmptyDescription>
-                </EmptyContent>
-              </Empty>
-            )}
-          </TabsContent>
-
-          <TabsContent value="posts" className="mt-4 space-y-4">
-            {showPostsLoading ? (
-              <FeedListSkeleton count={3} />
-            ) : posts.length > 0 ? (
-              posts.map((post, index) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  revealDelay={Math.min(index * 60, 300)}
-                />
-              ))
-            ) : (
-              <Empty className="border bg-card py-14">
-                <EmptyContent>
-                  <EmptyTitle>No posts found</EmptyTitle>
-                  <EmptyDescription>
-                    {debouncedQuery
-                      ? "Try different keywords."
-                      : "No posts yet."}
-                  </EmptyDescription>
-                </EmptyContent>
-              </Empty>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+      <Suspense
+        fallback={
+          <div className={cn(pageColumnClass, pageStackClass)}>
+            <FeedListSkeleton count={2} />
+          </div>
+        }
+      >
+        <SearchPageContent />
+      </Suspense>
     </AppShell>
   );
 }

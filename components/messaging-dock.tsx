@@ -105,6 +105,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
     pendingPeerUserId,
     openMessaging,
     clearPendingPeer,
+    closeMessaging,
     setExpanded,
     openConversation,
     closeConversation,
@@ -122,6 +123,8 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const [composeOpen, setComposeOpen] = useState(false);
   const [people, setPeople] = useState<User[]>([]);
   const [threadNotFound, setThreadNotFound] = useState(false);
+  const [threadError, setThreadError] = useState<string | null>(null);
+  const [threadRetry, setThreadRetry] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = useCallback(async () => {
@@ -190,11 +193,23 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
 
   /* eslint-disable react-hooks/set-state-in-effect -- refresh inbox when panel opens or dock mounts */
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setConversationList([]);
+      setThreadMessages({});
+      setComposeOpen(false);
+      setPeople([]);
+      setDraft("");
+      setQuery("");
+      setSetupError(null);
+      setThreadNotFound(false);
+      setThreadError(null);
+      closeMessaging();
+      return;
+    }
     if (mode === "dock" || expanded) {
       void loadConversations();
     }
-  }, [expanded, userId, loadConversations, mode]);
+  }, [expanded, userId, loadConversations, mode, closeMessaging]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
@@ -211,8 +226,9 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
         );
         if (cancelled) return;
         clearPendingPeer();
-        openConversation(id);
         await loadConversations();
+        if (cancelled) return;
+        openConversation(id);
         if (mode === "page") {
           router.push(`/messages/${id}`);
         }
@@ -249,6 +265,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
     async function loadThread() {
       setLoadingThread(true);
       setThreadNotFound(false);
+      setThreadError(null);
       try {
         const supabase = createClient();
         const messages = await fetchMessages(supabase, conversationId!);
@@ -281,7 +298,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
         await markRead(conversationId!);
       } catch (err) {
         if (cancelled) return;
-        setThreadNotFound(true);
+        setThreadError(getErrorMessage(err, "Could not load messages."));
         appToast.error(
           "Could not load messages",
           getErrorMessage(err, "Try again."),
@@ -363,7 +380,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
       unsubscribe();
       window.clearInterval(poll);
     };
-  }, [conversationId, userId, shouldSubscribe, markRead]);
+  }, [conversationId, userId, shouldSubscribe, markRead, threadRetry]);
 
   useEffect(() => {
     if (!shouldSubscribe || !userId) return;
@@ -400,8 +417,13 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
       },
     );
 
+    const inboxPoll = window.setInterval(() => {
+      void loadConversations();
+    }, 20_000);
+
     return () => {
       unsubscribe();
+      window.clearInterval(inboxPoll);
     };
   }, [
     expanded,
@@ -561,6 +583,10 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   }
 
   if (mode === "dock" && isMessagesRoute) {
+    return null;
+  }
+
+  if (!userId) {
     return null;
   }
 
@@ -736,7 +762,24 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
         mode === "dock" && !conversation && !conversationId && "hidden",
       )}
     >
-      {conversation ? (
+      {conversation && threadError ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+          <MessageCircle className="size-10 text-muted-foreground/50" />
+          <p className="text-base font-semibold">Could not load messages</p>
+          <p className="max-w-xs text-sm text-muted-foreground">{threadError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setThreadError(null);
+              setThreadRetry((n) => n + 1);
+            }}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : conversation ? (
         <div className="flex min-h-0 flex-1 flex-col bg-[#efeae2] dark:bg-zinc-900">
           <div className="flex h-14 shrink-0 items-center gap-1 border-b border-black/5 bg-background px-1.5 shadow-sm">
             <Button

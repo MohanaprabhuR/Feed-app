@@ -113,20 +113,21 @@ export function FeedPosts({
     void loadPosts({ showLoading: true });
   }, [serverLoaded, loadPosts]);
 
-  // Live feed: when anyone else publishes a post, refetch so it appears
-  // without a manual refresh. The current user's own post is already added
-  // optimistically by handlePosted, so skip those events.
+  // Live feed: refetch when posts are added, edited, or removed.
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
       .channel(`feed-posts:${Date.now()}:${Math.random().toString(16).slice(2)}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "posts" },
+        { event: "*", schema: "public", table: "posts" },
         (payload) => {
-          const authorId = (payload.new as { author_id?: string } | null)
-            ?.author_id;
-          if (authorId && authorId === user?.id) return;
+          if (payload.eventType === "INSERT") {
+            const authorId = (payload.new as { author_id?: string } | null)
+              ?.author_id;
+            // Own creates are already added optimistically via onPosted.
+            if (authorId && authorId === user?.id) return;
+          }
           void loadPosts();
         },
       )

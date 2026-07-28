@@ -360,7 +360,11 @@ export function AppHeader() {
             placeholder="Search"
             prefix={<Search className="size-4 text-muted-foreground" />}
             onKeyDown={(e) => {
-              if (e.key === "Enter") router.push("/search");
+              if (e.key !== "Enter") return;
+              const value = (e.currentTarget.value || "").trim();
+              router.push(
+                value ? `/search?q=${encodeURIComponent(value)}` : "/search",
+              );
             }}
           />
         </div>

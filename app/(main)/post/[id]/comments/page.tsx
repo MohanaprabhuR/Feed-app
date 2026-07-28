@@ -10,6 +10,7 @@ import {
   insertEmojiAtCaret,
 } from "@/components/emoji-picker-button";
 import { PageHeader } from "@/components/page-header";
+import { PostCard } from "@/components/post-card";
 import { ProfileTrigger } from "@/components/profile-trigger";
 import { ReactionButton } from "@/components/reaction-button";
 import { UserAvatar } from "@/components/user-avatar";
@@ -17,7 +18,7 @@ import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CommentListSkeleton } from "@/components/skeletons";
+import { CommentListSkeleton, FeedListSkeleton } from "@/components/skeletons";
 import {
   Empty,
   EmptyContent,
@@ -27,7 +28,7 @@ import {
 import { appToast } from "@/lib/app-toast";
 import { api, ApiClientError } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
-import type { Comment, ReactionType, User } from "@/lib/types";
+import type { Comment, Post, ReactionType, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function updateCommentTree(
@@ -228,6 +229,7 @@ export default function CommentsPage({
 }) {
   const { id } = use(params);
   const { user, loading: userLoading } = useCurrentUser();
+  const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
@@ -255,14 +257,18 @@ export default function CommentsPage({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      await api.posts.get(id);
-      const { comments: data } = await api.posts.comments.list(id);
+      const [{ post: loadedPost }, { comments: data }] = await Promise.all([
+        api.posts.get(id),
+        api.posts.comments.list(id),
+      ]);
+      setPost(loadedPost);
       setComments(data);
       setMissingPost(false);
       setError(null);
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 404) {
         setMissingPost(true);
+        setPost(null);
         setComments([]);
         setError(null);
         return;
@@ -308,7 +314,12 @@ export default function CommentsPage({
     <AppShell noPadding className="flex flex-col">
       <PageHeader title="Comments" backHref="/feed" />
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        {loading && <CommentListSkeleton count={3} />}
+        {loading && (
+          <>
+            <FeedListSkeleton count={1} />
+            <CommentListSkeleton count={3} />
+          </>
+        )}
 
         {error && (
           <Alert variant="error" className="w-full max-w-none">
@@ -331,6 +342,10 @@ export default function CommentsPage({
             </EmptyContent>
           </Empty>
         )}
+
+        {!loading && !missingPost && post ? (
+          <PostCard post={post} />
+        ) : null}
 
         {!loading && !error && !missingPost && comments.length === 0 && (
           <Empty>

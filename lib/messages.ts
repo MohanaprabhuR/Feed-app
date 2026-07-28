@@ -232,12 +232,17 @@ export async function markConversationRead(
 export async function fetchMessages(
   supabase: SupabaseClient,
   conversationId: string,
+  options?: { limit?: number },
 ): Promise<Message[]> {
+  // Fetch newest-first then reverse so PostgREST's default row cap cannot
+  // drop recent messages in long threads.
+  const limit = options?.limit ?? 200;
   const { data, error } = await supabase
     .from("direct_messages")
     .select("id, conversation_id, sender_id, content, created_at")
     .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
   if (error) {
     if (isMissingMessagingSchemaError(error.message)) {
@@ -246,7 +251,10 @@ export async function fetchMessages(
     throw error;
   }
 
-  return ((data ?? []) as MessageRow[]).map(messageRowToMessage);
+  return ((data ?? []) as MessageRow[])
+    .slice()
+    .reverse()
+    .map(messageRowToMessage);
 }
 
 export async function sendMessage(

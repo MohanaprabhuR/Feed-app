@@ -81,6 +81,33 @@ export function NotificationsList() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(
+        `notifications-list:${user.id}:${Date.now()}:${Math.random().toString(16).slice(2)}`,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `recipient_id=eq.${user.id}`,
+        },
+        () => {
+          void load();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id, load]);
+
   async function handleOpen(notification: Notification) {
     if (!notification.read) {
       try {

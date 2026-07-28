@@ -744,7 +744,7 @@ export async function updatePost(
   const payload: {
     content: string;
     image?: string | null;
-    title?: string;
+    title?: string | null;
     event?: PostEvent | null;
   } = {
     content: trimmed,
@@ -752,6 +752,9 @@ export async function updatePost(
 
   if (title !== undefined) {
     payload.title = title;
+  } else if (options?.event !== undefined && includeEvent) {
+    // Keep denormalized title in sync when attaching, renaming, or clearing events.
+    payload.title = normalizedEvent?.title ?? null;
   }
 
   if (media === null) {
