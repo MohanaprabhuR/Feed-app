@@ -10,6 +10,14 @@ function optionalString(value: unknown): string | undefined {
   return trimmed || undefined;
 }
 
+function parseImages(value: unknown): string[] | null {
+  if (value === null) return null;
+  if (!Array.isArray(value)) return null;
+  return value
+    .map((item) => optionalString(item))
+    .filter((url): url is string => Boolean(url));
+}
+
 function parseMedia(
   value: unknown,
 ): { image?: string; video?: string; file?: string } | null | undefined {
@@ -81,6 +89,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       {
         ...(body.title !== undefined ? { title: String(body.title) } : {}),
         ...("event" in body ? { event: parseEvent(body.event) } : {}),
+        ...("images" in body ? { images: parseImages(body.images) } : {}),
       },
     );
     return { post };

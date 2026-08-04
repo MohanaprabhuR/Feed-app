@@ -32,12 +32,12 @@ export function ArticleViewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size="lg"
-        className="max-h-[min(90vh,760px)] gap-0 overflow-hidden p-0 sm:max-w-3xl"
+        className="max-h-[min(92vh,820px)] gap-0 overflow-hidden p-0 sm:max-w-4xl"
       >
         <DialogTitle className="sr-only">
           {article.title || "Untitled article"}
         </DialogTitle>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 sm:px-8">
           <Item size="sm" className="mb-6 p-0">
             <UserAvatar
               src={article.author.avatar}
@@ -71,7 +71,7 @@ export function ArticleViewDialog({
           </h1>
 
           {article.image && (
-            <div className="relative mt-6 aspect-2/1 overflow-hidden rounded-xl bg-muted">
+            <div className="relative mt-6 aspect-video overflow-hidden rounded-2xl bg-muted">
               <Image
                 src={article.image}
                 alt={article.title ?? "Article cover"}
@@ -83,13 +83,17 @@ export function ArticleViewDialog({
                 sizes="(max-width: 768px) 100vw, 768px"
                 priority
               />
+              <div className="absolute inset-0 bg-linear-to-t from-black/35 via-transparent to-transparent" />
             </div>
           )}
 
-          <div className="mt-8 space-y-4">
+          <div className="mt-8 space-y-5">
             {article.content.split("\n").map((paragraph, index) =>
               paragraph.trim() ? (
-                <p key={index} className="text-base leading-8 text-foreground">
+                <p
+                  key={index}
+                  className="text-base leading-8 text-foreground sm:text-[17px]"
+                >
                   {paragraph}
                 </p>
               ) : (

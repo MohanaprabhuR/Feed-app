@@ -45,6 +45,14 @@ function parseEvent(value: unknown): PostEvent | undefined {
   };
 }
 
+function parseImages(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const urls = value
+    .map((item) => optionalString(item))
+    .filter((url): url is string => Boolean(url));
+  return urls.length ? urls : undefined;
+}
+
 function parseCelebration(value: unknown): PostCelebration | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return undefined;
@@ -120,6 +128,8 @@ export async function POST(request: Request) {
       parseMedia(body.media),
       parseEvent(body.event),
       parseCelebration(body.celebration),
+      parseImages(body.images),
+      body.mediaLayout === "slider" ? "slider" : "grid",
     );
     return { post };
   });

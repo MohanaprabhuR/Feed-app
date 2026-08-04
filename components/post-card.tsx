@@ -3,7 +3,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   Bookmark,
   BookmarkCheck,
@@ -13,6 +12,7 @@ import {
 import { useCurrentUser } from "@/components/current-user-provider";
 import { PostComments } from "@/components/post-comments";
 import { PostEventCard } from "@/components/post-event-card";
+import { PostMediaGallery } from "@/components/post-media-gallery";
 import { PostCelebrationCard } from "@/components/post-celebration-card";
 import { getCelebrationMeta } from "@/lib/celebrations";
 import { PostLikeButton } from "@/components/post-like-button";
@@ -153,6 +153,69 @@ export function PostCard({
     }
   }
 
+  const galleryImages =
+    post.images && post.images.length > 0
+      ? post.images
+      : post.image
+        ? [post.image]
+        : [];
+
+  const engagementBar = (
+    <PostEngagementBar
+      postId={post.id}
+      likesCount={likesCount}
+      commentsCount={commentsCount}
+      sharesCount={sharesCount}
+      types={reactionSummary}
+      commentsOpen={commentsOpen}
+      onOpenComments={() => setCommentsOpen((open) => !open)}
+      onRepost={() =>
+        appToast.info(
+          "Repost coming soon",
+          "Repost will be available in a future update.",
+        )
+      }
+      onShare={() => setShareOpen(true)}
+      likeControl={
+        <PostLikeButton
+          postId={post.id}
+          initialLiked={Boolean(myReaction)}
+          initialReaction={myReaction}
+          initialCount={likesCount}
+          hideCount
+          className="justify-start"
+          onCountChange={setLikesCount}
+          onReactionChange={(next, count) => {
+            setMyReaction((prev) => {
+              setReactionSummary((current) =>
+                mergeReactionSummary(current, prev, next, count),
+              );
+              return next;
+            });
+          }}
+        />
+      }
+      trailing={
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          className={cn("h-9 justify-start", isSaved && "text-foreground")}
+          aria-label={isSaved ? "Unsave post" : "Save post"}
+          aria-pressed={isSaved}
+          disabled={saving}
+          onClick={() => void handleToggleSave()}
+        >
+          {isSaved ? (
+            <BookmarkCheck className="size-4 fill-current" />
+          ) : (
+            <Bookmark className="size-4" />
+          )}
+        </Button>
+      }
+    />
+  );
+
   return (
     <ScrollReveal delay={revealDelay}>
       <Card padding="none" className={feedCardClass}>
@@ -244,71 +307,14 @@ export function PostCard({
               </ItemContent>
             </a>
           </Item>
-        ) : post.image ? (
-          <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
-            <Image
-              src={post.image}
-              alt="Post image"
-              fill
-              unoptimized={post.image.includes("/storage/v1/object/public/")}
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 600px"
-            />
-          </div>
+        ) : galleryImages.length > 0 ? (
+          <PostMediaGallery
+            images={galleryImages}
+            layout={post.mediaLayout ?? "grid"}
+          />
         ) : null}
       </CardContent>
-      <CardFooter className={feedCardFooterClass}>
-        <PostEngagementBar
-          postId={post.id}
-          likesCount={likesCount}
-          commentsCount={commentsCount}
-          sharesCount={sharesCount}
-          types={reactionSummary}
-          commentsOpen={commentsOpen}
-          onOpenComments={() => setCommentsOpen((open) => !open)}
-          onRepost={() =>
-            appToast.info("Repost coming soon", "Repost will be available in a future update.")
-          }
-          onShare={() => setShareOpen(true)}
-          likeControl={
-            <PostLikeButton
-              postId={post.id}
-              initialLiked={Boolean(myReaction)}
-              initialReaction={myReaction}
-              initialCount={likesCount}
-              hideCount
-              className="justify-start"
-              onCountChange={setLikesCount}
-              onReactionChange={(next, count) => {
-                setMyReaction((prev) => {
-                  setReactionSummary((current) =>
-                    mergeReactionSummary(current, prev, next, count),
-                  );
-                  return next;
-                });
-              }}
-            />
-          }
-          trailing={
-            <Button
-              variant="ghost"
-              size="sm"
-              iconOnly
-              className={cn("h-9 justify-start", isSaved && "text-foreground")}
-              aria-label={isSaved ? "Unsave post" : "Save post"}
-              aria-pressed={isSaved}
-              disabled={saving}
-              onClick={() => void handleToggleSave()}
-            >
-              {isSaved ? (
-                <BookmarkCheck className="size-4 fill-current" />
-              ) : (
-                <Bookmark className="size-4" />
-              )}
-            </Button>
-          }
-        />
-      </CardFooter>
+      <CardFooter className={feedCardFooterClass}>{engagementBar}</CardFooter>
 
       <PostComments
         postId={post.id}

@@ -57,6 +57,8 @@ export const api = {
     create: (input: {
       content: string;
       media?: { image?: string; video?: string; file?: string };
+      images?: string[];
+      mediaLayout?: "grid" | "slider";
       event?: PostEvent;
       celebration?: PostCelebration;
     }) =>
@@ -80,6 +82,7 @@ export const api = {
       input: {
         content: string;
         media?: { image?: string; video?: string; file?: string } | null;
+        images?: string[] | null;
         title?: string;
         event?: PostEvent | null;
       },

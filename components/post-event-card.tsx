@@ -54,36 +54,44 @@ export function PostEventCard({
   event: PostEvent;
   className?: string;
 }) {
+  const eventDate = new Date(event.startsAt);
+  const monthLabel = Number.isNaN(eventDate.getTime())
+    ? "TBD"
+    : eventDate.toLocaleString(EVENT_DATE_LOCALE, {
+        month: "short",
+      });
+  const dayLabel = Number.isNaN(eventDate.getTime())
+    ? "--"
+    : String(eventDate.getDate());
+
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border bg-card shadow-sm",
+        "overflow-hidden rounded-2xl border border-border/70 bg-linear-to-br from-card to-muted/20 shadow-sm",
         className,
       )}
     >
-      <div className="flex gap-3 p-4">
-        <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <span className="text-2xs font-semibold uppercase leading-none">
-            {new Date(event.startsAt).toLocaleString(EVENT_DATE_LOCALE, {
-              month: "short",
-            })}
+      <div className="flex gap-3 p-4 sm:gap-4 sm:p-5">
+        <div className="flex size-14 shrink-0 flex-col items-center justify-center rounded-xl border border-primary/15 bg-primary text-primary-foreground shadow-sm">
+          <span className="text-2xs font-semibold uppercase tracking-wide leading-none">
+            {monthLabel}
           </span>
-          <span className="text-xl font-semibold leading-none">
-            {new Date(event.startsAt).getDate()}
-          </span>
+          <span className="text-xl font-semibold leading-none">{dayLabel}</span>
         </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          <p className="font-serif text-lg font-medium leading-tight tracking-tight">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <p className="font-serif text-lg font-medium leading-tight tracking-tight sm:text-xl">
             {event.title}
           </p>
           <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
             <Calendar className="mt-0.5 size-3.5 shrink-0" />
-            <span>{formatEventWhen(event.startsAt, event.endsAt)}</span>
+            <span className="leading-relaxed">
+              {formatEventWhen(event.startsAt, event.endsAt)}
+            </span>
           </p>
           {event.location ? (
             <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
               <MapPin className="mt-0.5 size-3.5 shrink-0" />
-              <span>{event.location}</span>
+              <span className="leading-relaxed">{event.location}</span>
             </p>
           ) : null}
         </div>

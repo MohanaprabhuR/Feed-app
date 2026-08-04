@@ -479,3 +479,50 @@ export function PageBlockSkeleton({ className }: { className?: string }) {
     />
   );
 }
+
+/** Rows of setting entries (icon + label + trailing control) inside a card. */
+export function SettingsListSkeleton({
+  rows = 5,
+  className,
+}: {
+  rows?: number;
+  className?: string;
+}) {
+  return (
+    <div className={cn("divide-y skeleton-stagger", className)}>
+      {Array.from({ length: rows }).map((_, index) => (
+        <div key={index} className="flex items-center gap-3 py-3.5">
+          <Skeleton className="size-9 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-48 max-w-full" />
+          </div>
+          <Skeleton className="size-5 shrink-0 rounded-md" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Heading plus prose lines, for text-heavy pages (About, Legal). */
+export function TextBlockSkeleton({
+  lines = 6,
+  className,
+}: {
+  lines?: number;
+  className?: string;
+}) {
+  return (
+    <Card padding="none" className={cn(feedCardClass, "skeleton-stagger", className)}>
+      <CardContent className={cn(feedCardSectionClass, "space-y-3")}>
+        <Skeleton className="h-6 w-40" />
+        {Array.from({ length: lines }).map((_, index) => (
+          <Skeleton
+            key={index}
+            className={cn("h-4 w-full", index % 3 === 2 && "w-2/3")}
+          />
+        ))}
+      </CardContent>
+    </Card>
+  );
+}

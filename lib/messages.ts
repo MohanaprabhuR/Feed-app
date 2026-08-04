@@ -49,10 +49,102 @@ export function messageRowToMessage(row: MessageRow): Message {
     senderId: row.sender_id,
     content: row.content,
     createdAt: formatRelativeTime(row.created_at),
+    createdAtRaw: row.created_at,
   };
 }
 
+/** Time-of-day label for a message bubble, e.g. "9:41 AM". */
+export function formatMessageTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Day divider label: "Today", "Yesterday", or "Jul 27, 2026". */
+export function formatMessageDay(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round(
+    (startOfDay(now) - startOfDay(date)) / 86_400_000,
+  );
+  if (dayDiff === 0) return "Today";
+  if (dayDiff === 1) return "Yesterday";
+  return date.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/** True when two ISO timestamps fall on the same calendar day. */
+export function isSameDay(a: string, b: string): boolean {
+  const da = new Date(a);
+  const db = new Date(b);
+  return (
+    da.getFullYear() === db.getFullYear() &&
+    da.getMonth() === db.getMonth() &&
+    da.getDate() === db.getDate()
+  );
+}
+
 export type DirectMessageRow = MessageRow;
+
+export type MessageAttachment = {
+  type: "image" | "video" | "file";
+  url: string;
+  name?: string;
+};
+
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|svg)(\?|#|$)/i;
+const VIDEO_EXT = /\.(mp4|webm|mov|m4v)(\?|#|$)/i;
+// Our uploads are stored as `<userId>/<timestamp>-<uuid>-<originalName>`, so the
+// original filename can be recovered by stripping that prefix off the last path
+// segment.
+const UPLOAD_PREFIX =
+  /^\d+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i;
+
+/** Original filename recovered from an uploaded media URL, if available. */
+export function fileNameFromUrl(url: string): string | undefined {
+  try {
+    const last = decodeURIComponent(
+      new URL(url).pathname.split("/").pop() ?? "",
+    );
+    if (!last) return undefined;
+    return last.replace(UPLOAD_PREFIX, "") || last;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Chat attachments are sent as a bare media URL in the message body (the
+ * direct_messages table only stores text). Detect one so bubbles can render
+ * the image/video/file inline; anything else stays plain text.
+ */
+export function getMessageAttachment(content: string): MessageAttachment | null {
+  const trimmed = content.trim();
+  if (!/^https?:\/\/\S+$/.test(trimmed)) return null;
+  const name = fileNameFromUrl(trimmed);
+  if (IMAGE_EXT.test(trimmed)) return { type: "image", url: trimmed, name };
+  if (VIDEO_EXT.test(trimmed)) return { type: "video", url: trimmed, name };
+  // Only treat our own uploaded files as file attachments — leave arbitrary
+  // links the user types as plain text.
+  if (trimmed.includes("/post-media/"))
+    return { type: "file", url: trimmed, name };
+  return null;
+}
+
+/** Short label for a message in the conversation list (hides raw media URLs). */
+export function messagePreview(content: string): string {
+  const attachment = getMessageAttachment(content);
+  if (!attachment) return content;
+  if (attachment.type === "image") return "📷 Photo";
+  if (attachment.type === "video") return "🎬 Video";
+  return "📎 Attachment";
+}
 
 export async function fetchConversations(
   supabase: SupabaseClient,

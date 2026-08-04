@@ -199,29 +199,48 @@ export function ArticleCard({
         <button
           type="button"
           onClick={() => setViewOpen(true)}
-          className="group block w-full space-y-3 text-left"
+          className="group block w-full space-y-4 text-left"
         >
           {post.image && (
-            <div className="relative aspect-2/1 overflow-hidden rounded-lg bg-muted">
+            <div className="relative aspect-video overflow-hidden rounded-xl bg-muted">
               <Image
                 src={post.image}
                 alt={post.title ?? "Article cover"}
                 fill
                 unoptimized={post.image.includes("/storage/v1/object/public/")}
-                className="object-cover transition-transform group-hover:scale-[1.01]"
+                className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                 sizes="(max-width: 768px) 100vw, 600px"
               />
+              <div className="absolute inset-0 bg-linear-to-t from-black/45 via-black/10 to-transparent" />
+              <div className="absolute left-3 top-3">
+                <Badge variant="secondary" theme="amber" size="md">
+                  <Newspaper className="size-3.5" />
+                  Article
+                </Badge>
+              </div>
+              <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/80">
+                  {readTime} min read
+                </p>
+                <h3 className="mt-1 line-clamp-2 text-xl font-bold leading-snug sm:text-2xl">
+                  {post.title || "Untitled article"}
+                </h3>
+              </div>
             </div>
           )}
 
           <div className="space-y-2">
-            <Badge variant="outline" theme="amber" size="md">
-              <Newspaper className="size-3.5" />
-              Article · {readTime} min read
-            </Badge>
-            <h3 className="text-xl font-bold leading-snug group-hover:underline">
-              {post.title || "Untitled article"}
-            </h3>
+            {!post.image ? (
+              <>
+                <Badge variant="outline" theme="amber" size="md">
+                  <Newspaper className="size-3.5" />
+                  Article · {readTime} min read
+                </Badge>
+                <h3 className="text-xl font-bold leading-snug group-hover:underline">
+                  {post.title || "Untitled article"}
+                </h3>
+              </>
+            ) : null}
             <p className="text-base leading-relaxed text-muted-foreground">
               {excerpt}
             </p>

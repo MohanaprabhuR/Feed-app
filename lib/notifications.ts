@@ -126,6 +126,22 @@ export async function markNotificationRead(
   if (error) throw error;
 }
 
+/** Mark message notifications for a conversation read (when the chat is opened). */
+export async function markConversationNotificationsRead(
+  supabase: SupabaseClient,
+  conversationId: string,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("recipient_id", userId)
+    .eq("conversation_id", conversationId)
+    .is("read_at", null);
+
+  if (error) throw error;
+}
+
 export async function markAllNotificationsRead(
   supabase: SupabaseClient,
   userId: string,

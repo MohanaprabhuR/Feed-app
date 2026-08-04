@@ -8,6 +8,8 @@ export type PostRow = {
   id: string;
   content: string;
   image: string | null;
+  images?: string[] | null;
+  media_layout?: string | null;
   video?: string | null;
   post_type?: PostType | null;
   title?: string | null;
@@ -26,6 +28,10 @@ type SchemaMode = "legacy" | "modern";
 let cachedSchemaMode: SchemaMode | null = null;
 let cachedEventColumn: boolean | null = null;
 let cachedCelebrationColumn: boolean | null = null;
+let cachedImagesColumn: boolean | null = null;
+let cachedMediaLayoutColumn: boolean | null = null;
+let cachedImagesColumnCheckedAt = 0;
+const IMAGES_COLUMN_MISS_RETRY_MS = 30_000;
 
 const postSelectBase = `
   id,
@@ -118,6 +124,71 @@ function isMissingCelebrationColumnError(message: string) {
   );
 }
 
+function isMissingImagesColumnError(message: string) {
+  return (
+    message.includes("images") &&
+    (message.includes("column") ||
+      message.includes("schema cache") ||
+      message.includes("Could not find"))
+  );
+}
+
+function isMissingMediaLayoutColumnError(message: string) {
+  return (
+    message.includes("media_layout") &&
+    (message.includes("column") ||
+      message.includes("schema cache") ||
+      message.includes("Could not find"))
+  );
+}
+
+/**
+ * When the `images` column is missing, pack multiple URLs into the legacy
+ * `image` text field so multi-image posts still round-trip.
+ */
+function packImagesIntoImageField(urls: string[]): string {
+  return JSON.stringify(urls);
+}
+
+function unpackImagesFromImageField(
+  value: string | null | undefined,
+): string[] | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("[")) return null;
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (
+      !Array.isArray(parsed) ||
+      parsed.length === 0 ||
+      !parsed.every((item) => typeof item === "string" && item.trim())
+    ) {
+      return null;
+    }
+    return parsed.map((item) => String(item).trim());
+  } catch {
+    return null;
+  }
+}
+
+function resolveImageList(row: {
+  image?: string | null;
+  images?: string[] | null;
+}): string[] {
+  const fromColumn = Array.isArray(row.images)
+    ? row.images.filter(
+        (url): url is string => typeof url === "string" && url.trim().length > 0,
+      )
+    : [];
+  if (fromColumn.length > 0) return fromColumn;
+
+  const packed = unpackImagesFromImageField(row.image);
+  if (packed) return packed;
+
+  const media = splitPostMedia(row.image, null);
+  return media.image ? [media.image] : [];
+}
+
 function normalizeCelebration(value: unknown): PostCelebration | undefined {
   if (!value || typeof value !== "object") return undefined;
   const raw = value as Record<string, unknown>;
@@ -198,6 +269,8 @@ export function resetSchemaModeCache() {
   cachedSchemaMode = null;
   cachedEventColumn = null;
   cachedCelebrationColumn = null;
+  cachedImagesColumn = null;
+  cachedMediaLayoutColumn = null;
 }
 
 async function resolveEventColumn(supabase: SupabaseClient): Promise<boolean> {
@@ -218,15 +291,63 @@ async function resolveCelebrationColumn(
   return cachedCelebrationColumn;
 }
 
+async function resolveImagesColumn(supabase: SupabaseClient): Promise<boolean> {
+  // If we previously thought the column was missing, re-check periodically so a
+  // migration applied mid-session starts working without a server restart.
+  if (
+    cachedImagesColumn === false &&
+    Date.now() - cachedImagesColumnCheckedAt > IMAGES_COLUMN_MISS_RETRY_MS
+  ) {
+    cachedImagesColumn = null;
+  }
+  if (cachedImagesColumn !== null) return cachedImagesColumn;
+  const { error } = await supabase.from("posts").select("images").limit(1);
+  cachedImagesColumn = !(error && isMissingImagesColumnError(error.message));
+  cachedImagesColumnCheckedAt = Date.now();
+  return cachedImagesColumn;
+}
+
+async function resolveImagesColumnFresh(
+  supabase: SupabaseClient,
+): Promise<boolean> {
+  cachedImagesColumn = null;
+  return resolveImagesColumn(supabase);
+}
+
+async function resolveMediaLayoutColumn(
+  supabase: SupabaseClient,
+): Promise<boolean> {
+  if (cachedMediaLayoutColumn !== null) return cachedMediaLayoutColumn;
+  const { error } = await supabase
+    .from("posts")
+    .select("media_layout")
+    .limit(1);
+  cachedMediaLayoutColumn = !(
+    error && isMissingMediaLayoutColumnError(error.message)
+  );
+  return cachedMediaLayoutColumn;
+}
+
+async function resolveMediaLayoutColumnFresh(
+  supabase: SupabaseClient,
+): Promise<boolean> {
+  cachedMediaLayoutColumn = null;
+  return resolveMediaLayoutColumn(supabase);
+}
+
 function activeSelect(
   mode: SchemaMode,
   includeEvent: boolean,
   includeCelebration: boolean,
+  includeImages: boolean,
+  includeMediaLayout: boolean,
 ) {
   if (mode === "legacy") return legacyPostSelect;
   const extras = [
     includeEvent ? "event" : null,
     includeCelebration ? "celebration" : null,
+    includeImages ? "images" : null,
+    includeMediaLayout ? "media_layout" : null,
   ].filter((column): column is string => Boolean(column));
   return extras.length
     ? `${postSelectBase},\n  ${extras.join(",\n  ")}`
@@ -245,10 +366,20 @@ async function queryPosts(
     mode === "modern" ? await resolveEventColumn(supabase) : false;
   let includeCelebration =
     mode === "modern" ? await resolveCelebrationColumn(supabase) : false;
+  let includeImages =
+    mode === "modern" ? await resolveImagesColumnFresh(supabase) : false;
+  let includeMediaLayout =
+    mode === "modern" ? await resolveMediaLayoutColumn(supabase) : false;
 
   for (;;) {
     const result = await buildQuery(
-      activeSelect(mode, includeEvent, includeCelebration),
+      activeSelect(
+        mode,
+        includeEvent,
+        includeCelebration,
+        includeImages,
+        includeMediaLayout,
+      ),
     );
     if (!result.error) {
       return normalizeRows(result.data as PostRow | PostRow[] | null).map(
@@ -266,6 +397,19 @@ async function queryPosts(
     if (includeEvent && isMissingEventColumnError(result.error.message)) {
       cachedEventColumn = false;
       includeEvent = false;
+      continue;
+    }
+    if (includeImages && isMissingImagesColumnError(result.error.message)) {
+      cachedImagesColumn = false;
+      includeImages = false;
+      continue;
+    }
+    if (
+      includeMediaLayout &&
+      isMissingMediaLayoutColumnError(result.error.message)
+    ) {
+      cachedMediaLayoutColumn = false;
+      includeMediaLayout = false;
       continue;
     }
     throw result.error;
@@ -316,9 +460,15 @@ export function postRowToPost(
     };
   }
 
-  const media = splitPostMedia(normalized.image, normalized.video);
+  const packedImages = unpackImagesFromImageField(normalized.image);
+  const media = packedImages
+    ? { image: packedImages[0], video: undefined, file: undefined }
+    : splitPostMedia(normalized.image, normalized.video);
   const event = normalizeEvent(normalized.event);
   const celebration = normalizeCelebration(normalized.celebration);
+
+  // Prefer `images` column, then packed JSON in `image`, then single legacy URL.
+  const images = resolveImageList(normalized);
 
   return {
     id: normalized.id,
@@ -326,7 +476,9 @@ export function postRowToPost(
     type: event ? "event" : "post",
     title: normalized.title ?? event?.title,
     content: normalized.content,
-    image: media.image,
+    image: images[0] ?? media.image,
+    images: images.length > 0 ? images : undefined,
+    mediaLayout: normalized.media_layout === "slider" ? "slider" : "grid",
     video: media.video,
     file: media.file,
     event,
@@ -379,6 +531,8 @@ function flatPostColumns(
   mode: SchemaMode,
   includeEvent: boolean,
   includeCelebration: boolean,
+  includeImages: boolean,
+  includeMediaLayout: boolean,
 ) {
   if (mode === "legacy") {
     return "id, content, image, likes_count, comments_count, shares_count, created_at, author_id";
@@ -386,6 +540,8 @@ function flatPostColumns(
   const columns = ["id", "content", "image", "post_type", "title"];
   if (includeEvent) columns.push("event");
   if (includeCelebration) columns.push("celebration");
+  if (includeImages) columns.push("images");
+  if (includeMediaLayout) columns.push("media_layout");
   columns.push(
     "likes_count",
     "comments_count",
@@ -404,11 +560,23 @@ async function loadAllPostRows(reader: SupabaseClient) {
     mode === "modern" ? await resolveEventColumn(reader) : false;
   let includeCelebration =
     mode === "modern" ? await resolveCelebrationColumn(reader) : false;
+  let includeImages =
+    mode === "modern" ? await resolveImagesColumnFresh(reader) : false;
+  let includeMediaLayout =
+    mode === "modern" ? await resolveMediaLayoutColumnFresh(reader) : false;
 
   for (;;) {
     const result = await reader
       .from("posts")
-      .select(flatPostColumns(mode, includeEvent, includeCelebration))
+      .select(
+        flatPostColumns(
+          mode,
+          includeEvent,
+          includeCelebration,
+          includeImages,
+          includeMediaLayout,
+        ),
+      )
       .order("created_at", { ascending: false });
 
     if (!result.error) {
@@ -427,6 +595,19 @@ async function loadAllPostRows(reader: SupabaseClient) {
     if (includeEvent && isMissingEventColumnError(result.error.message)) {
       cachedEventColumn = false;
       includeEvent = false;
+      continue;
+    }
+    if (includeImages && isMissingImagesColumnError(result.error.message)) {
+      cachedImagesColumn = false;
+      includeImages = false;
+      continue;
+    }
+    if (
+      includeMediaLayout &&
+      isMissingMediaLayoutColumnError(result.error.message)
+    ) {
+      cachedMediaLayoutColumn = false;
+      includeMediaLayout = false;
       continue;
     }
     throw result.error;
@@ -540,15 +721,21 @@ export async function createPost(
   media?: { image?: string; video?: string; file?: string },
   event?: PostEvent,
   celebration?: PostCelebration,
+  images?: string[],
+  mediaLayout?: "grid" | "slider",
 ) {
   const trimmed = content.trim();
   const normalizedEvent = event ? normalizeEvent(event) : undefined;
   const normalizedCelebration = celebration
     ? normalizeCelebration(celebration)
     : undefined;
+  const imageList = (images ?? [])
+    .map((url) => (typeof url === "string" ? url.trim() : ""))
+    .filter(Boolean);
 
   if (
     !trimmed &&
+    imageList.length === 0 &&
     !media?.image &&
     !media?.video &&
     !media?.file &&
@@ -567,10 +754,6 @@ export async function createPost(
     throw new Error("Choose an occasion to celebrate.");
   }
 
-  const mediaUrl =
-    [media?.video, media?.image, media?.file]
-      .map((value) => (typeof value === "string" ? value.trim() : ""))
-      .find(Boolean) || null;
   const mode = await resolveSchemaMode(supabase);
   // Keep DB post_type as "post" — many projects only allow ('post','article').
   // UI treats rows with an `event` payload as event posts.
@@ -578,6 +761,18 @@ export async function createPost(
     mode === "modern" ? await resolveEventColumn(supabase) : false;
   const includeCelebration =
     mode === "modern" ? await resolveCelebrationColumn(supabase) : false;
+  const includeImages =
+    mode === "modern"
+      ? imageList.length > 1
+        ? await resolveImagesColumnFresh(supabase)
+        : await resolveImagesColumn(supabase)
+      : false;
+  const includeMediaLayout =
+    mode === "modern" && mediaLayout === "slider"
+      ? await resolveMediaLayoutColumnFresh(supabase)
+      : mode === "modern"
+        ? await resolveMediaLayoutColumn(supabase)
+        : false;
 
   if (normalizedEvent && !includeEvent) {
     throw new Error(
@@ -589,6 +784,14 @@ export async function createPost(
       "Celebrations need database setup. Run supabase/migrate-post-celebrations.sql in Supabase → SQL Editor.",
     );
   }
+
+  // Prefer the `images` column; otherwise pack multiple URLs into legacy `image`.
+  const mediaUrl =
+    imageList.length > 1 && !includeImages
+      ? packImagesIntoImageField(imageList)
+      : [imageList[0], media?.video, media?.image, media?.file]
+          .map((value) => (typeof value === "string" ? value.trim() : ""))
+          .find(Boolean) || null;
 
   const fallbackContent =
     normalizedEvent?.title ??
@@ -609,8 +812,20 @@ export async function createPost(
   if (includeCelebration) {
     modernPayload.celebration = normalizedCelebration ?? null;
   }
+  if (includeImages) {
+    modernPayload.images = imageList.length > 0 ? imageList : null;
+  }
+  if (includeMediaLayout) {
+    modernPayload.media_layout = mediaLayout === "slider" ? "slider" : null;
+  }
 
-  const select = activeSelect(mode, includeEvent, includeCelebration);
+  const select = activeSelect(
+    mode,
+    includeEvent,
+    includeCelebration,
+    includeImages,
+    includeMediaLayout,
+  );
 
   const { data, error } =
     mode === "modern"
@@ -645,9 +860,48 @@ export async function createPost(
         "Celebrations need database setup. Run supabase/migrate-post-celebrations.sql in Supabase → SQL Editor.",
       );
     }
+    if (includeImages && isMissingImagesColumnError(error.message)) {
+      cachedImagesColumn = false;
+      const { images: _omitImages, ...withoutImages } = modernPayload as {
+        images?: unknown;
+      } & Record<string, unknown>;
+      void _omitImages;
+      const packedPayload: Record<string, unknown> = {
+        ...withoutImages,
+        image:
+          imageList.length > 1
+            ? packImagesIntoImageField(imageList)
+            : mediaUrl,
+      };
+      const retry = await supabase
+        .from("posts")
+        .insert(packedPayload)
+        .select(
+          activeSelect(mode, includeEvent, includeCelebration, false, false),
+        )
+        .single();
+      if (retry.error) throw retry.error;
+      return attachCreatedImages(
+        postRowToPost(withLegacyDefaults(retry.data as unknown as PostRow))!,
+        imageList,
+      );
+    }
     throw error;
   }
-  return postRowToPost(withLegacyDefaults(data as PostRow))!;
+  return attachCreatedImages(
+    postRowToPost(withLegacyDefaults(data as PostRow))!,
+    imageList,
+  );
+}
+
+function attachCreatedImages(post: Post, imageList: string[]): Post {
+  if (imageList.length === 0) return post;
+  if (post.images && post.images.length >= imageList.length) return post;
+  return {
+    ...post,
+    image: imageList[0],
+    images: imageList,
+  };
 }
 
 export async function createArticle(
@@ -699,11 +953,23 @@ export async function updatePost(
   authorId: string,
   content: string,
   media?: { image?: string; video?: string; file?: string } | null,
-  options?: { title?: string; event?: PostEvent | null },
+  options?: {
+    title?: string;
+    event?: PostEvent | null;
+    images?: string[] | null;
+  },
 ) {
   const trimmed = content.trim();
-  const replacingMedia = media !== undefined;
-  const hasNewMedia = Boolean(media?.image || media?.video || media?.file);
+  const imageList =
+    options?.images != null
+      ? options.images
+          .map((url) => (typeof url === "string" ? url.trim() : ""))
+          .filter(Boolean)
+      : undefined;
+  const replacingMedia = media !== undefined || options?.images !== undefined;
+  const hasNewMedia =
+    Boolean(media?.image || media?.video || media?.file) ||
+    (imageList?.length ?? 0) > 0;
   const title =
     options?.title !== undefined ? options.title.trim() : undefined;
   const normalizedEvent =
@@ -733,7 +999,21 @@ export async function updatePost(
     mode === "modern" ? await resolveEventColumn(supabase) : false;
   const includeCelebration =
     mode === "modern" ? await resolveCelebrationColumn(supabase) : false;
-  const select = activeSelect(mode, includeEvent, includeCelebration);
+  const includeImages =
+    mode === "modern"
+      ? (imageList?.length ?? 0) > 1
+        ? await resolveImagesColumnFresh(supabase)
+        : await resolveImagesColumn(supabase)
+      : false;
+  const includeMediaLayout =
+    mode === "modern" ? await resolveMediaLayoutColumn(supabase) : false;
+  const select = activeSelect(
+    mode,
+    includeEvent,
+    includeCelebration,
+    includeImages,
+    includeMediaLayout,
+  );
 
   if (options?.event && !includeEvent) {
     throw new Error(
@@ -744,6 +1024,7 @@ export async function updatePost(
   const payload: {
     content: string;
     image?: string | null;
+    images?: string[] | null;
     title?: string | null;
     event?: PostEvent | null;
   } = {
@@ -757,8 +1038,18 @@ export async function updatePost(
     payload.title = normalizedEvent?.title ?? null;
   }
 
-  if (media === null) {
+  if (imageList !== undefined) {
+    // Prefer `images` column; pack into legacy `image` when the column is absent.
+    payload.image =
+      imageList.length > 1 && !includeImages
+        ? packImagesIntoImageField(imageList)
+        : (imageList[0] ?? null);
+    if (includeImages) {
+      payload.images = imageList.length > 0 ? imageList : null;
+    }
+  } else if (media === null) {
     payload.image = null;
+    if (includeImages) payload.images = null;
   } else if (media) {
     payload.image = media.video ?? media.image ?? media.file ?? null;
   }

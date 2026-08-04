@@ -121,8 +121,13 @@ type EditPostDialogProps = {
   onDeleted?: (postId: string) => void;
 };
 
+type EditImage =
+  | { source: "existing"; url: string }
+  | { source: "new"; file: File; previewUrl: string };
+
+/** Video/file attachment (single). Non-article images live in `editImages`. */
 function existingAttachmentFromPost(post: Post): EditAttachment | null {
-  if (post.image) {
+  if (post.type === "article" && post.image) {
     return { source: "existing", type: "image", url: post.image };
   }
   if (post.video) {
@@ -137,6 +142,17 @@ function existingAttachmentFromPost(post: Post): EditAttachment | null {
     };
   }
   return null;
+}
+
+function existingImagesFromPost(post: Post): EditImage[] {
+  if (post.type === "article" || post.video || post.file) return [];
+  const urls =
+    post.images && post.images.length > 0
+      ? post.images
+      : post.image
+        ? [post.image]
+        : [];
+  return urls.map((url) => ({ source: "existing", url }) as EditImage);
 }
 
 export function EditPostDialog({
@@ -155,6 +171,9 @@ export function EditPostDialog({
   const [attachment, setAttachment] = useState<EditAttachment | null>(() =>
     existingAttachmentFromPost(post),
   );
+  const [editImages, setEditImages] = useState<EditImage[]>(() =>
+    existingImagesFromPost(post),
+  );
   const [showEventForm, setShowEventForm] = useState(Boolean(post.event));
   const [eventDraft, setEventDraft] = useState<EventDraft>(() =>
     eventDraftFromPost(post),
@@ -171,6 +190,12 @@ export function EditPostDialog({
     setDraft(post.content);
     setTitleDraft(post.title ?? "");
     setAttachment(existingAttachmentFromPost(post));
+    setEditImages((current) => {
+      current.forEach((item) => {
+        if (item.source === "new") URL.revokeObjectURL(item.previewUrl);
+      });
+      return existingImagesFromPost(post);
+    });
     setShowEventForm(Boolean(post.event));
     setEventDraft(eventDraftFromPost(post));
     setError(null);
@@ -231,6 +256,31 @@ export function EditPostDialog({
       URL.revokeObjectURL(attachment.previewUrl);
     }
     setAttachment(null);
+  }
+
+  function removeEditImage(index: number) {
+    setEditImages((current) => {
+      const target = current[index];
+      if (target?.source === "new") URL.revokeObjectURL(target.previewUrl);
+      return current.filter((_, i) => i !== index);
+    });
+  }
+
+  function handleImagesSelect(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return;
+    const picked: EditImage[] = [];
+    for (const file of Array.from(fileList)) {
+      if (getAttachmentType(file) !== "image") continue;
+      if (validatePostAttachment(file)) continue;
+      picked.push({
+        source: "new",
+        file,
+        previewUrl: URL.createObjectURL(file),
+      });
+    }
+    if (picked.length === 0) return;
+    clearAttachment();
+    setEditImages((current) => [...current, ...picked]);
   }
 
   function openPicker(kind: "image" | "video" | "file") {
@@ -312,7 +362,7 @@ export function EditPostDialog({
         setError("Add an event title and start date/time.");
         return;
       }
-      if (!trimmed && !attachment && !showEventForm) {
+      if (!trimmed && !attachment && editImages.length === 0 && !showEventForm) {
         setError("Post must include text or an attachment.");
         return;
       }
@@ -326,14 +376,28 @@ export function EditPostDialog({
         | { image?: string; video?: string; file?: string }
         | null
         | undefined;
+      let images: string[] | null | undefined;
 
       if (attachment?.source === "new") {
+        // A new video/file replaces any images.
         const uploaded = await uploadPostAttachment(attachment.file);
         media = {};
         if (uploaded.attachmentType === "image") media.image = uploaded.url;
         else if (uploaded.attachmentType === "video") media.video = uploaded.url;
         else media.file = uploaded.url;
+        if (!isArticle) images = [];
       } else if (attachment?.source === "existing") {
+        media = undefined;
+      } else if (!isArticle) {
+        // Image mode: upload new picks, then rebuild the ordered URL list.
+        const newUploads = await Promise.all(
+          editImages.map((item) =>
+            item.source === "new"
+              ? uploadPostAttachment(item.file).then((r) => r.url)
+              : Promise.resolve(item.url),
+          ),
+        );
+        images = newUploads;
         media = undefined;
       } else if (hadExistingMedia) {
         media = null;
@@ -348,6 +412,7 @@ export function EditPostDialog({
       const { post: updated } = await api.posts.update(post.id, {
         content: trimmed,
         media,
+        ...(images !== undefined ? { images } : {}),
         ...(isArticle
           ? { title: trimmedTitle }
           : { event: eventForSave }),
@@ -425,9 +490,11 @@ export function EditPostDialog({
           ref={imageInputRef}
           type="file"
           accept="image/jpeg,image/png,image/gif,image/webp"
+          multiple={!isArticle}
           className="hidden"
           onChange={(e) => {
-            handleFileSelect(e.target.files?.[0]);
+            if (isArticle) handleFileSelect(e.target.files?.[0]);
+            else handleImagesSelect(e.target.files);
             e.target.value = "";
           }}
         />
@@ -676,6 +743,48 @@ export function EditPostDialog({
                   }}
                 />
               ) : null}
+
+              {!isArticle && editImages.length > 0 && (
+                <div
+                  className={cn(
+                    "grid gap-1",
+                    editImages.length === 1
+                      ? "grid-cols-1"
+                      : "grid-cols-2 sm:grid-cols-3",
+                  )}
+                >
+                  {editImages.map((item, index) => (
+                    <div
+                      key={item.source === "existing" ? item.url : index}
+                      className="relative aspect-square overflow-hidden rounded-lg bg-muted"
+                    >
+                      <Image
+                        src={
+                          item.source === "existing"
+                            ? item.url
+                            : item.previewUrl
+                        }
+                        alt={`Image ${index + 1}`}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        iconOnly
+                        className="absolute right-1 top-1 size-7"
+                        onClick={() => removeEditImage(index)}
+                        disabled={saving}
+                        aria-label={`Remove image ${index + 1}`}
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {attachment && !isArticle && (
                 <Card className="relative overflow-hidden">

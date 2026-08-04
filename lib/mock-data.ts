@@ -1,7 +1,6 @@
 import type {
   Comment,
   Conversation,
-  Message,
   Notification,
   Post,
   User,
@@ -234,51 +233,6 @@ export const conversations: Conversation[] = [
     unread: 1,
   },
 ];
-
-export const messages: Record<string, Message[]> = {
-  conv1: [
-    {
-      id: "m1",
-      senderId: "u1",
-      content: "Hey! Loved your portfolio redesign.",
-      createdAt: "2h ago",
-    },
-    {
-      id: "m2",
-      senderId: "me",
-      content: "Thank you so much! It took a while to get right.",
-      createdAt: "1h ago",
-    },
-    {
-      id: "m3",
-      senderId: "u1",
-      content: "That photo is amazing! Where was it taken?",
-      createdAt: "10m ago",
-    },
-  ],
-  conv2: [
-    {
-      id: "m4",
-      senderId: "me",
-      content: "Can you share the ramen recipe?",
-      createdAt: "2h ago",
-    },
-    {
-      id: "m5",
-      senderId: "u3",
-      content: "I'll send you the recipe tonight!",
-      createdAt: "1h ago",
-    },
-  ],
-  conv3: [
-    {
-      id: "m6",
-      senderId: "u2",
-      content: "Want to collaborate on the open source project?",
-      createdAt: "3h ago",
-    },
-  ],
-};
 
 export const blockedUsers: User[] = [
   {

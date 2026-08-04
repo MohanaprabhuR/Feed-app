@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   Award,
   Calendar,
+  GalleryHorizontalEnd,
   ChevronDown,
   Clock,
   FileText,
@@ -152,6 +153,10 @@ export function CreatePostComposer({
   const isArticleDialogOpen = articleOpen || initialArticleOpen;
   const [content, setContent] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
+  const [images, setImages] = useState<{ file: File; previewUrl: string }[]>(
+    [],
+  );
+  const [sliderMode, setSliderMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showEventForm, setShowEventForm] = useState(false);
   const [eventDraft, setEventDraft] = useState<EventDraft>({
@@ -267,8 +272,51 @@ export function CreatePostComposer({
     setAttachment(null);
   }
 
+  function clearImages() {
+    setSliderMode(false);
+    setImages((current) => {
+      current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      return [];
+    });
+  }
+
+  function removeImage(index: number) {
+    setImages((current) => {
+      const target = current[index];
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return current.filter((_, i) => i !== index);
+    });
+  }
+
+  function handleImagesSelect(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return;
+    const picked: { file: File; previewUrl: string }[] = [];
+    for (const file of Array.from(fileList)) {
+      if (getAttachmentType(file) !== "image") continue;
+      const validationError = validatePostAttachment(file);
+      if (validationError) {
+        toast.custom(() => (
+          <Alert variant="error">
+            <AlertContent>
+              <AlertTitle>Invalid image.</AlertTitle>
+              <AlertDescription>{validationError}</AlertDescription>
+            </AlertContent>
+          </Alert>
+        ));
+        continue;
+      }
+      picked.push({ file, previewUrl: URL.createObjectURL(file) });
+    }
+    if (picked.length === 0) return;
+    // Picking images replaces any single video/file attachment.
+    clearAttachment();
+    setImages((current) => [...current, ...picked]);
+    setOpen(true);
+  }
+
   function resetComposer() {
     clearAttachment();
+    clearImages();
     clearEvent();
     clearCelebration();
     setContent("");
@@ -312,12 +360,20 @@ export function CreatePostComposer({
   }
 
   function openPicker(kind: "image" | "video" | "file") {
+    if (kind === "image") setSliderMode(false);
     openModal();
     requestAnimationFrame(() => {
       if (kind === "image") imageInputRef.current?.click();
       if (kind === "video") videoInputRef.current?.click();
       if (kind === "file") fileInputRef.current?.click();
     });
+  }
+
+  /** Add images that display as a swipeable slider instead of a collage grid. */
+  function openSliderPicker() {
+    setSliderMode(true);
+    openModal();
+    requestAnimationFrame(() => imageInputRef.current?.click());
   }
 
   async function handlePost() {
@@ -358,7 +414,14 @@ export function CreatePostComposer({
 
     const celebration = buildCelebrationPayload();
 
-    if (!content.trim() && !attachment && !event && !celebration) return;
+    if (
+      !content.trim() &&
+      !attachment &&
+      images.length === 0 &&
+      !event &&
+      !celebration
+    )
+      return;
 
     setLoading(true);
 
@@ -366,8 +429,14 @@ export function CreatePostComposer({
       let image: string | undefined;
       let video: string | undefined;
       let file: string | undefined;
+      let imageUrls: string[] | undefined;
 
-      if (attachment) {
+      if (images.length > 0) {
+        const uploaded = await Promise.all(
+          images.map((item) => uploadPostAttachment(item.file)),
+        );
+        imageUrls = uploaded.map((result) => result.url);
+      } else if (attachment) {
         const uploaded = await uploadPostAttachment(attachment.file);
         if (uploaded.attachmentType === "image") image = uploaded.url;
         else if (uploaded.attachmentType === "video") video = uploaded.url;
@@ -377,6 +446,8 @@ export function CreatePostComposer({
       const { post: created } = await api.posts.create({
         content,
         media: { image, video, file },
+        images: imageUrls,
+        mediaLayout: sliderMode && (imageUrls?.length ?? 0) > 1 ? "slider" : "grid",
         event,
         celebration,
       });
@@ -427,6 +498,7 @@ export function CreatePostComposer({
     user &&
     !loading &&
     (content.trim() ||
+      images.length > 0 ||
       attachment ||
       (showEventForm && eventDraft.title.trim() && eventDraft.startsAt) ||
       showCelebrationForm),
@@ -438,9 +510,10 @@ export function CreatePostComposer({
         ref={imageInputRef}
         type="file"
         accept="image/jpeg,image/png,image/gif,image/webp"
+        multiple
         className="hidden"
         onChange={(e) => {
-          handleFileSelect(e.target.files?.[0]);
+          handleImagesSelect(e.target.files);
           e.target.value = "";
         }}
       />
@@ -733,6 +806,44 @@ export function CreatePostComposer({
               />
             ) : null}
 
+            {images.length > 0 && (
+              <div
+                className={cn(
+                  "grid gap-1",
+                  images.length === 1
+                    ? "grid-cols-1"
+                    : "grid-cols-2 sm:grid-cols-3",
+                )}
+              >
+                {images.map((item, index) => (
+                  <div
+                    key={index}
+                    className="relative aspect-square overflow-hidden rounded-lg bg-muted"
+                  >
+                    <Image
+                      src={item.previewUrl}
+                      alt={`Selected image ${index + 1}`}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      iconOnly
+                      className="absolute right-1 top-1 size-7"
+                      onClick={() => removeImage(index)}
+                      disabled={loading}
+                      aria-label={`Remove image ${index + 1}`}
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {attachment && (
               <Card className="relative overflow-hidden">
                 {attachment.type === "image" && attachment.previewUrl && (
@@ -822,6 +933,18 @@ export function CreatePostComposer({
                 aria-label="Add photo"
               >
                 <ImageIcon />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                iconOnly
+                onClick={openSliderPicker}
+                aria-label="Add image slider"
+                aria-pressed={sliderMode}
+                className={cn(sliderMode && "bg-accent text-foreground")}
+              >
+                <GalleryHorizontalEnd />
               </Button>
               <Button
                 type="button"

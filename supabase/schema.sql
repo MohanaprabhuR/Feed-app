@@ -145,6 +145,8 @@ create table if not exists public.posts (
   author_id uuid references public.profiles(id) on delete cascade not null,
   content text not null,
   image text,
+  images text[],
+  media_layout text,
   post_type text default 'post' not null,
   title text,
   event jsonb,

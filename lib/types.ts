@@ -54,6 +54,10 @@ export type Post = {
   title?: string;
   content: string;
   image?: string;
+  /** All attached images (0–N). `image` mirrors the first for compatibility. */
+  images?: string[];
+  /** How multiple images render: "grid" collage (default) or "slider" carousel. */
+  mediaLayout?: "grid" | "slider";
   video?: string;
   file?: {
     url: string;
@@ -115,5 +119,8 @@ export type Message = {
   id: string;
   senderId: string;
   content: string;
+  /** Relative label (e.g. "2m ago") — used for the conversation list. */
   createdAt: string;
+  /** Raw ISO timestamp — used to render bubble time + date dividers. */
+  createdAtRaw: string;
 };

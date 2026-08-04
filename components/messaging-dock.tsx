@@ -1,20 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   ChevronLeft,
+  Download,
   MessageCircle,
   MoreHorizontal,
   Paperclip,
   Search,
   Send,
-  Smile,
   SquarePen,
 } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
+import { useNotifications } from "@/components/notifications-provider";
+import { markConversationNotificationsRead } from "@/lib/notifications";
 import { useMessaging } from "@/components/messaging-provider";
+import { EmojiPickerButton } from "@/components/emoji-picker-button";
 import { CurrentUserAvatar, UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,14 +38,23 @@ import { getErrorMessage } from "@/lib/errors";
 import {
   fetchConversations,
   fetchMessages,
+  formatMessageDay,
+  formatMessageTime,
+  getMessageAttachment,
   getOrCreateDirectConversation,
+  isSameDay,
   markConversationRead,
+  messagePreview,
   messageRowToMessage,
   sendMessage,
   subscribeToConversationMessages,
   subscribeToInboxMessages,
   type DirectMessageRow,
 } from "@/lib/messages";
+import {
+  uploadPostAttachment,
+  validatePostAttachment,
+} from "@/lib/post-media";
 import { createClient } from "@/lib/supabase/client";
 import type { Conversation, Message, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -98,6 +117,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const shouldSubscribe =
     mode === "page" ? true : mode === "dock" && !isMessagesRoute;
   const { user } = useCurrentUser();
+  const { refreshUnreadCount: refreshNotifications } = useNotifications();
   const userId = user?.id;
   const {
     expanded,
@@ -125,7 +145,10 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const [threadNotFound, setThreadNotFound] = useState(false);
   const [threadError, setThreadError] = useState<string | null>(null);
   const [threadRetry, setThreadRetry] = useState(0);
+  const [uploading, setUploading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const draftInputRef = useRef<HTMLInputElement>(null);
+  const attachInputRef = useRef<HTMLInputElement>(null);
 
   const loadConversations = useCallback(async () => {
     if (!userId) {
@@ -162,6 +185,11 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
       try {
         const supabase = createClient();
         await markConversationRead(supabase, id, userId);
+        // Also clear this chat's message notification from the nav bell badge.
+        await markConversationNotificationsRead(supabase, id, userId).catch(
+          () => {},
+        );
+        void refreshNotifications();
       } catch (err) {
         setSetupError(
           getErrorMessage(
@@ -171,7 +199,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
         );
       }
     },
-    [clearUnread, userId],
+    [clearUnread, userId, refreshNotifications],
   );
 
   useEffect(() => {
@@ -502,6 +530,51 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
       );
     } finally {
       setSending(false);
+    }
+  }
+
+  function handleEmojiSelect(emoji: string) {
+    setDraft((current) => current + emoji);
+    requestAnimationFrame(() => draftInputRef.current?.focus());
+  }
+
+  async function handleAttach(file: File | undefined) {
+    if (!file || !conversationId || !userId || uploading || sending) return;
+
+    const validationError = validatePostAttachment(file);
+    if (validationError) {
+      appToast.error("Can't attach file", validationError);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { url } = await uploadPostAttachment(file);
+      const supabase = createClient();
+      const saved = await sendMessage(supabase, conversationId, userId, url);
+      setThreadMessages((current) => ({
+        ...current,
+        [conversationId]: [...(current[conversationId] ?? []), saved],
+      }));
+      setConversationList((current) =>
+        current.map((conv) =>
+          conv.id === conversationId
+            ? {
+                ...conv,
+                lastMessage: saved.content,
+                lastMessageAt: saved.createdAt,
+                unread: 0,
+              }
+            : conv,
+        ),
+      );
+    } catch (err) {
+      appToast.error(
+        "Attachment not sent",
+        getErrorMessage(err, "Could not upload your file."),
+      );
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -851,15 +924,26 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                 (next.senderId === "me" ||
                   Boolean(user?.id && next.senderId === user.id));
               const showAvatar = !next || nextIsMe !== isMe;
+              const prev = chatMessages[index - 1];
+              const showDayDivider =
+                !prev || !isSameDay(prev.createdAtRaw, msg.createdAtRaw);
+              const attachment = getMessageAttachment(msg.content);
 
               return (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    "flex items-end gap-1.5",
-                    isMe ? "justify-end" : "justify-start",
-                  )}
-                >
+                <Fragment key={msg.id}>
+                  {showDayDivider ? (
+                    <div className="my-1.5 flex justify-center">
+                      <span className="rounded-full bg-foreground/10 px-2.5 py-0.5 text-2xs font-medium text-foreground/70">
+                        {formatMessageDay(msg.createdAtRaw)}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div
+                    className={cn(
+                      "flex items-end gap-1.5",
+                      isMe ? "justify-end" : "justify-start",
+                    )}
+                  >
                   {!isMe && (
                     <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center">
                       {showAvatar ? (
@@ -874,22 +958,60 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                   )}
                   <div
                     className={cn(
-                      "max-w-[78%] px-3 py-2 text-sm leading-relaxed shadow-sm",
+                      "max-w-[78%] text-sm leading-relaxed shadow-sm",
+                      attachment && attachment.type !== "file"
+                        ? "p-1"
+                        : "px-3 py-2",
                       isMe
                         ? "rounded-2xl rounded-br-md bg-foreground text-background"
                         : "rounded-2xl rounded-bl-md bg-background text-foreground",
                     )}
                   >
-                    <p className="whitespace-pre-wrap wrap-break-word">
-                      {msg.content}
-                    </p>
+                    {attachment ? (
+                      attachment.type === "image" ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- user chat upload of unknown dimensions
+                        <img
+                          src={attachment.url}
+                          alt="Attachment"
+                          className="max-h-64 max-w-full rounded-lg object-cover"
+                        />
+                      ) : attachment.type === "video" ? (
+                        <video
+                          src={attachment.url}
+                          controls
+                          className="max-h-64 max-w-full rounded-lg"
+                        />
+                      ) : (
+                        <a
+                          href={attachment.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn(
+                            "flex items-center gap-1.5 font-medium underline",
+                            isMe ? "text-background" : "text-foreground",
+                          )}
+                        >
+                          <Download className="size-4 shrink-0" />
+                          <span className="min-w-0 truncate">
+                            {attachment.name ?? "Download file"}
+                          </span>
+                        </a>
+                      )
+                    ) : (
+                      <p className="whitespace-pre-wrap wrap-break-word">
+                        {msg.content}
+                      </p>
+                    )}
                     <p
                       className={cn(
                         "mt-1 text-right text-2xs leading-none",
+                        attachment &&
+                          attachment.type !== "file" &&
+                          "px-1 pb-0.5",
                         isMe ? "text-background/60" : "text-muted-foreground",
                       )}
                     >
-                      {msg.createdAt}
+                      {formatMessageTime(msg.createdAtRaw)}
                     </p>
                   </div>
                   {isMe && (
@@ -899,7 +1021,8 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                       ) : null}
                     </span>
                   )}
-                </div>
+                  </div>
+                </Fragment>
               );
             })}
             <div ref={chatEndRef} />
@@ -913,24 +1036,32 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                 void handleSend();
               }}
             >
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                iconOnly
-                className="mb-0.5 shrink-0 text-muted-foreground"
-                aria-label="Emoji"
-              >
-                <Smile />
-              </Button>
+              <EmojiPickerButton
+                onSelect={handleEmojiSelect}
+                disabled={sending || uploading}
+                side="top"
+                align="start"
+                buttonClassName="mb-0.5 shrink-0"
+              />
+              <input
+                ref={attachInputRef}
+                type="file"
+                accept="image/*,video/*,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  void handleAttach(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Input
+                  ref={draftInputRef}
                   placeholder="Type a message"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   size="sm"
                   autoComplete="off"
-                  disabled={sending}
+                  disabled={sending || uploading}
                 />
                 <Button
                   type="button"
@@ -938,7 +1069,9 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                   size="sm"
                   iconOnly
                   className="shrink-0 text-muted-foreground"
-                  aria-label="Attach"
+                  aria-label="Attach file"
+                  disabled={uploading || sending}
+                  onClick={() => attachInputRef.current?.click()}
                 >
                   <Paperclip />
                 </Button>
@@ -948,7 +1081,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                 size="sm"
                 iconOnly
                 aria-label="Send"
-                disabled={!draft.trim() || sending}
+                disabled={!draft.trim() || sending || uploading}
                 loading={sending}
                 className="mb-0.5 size-10 shrink-0 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40"
               >
@@ -1117,7 +1250,7 @@ function ConversationList({
                       : "text-muted-foreground",
                   )}
                 >
-                  {conv.lastMessage}
+                  {messagePreview(conv.lastMessage)}
                 </p>
                 <UnreadBadge count={conv.unread} />
               </div>
