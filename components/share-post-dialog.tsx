@@ -230,14 +230,23 @@ export function SharePostDialog({
             {people.map((person) => {
               const selected = selectedIds.has(person.id);
               return (
-                <button
+                // Not a <button>: UserListItem contains interactive elements
+                // (profile trigger, checkbox), which can't nest inside a button.
+                <div
                   key={person.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   className={cn(
-                    "w-full text-left transition-colors hover:bg-muted/50",
+                    "w-full cursor-pointer text-left transition-colors hover:bg-muted/50",
                     selected && "bg-muted/40",
                   )}
                   onClick={() => toggleUser(person.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleUser(person.id);
+                    }
+                  }}
                 >
                   <UserListItem
                     user={person}
@@ -250,7 +259,7 @@ export function SharePostDialog({
                       />
                     }
                   />
-                </button>
+                </div>
               );
             })}
           </div>

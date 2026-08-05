@@ -77,6 +77,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PostEventCard } from "@/components/post-event-card";
 import { PostCelebrationCard } from "@/components/post-celebration-card";
 import { DateTimePickerPopover } from "@/components/datetime-picker-popover";
@@ -105,6 +110,34 @@ type CelebrationDraft = {
   occasion: CelebrationOccasion;
   message: string;
 };
+
+function ComposerIconButton({
+  label,
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof Button> & { label: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          iconOnly
+          aria-label={label}
+          className={className}
+          {...props}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={6}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 const feedActions = [
   {
@@ -1002,92 +1035,75 @@ export function CreatePostComposer({
             </Button>
 
             <div className="ml-auto flex items-center gap-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                iconOnly
+              <ComposerIconButton
+                label="Image"
                 onClick={() => openPicker("image")}
-                aria-label="Add photo"
               >
                 <ImageIcon />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                iconOnly
+              </ComposerIconButton>
+              <ComposerIconButton
+                label="Slider"
                 onClick={openSliderPicker}
-                aria-label="Add image slider"
                 aria-pressed={imageLayout === "slider"}
                 className={cn(
                   imageLayout === "slider" && "bg-accent text-foreground",
                 )}
               >
                 <GalleryHorizontalEnd />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                iconOnly
+              </ComposerIconButton>
+              <ComposerIconButton
+                label="Document slider"
                 onClick={openDocumentPicker}
-                aria-label="Add document carousel"
                 aria-pressed={imageLayout === "document"}
                 className={cn(
                   imageLayout === "document" && "bg-accent text-foreground",
                 )}
               >
                 <Files />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                iconOnly
+              </ComposerIconButton>
+              <ComposerIconButton
+                label="Video"
                 onClick={() => openPicker("video")}
-                aria-label="Add video"
               >
                 <Video />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                iconOnly
+              </ComposerIconButton>
+              <ComposerIconButton
+                label="Event"
                 onClick={openEventForm}
-                aria-label="Create event"
                 aria-pressed={showEventForm}
                 className={cn(showEventForm && "bg-accent text-foreground")}
               >
                 <Calendar />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                iconOnly
+              </ComposerIconButton>
+              <ComposerIconButton
+                label="Celebrate"
                 onClick={openCelebrationForm}
-                aria-label="Celebrate an occasion"
                 aria-pressed={showCelebrationForm}
                 className={cn(
                   showCelebrationForm && "bg-accent text-foreground",
                 )}
               >
                 <Award />
-              </Button>
+              </ComposerIconButton>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    iconOnly
-                    aria-label="More options"
-                  >
-                    <Plus />
-                  </Button>
-                </DropdownMenuTrigger>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        aria-label="More options"
+                      >
+                        <Plus />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={6}>
+                    More
+                  </TooltipContent>
+                </Tooltip>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem onClick={() => openPicker("file")}>
                     <Paperclip className="size-4" />

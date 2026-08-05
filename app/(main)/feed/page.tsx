@@ -7,6 +7,8 @@ import { fetchSuggestedProfiles } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import type { Post, User } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function FeedPage({
   searchParams,
 }: {

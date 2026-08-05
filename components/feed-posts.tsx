@@ -109,9 +109,24 @@ export function FeedPosts({
   );
 
   useEffect(() => {
-    if (serverLoaded) return;
-    void loadPosts({ showLoading: true });
+    // Always revalidate against the shared Supabase DB so posts created on
+    // production (or another device) show up in local/dev without a hard reload.
+    void loadPosts({ showLoading: !serverLoaded });
   }, [serverLoaded, loadPosts]);
+
+  useEffect(() => {
+    function refreshIfVisible() {
+      if (document.visibilityState === "visible") {
+        void loadPosts();
+      }
+    }
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    return () => {
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
+  }, [loadPosts]);
 
   // Live feed: refetch when posts are added, edited, or removed.
   useEffect(() => {
