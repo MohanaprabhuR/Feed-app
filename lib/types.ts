@@ -56,8 +56,11 @@ export type Post = {
   image?: string;
   /** All attached images (0–N). `image` mirrors the first for compatibility. */
   images?: string[];
-  /** How multiple images render: "grid" collage (default) or "slider" carousel. */
-  mediaLayout?: "grid" | "slider";
+  /** Per-image captions, index-aligned with `images` (slider posts). */
+  imageCaptions?: string[];
+  /** How multiple images render: "grid" collage (default), "slider" card
+   * carousel, or "document" paged viewer (uses `title` as the header). */
+  mediaLayout?: "grid" | "slider" | "document";
   video?: string;
   file?: {
     url: string;

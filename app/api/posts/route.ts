@@ -129,7 +129,15 @@ export async function POST(request: Request) {
       parseEvent(body.event),
       parseCelebration(body.celebration),
       parseImages(body.images),
-      body.mediaLayout === "slider" ? "slider" : "grid",
+      body.mediaLayout === "slider"
+        ? "slider"
+        : body.mediaLayout === "document"
+          ? "document"
+          : "grid",
+      Array.isArray(body.imageCaptions)
+        ? body.imageCaptions.map((c: unknown) => (typeof c === "string" ? c : ""))
+        : undefined,
+      typeof body.title === "string" ? body.title : undefined,
     );
     return { post };
   });

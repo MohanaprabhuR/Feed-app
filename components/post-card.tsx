@@ -310,6 +310,8 @@ export function PostCard({
         ) : galleryImages.length > 0 ? (
           <PostMediaGallery
             images={galleryImages}
+            captions={post.imageCaptions}
+            title={post.title}
             layout={post.mediaLayout ?? "grid"}
           />
         ) : null}

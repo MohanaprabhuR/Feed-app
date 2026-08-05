@@ -58,7 +58,9 @@ export const api = {
       content: string;
       media?: { image?: string; video?: string; file?: string };
       images?: string[];
-      mediaLayout?: "grid" | "slider";
+      imageCaptions?: string[];
+      mediaLayout?: "grid" | "slider" | "document";
+      title?: string;
       event?: PostEvent;
       celebration?: PostCelebration;
     }) =>

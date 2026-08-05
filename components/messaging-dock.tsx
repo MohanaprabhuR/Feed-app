@@ -182,14 +182,16 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
     async (id: string) => {
       if (!userId) return;
       clearUnread(id);
+      const supabase = createClient();
+
+      // Clear this chat's message notification from the nav bell badge — done
+      // independently so a missing conversation read-policy can't block it.
+      void markConversationNotificationsRead(supabase, id, userId)
+        .then(() => refreshNotifications())
+        .catch(() => {});
+
       try {
-        const supabase = createClient();
         await markConversationRead(supabase, id, userId);
-        // Also clear this chat's message notification from the nav bell badge.
-        await markConversationNotificationsRead(supabase, id, userId).catch(
-          () => {},
-        );
-        void refreshNotifications();
       } catch (err) {
         setSetupError(
           getErrorMessage(

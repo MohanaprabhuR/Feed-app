@@ -171,7 +171,27 @@ function unpackImagesFromImageField(
   }
 }
 
-function resolveImageList(row: {
+// Per-image captions (for slider posts) are stored inline in each `images`
+// entry as `url␟caption` using a control char that never appears in URLs/text,
+// so no extra column is needed.
+const CAPTION_SEP = "\u001f";
+
+export function combineImageEntry(url: string, caption?: string): string {
+  const trimmedCaption = caption?.trim();
+  return trimmedCaption ? `${url}${CAPTION_SEP}${trimmedCaption}` : url;
+}
+
+export function splitImageEntry(entry: string): {
+  url: string;
+  caption?: string;
+} {
+  const index = entry.indexOf(CAPTION_SEP);
+  if (index === -1) return { url: entry };
+  return { url: entry.slice(0, index), caption: entry.slice(index + 1) || undefined };
+}
+
+/** Raw `images` entries (may carry an inline caption). */
+function resolveImageEntries(row: {
   image?: string | null;
   images?: string[] | null;
 }): string[] {
@@ -462,13 +482,17 @@ export function postRowToPost(
 
   const packedImages = unpackImagesFromImageField(normalized.image);
   const media = packedImages
-    ? { image: packedImages[0], video: undefined, file: undefined }
+    ? { image: splitImageEntry(packedImages[0]).url, video: undefined, file: undefined }
     : splitPostMedia(normalized.image, normalized.video);
   const event = normalizeEvent(normalized.event);
   const celebration = normalizeCelebration(normalized.celebration);
 
   // Prefer `images` column, then packed JSON in `image`, then single legacy URL.
-  const images = resolveImageList(normalized);
+  // Each entry may carry an inline caption (slider posts).
+  const entries = resolveImageEntries(normalized).map(splitImageEntry);
+  const images = entries.map((entry) => entry.url);
+  const captions = entries.map((entry) => entry.caption ?? "");
+  const hasCaptions = captions.some((caption) => caption.length > 0);
 
   return {
     id: normalized.id,
@@ -478,7 +502,13 @@ export function postRowToPost(
     content: normalized.content,
     image: images[0] ?? media.image,
     images: images.length > 0 ? images : undefined,
-    mediaLayout: normalized.media_layout === "slider" ? "slider" : "grid",
+    imageCaptions: hasCaptions ? captions : undefined,
+    mediaLayout:
+      normalized.media_layout === "slider"
+        ? "slider"
+        : normalized.media_layout === "document"
+          ? "document"
+          : "grid",
     video: media.video,
     file: media.file,
     event,
@@ -722,16 +752,27 @@ export async function createPost(
   event?: PostEvent,
   celebration?: PostCelebration,
   images?: string[],
-  mediaLayout?: "grid" | "slider",
+  mediaLayout?: "grid" | "slider" | "document",
+  imageCaptions?: string[],
+  title?: string,
 ) {
   const trimmed = content.trim();
+  const trimmedTitle = title?.trim();
   const normalizedEvent = event ? normalizeEvent(event) : undefined;
   const normalizedCelebration = celebration
     ? normalizeCelebration(celebration)
     : undefined;
-  const imageList = (images ?? [])
-    .map((url) => (typeof url === "string" ? url.trim() : ""))
-    .filter(Boolean);
+  const captionList = imageCaptions ?? [];
+  const imagePairs = (images ?? [])
+    .map((url, index) => ({
+      url: typeof url === "string" ? url.trim() : "",
+      caption: captionList[index],
+    }))
+    .filter((pair) => pair.url.length > 0);
+  const imageList = imagePairs.map((pair) => pair.url);
+  const imageEntries = imagePairs.map((pair) =>
+    combineImageEntry(pair.url, pair.caption),
+  );
 
   if (
     !trimmed &&
@@ -767,8 +808,10 @@ export async function createPost(
         ? await resolveImagesColumnFresh(supabase)
         : await resolveImagesColumn(supabase)
       : false;
+  const wantsCustomLayout =
+    mediaLayout === "slider" || mediaLayout === "document";
   const includeMediaLayout =
-    mode === "modern" && mediaLayout === "slider"
+    mode === "modern" && wantsCustomLayout
       ? await resolveMediaLayoutColumnFresh(supabase)
       : mode === "modern"
         ? await resolveMediaLayoutColumn(supabase)
@@ -804,7 +847,7 @@ export async function createPost(
     content: trimmed || fallbackContent,
     image: mediaUrl,
     post_type: "post",
-    title: normalizedEvent?.title ?? null,
+    title: trimmedTitle || normalizedEvent?.title || null,
   };
   if (includeEvent) {
     modernPayload.event = normalizedEvent ?? null;
@@ -813,10 +856,10 @@ export async function createPost(
     modernPayload.celebration = normalizedCelebration ?? null;
   }
   if (includeImages) {
-    modernPayload.images = imageList.length > 0 ? imageList : null;
+    modernPayload.images = imageEntries.length > 0 ? imageEntries : null;
   }
   if (includeMediaLayout) {
-    modernPayload.media_layout = mediaLayout === "slider" ? "slider" : null;
+    modernPayload.media_layout = wantsCustomLayout ? mediaLayout : null;
   }
 
   const select = activeSelect(

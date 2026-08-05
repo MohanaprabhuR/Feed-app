@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   Award,
   Calendar,
+  Files,
   GalleryHorizontalEnd,
   ChevronDown,
   Clock,
@@ -153,10 +154,13 @@ export function CreatePostComposer({
   const isArticleDialogOpen = articleOpen || initialArticleOpen;
   const [content, setContent] = useState("");
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
-  const [images, setImages] = useState<{ file: File; previewUrl: string }[]>(
-    [],
-  );
-  const [sliderMode, setSliderMode] = useState(false);
+  const [images, setImages] = useState<
+    { file: File; previewUrl: string; caption: string }[]
+  >([]);
+  const [imageLayout, setImageLayout] = useState<
+    "grid" | "slider" | "document"
+  >("grid");
+  const [docTitle, setDocTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const [showEventForm, setShowEventForm] = useState(false);
   const [eventDraft, setEventDraft] = useState<EventDraft>({
@@ -273,7 +277,8 @@ export function CreatePostComposer({
   }
 
   function clearImages() {
-    setSliderMode(false);
+    setImageLayout("grid");
+    setDocTitle("");
     setImages((current) => {
       current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
       return [];
@@ -290,7 +295,7 @@ export function CreatePostComposer({
 
   function handleImagesSelect(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
-    const picked: { file: File; previewUrl: string }[] = [];
+    const picked: { file: File; previewUrl: string; caption: string }[] = [];
     for (const file of Array.from(fileList)) {
       if (getAttachmentType(file) !== "image") continue;
       const validationError = validatePostAttachment(file);
@@ -305,13 +310,19 @@ export function CreatePostComposer({
         ));
         continue;
       }
-      picked.push({ file, previewUrl: URL.createObjectURL(file) });
+      picked.push({ file, previewUrl: URL.createObjectURL(file), caption: "" });
     }
     if (picked.length === 0) return;
     // Picking images replaces any single video/file attachment.
     clearAttachment();
     setImages((current) => [...current, ...picked]);
     setOpen(true);
+  }
+
+  function setImageCaption(index: number, caption: string) {
+    setImages((current) =>
+      current.map((item, i) => (i === index ? { ...item, caption } : item)),
+    );
   }
 
   function resetComposer() {
@@ -360,7 +371,7 @@ export function CreatePostComposer({
   }
 
   function openPicker(kind: "image" | "video" | "file") {
-    if (kind === "image") setSliderMode(false);
+    if (kind === "image") setImageLayout("grid");
     openModal();
     requestAnimationFrame(() => {
       if (kind === "image") imageInputRef.current?.click();
@@ -369,9 +380,16 @@ export function CreatePostComposer({
     });
   }
 
-  /** Add images that display as a swipeable slider instead of a collage grid. */
+  /** Add images that display as a swipeable card slider. */
   function openSliderPicker() {
-    setSliderMode(true);
+    setImageLayout("slider");
+    openModal();
+    requestAnimationFrame(() => imageInputRef.current?.click());
+  }
+
+  /** Add images that display as a paged document carousel with a header title. */
+  function openDocumentPicker() {
+    setImageLayout("document");
     openModal();
     requestAnimationFrame(() => imageInputRef.current?.click());
   }
@@ -443,11 +461,20 @@ export function CreatePostComposer({
         else file = uploaded.url;
       }
 
+      const multiImage = (imageUrls?.length ?? 0) > 1;
       const { post: created } = await api.posts.create({
         content,
         media: { image, video, file },
         images: imageUrls,
-        mediaLayout: sliderMode && (imageUrls?.length ?? 0) > 1 ? "slider" : "grid",
+        imageCaptions:
+          imageLayout === "slider" && images.length > 0
+            ? images.map((item) => item.caption)
+            : undefined,
+        mediaLayout: multiImage ? imageLayout : "grid",
+        title:
+          imageLayout === "document" && docTitle.trim()
+            ? docTitle.trim()
+            : undefined,
         event,
         celebration,
       });
@@ -806,43 +833,94 @@ export function CreatePostComposer({
               />
             ) : null}
 
-            {images.length > 0 && (
-              <div
-                className={cn(
-                  "grid gap-1",
-                  images.length === 1
-                    ? "grid-cols-1"
-                    : "grid-cols-2 sm:grid-cols-3",
-                )}
-              >
-                {images.map((item, index) => (
-                  <div
-                    key={index}
-                    className="relative aspect-square overflow-hidden rounded-lg bg-muted"
-                  >
-                    <Image
-                      src={item.previewUrl}
-                      alt={`Selected image ${index + 1}`}
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      iconOnly
-                      className="absolute right-1 top-1 size-7"
-                      onClick={() => removeImage(index)}
-                      disabled={loading}
-                      aria-label={`Remove image ${index + 1}`}
-                    >
-                      <X />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+            {images.length > 0 && imageLayout === "document" && (
+              <input
+                type="text"
+                value={docTitle}
+                onChange={(e) => setDocTitle(e.target.value)}
+                placeholder="Document title (shown on the header)"
+                disabled={loading}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
             )}
+
+            {images.length > 0 &&
+              (imageLayout === "slider" ? (
+                // Slider mode: each image gets an optional caption.
+                <div className="space-y-2">
+                  {images.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 rounded-lg border p-2"
+                    >
+                      <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-muted">
+                        <Image
+                          src={item.previewUrl}
+                          alt={`Selected image ${index + 1}`}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={item.caption}
+                        onChange={(e) => setImageCaption(index, e.target.value)}
+                        placeholder={`Caption ${index + 1} (optional)`}
+                        disabled={loading}
+                        className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        onClick={() => removeImage(index)}
+                        disabled={loading}
+                        aria-label={`Remove image ${index + 1}`}
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className={cn(
+                    "grid gap-1",
+                    images.length === 1
+                      ? "grid-cols-1"
+                      : "grid-cols-2 sm:grid-cols-3",
+                  )}
+                >
+                  {images.map((item, index) => (
+                    <div
+                      key={index}
+                      className="relative aspect-square overflow-hidden rounded-lg bg-muted"
+                    >
+                      <Image
+                        src={item.previewUrl}
+                        alt={`Selected image ${index + 1}`}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        iconOnly
+                        className="absolute right-1 top-1 size-7"
+                        onClick={() => removeImage(index)}
+                        disabled={loading}
+                        aria-label={`Remove image ${index + 1}`}
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ))}
 
             {attachment && (
               <Card className="relative overflow-hidden">
@@ -941,10 +1019,26 @@ export function CreatePostComposer({
                 iconOnly
                 onClick={openSliderPicker}
                 aria-label="Add image slider"
-                aria-pressed={sliderMode}
-                className={cn(sliderMode && "bg-accent text-foreground")}
+                aria-pressed={imageLayout === "slider"}
+                className={cn(
+                  imageLayout === "slider" && "bg-accent text-foreground",
+                )}
               >
                 <GalleryHorizontalEnd />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                iconOnly
+                onClick={openDocumentPicker}
+                aria-label="Add document carousel"
+                aria-pressed={imageLayout === "document"}
+                className={cn(
+                  imageLayout === "document" && "bg-accent text-foreground",
+                )}
+              >
+                <Files />
               </Button>
               <Button
                 type="button"

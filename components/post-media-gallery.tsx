@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
 
 function isStorageUrl(url: string) {
   return url.includes("/storage/v1/object/public/");
@@ -105,13 +106,150 @@ function Lightbox({
   );
 }
 
-/** Inline LinkedIn-style slider: one image at a time with arrows, a seekable
- * progress bar + page counter, swipe, and a fullscreen button. */
+const CARD_WIDTH = 80; // % of the viewport per card (leaves peek on each side)
+
+/** LinkedIn-style card carousel: a centered card with peeking neighbors, arrows,
+ * an optional per-card caption, dots, and a fullscreen button. */
 function Carousel({
   images,
+  captions,
   onFullscreen,
 }: {
   images: string[];
+  captions?: string[];
+  onFullscreen: (index: number) => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const total = images.length;
+  const touchStartX = useRef<number | null>(null);
+  const clamp = (value: number) => Math.min(total - 1, Math.max(0, value));
+  const go = (dir: number) => setIndex((current) => clamp(current + dir));
+  const peek = (100 - CARD_WIDTH) / 2;
+
+  return (
+    <div className="select-none">
+      <div className="relative">
+        <div className="overflow-hidden">
+          <div
+            className="flex transition-transform duration-300 ease-out"
+            style={{ transform: `translateX(${peek - index * CARD_WIDTH}%)` }}
+            onTouchStart={(event) => {
+              touchStartX.current = event.touches[0]?.clientX ?? null;
+            }}
+            onTouchEnd={(event) => {
+              if (touchStartX.current == null) return;
+              const dx =
+                (event.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+              if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+              touchStartX.current = null;
+            }}
+          >
+            {images.map((src, i) => {
+              const caption = captions?.[i]?.trim();
+              const active = i === index;
+              return (
+                <div
+                  key={i}
+                  className="box-border shrink-0 px-1"
+                  style={{ width: `${CARD_WIDTH}%` }}
+                >
+                  <button
+                    type="button"
+                    aria-label={`Open image ${i + 1}`}
+                    onClick={() => (active ? onFullscreen(i) : setIndex(i))}
+                    className="block w-full text-left"
+                  >
+                    <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-neutral-900">
+                      <Image
+                        src={src}
+                        alt={`Image ${i + 1} of ${total}`}
+                        fill
+                        unoptimized={isStorageUrl(src)}
+                        sizes="(max-width: 768px) 80vw, 480px"
+                        className={cn(
+                          "object-cover transition-opacity duration-200",
+                          active ? "opacity-100" : "opacity-55",
+                        )}
+                      />
+                    </div>
+                    {caption ? (
+                      <p
+                        className={cn(
+                          "mt-2 line-clamp-2 text-sm font-semibold transition-opacity",
+                          active
+                            ? "text-foreground"
+                            : "text-muted-foreground opacity-70",
+                        )}
+                      >
+                        {caption}
+                      </p>
+                    ) : null}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {index > 0 ? (
+          <button
+            type="button"
+            aria-label="Previous image"
+            onClick={() => go(-1)}
+            className="absolute left-1 top-[42%] z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground shadow-md ring-1 ring-border transition-colors hover:bg-background"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+        ) : null}
+        {index < total - 1 ? (
+          <button
+            type="button"
+            aria-label="Next image"
+            onClick={() => go(1)}
+            className="absolute right-1 top-[42%] z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground shadow-md ring-1 ring-border transition-colors hover:bg-background"
+          >
+            <ChevronRight className="size-5" />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="mt-2 flex items-center justify-center gap-3">
+        <div className="flex items-center gap-1.5">
+          {images.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              aria-label={`Go to image ${i + 1}`}
+              onClick={() => setIndex(i)}
+              className={cn(
+                "h-1.5 rounded-full transition-all",
+                i === index ? "w-4 bg-foreground" : "w-1.5 bg-foreground/30",
+              )}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          aria-label="View fullscreen"
+          onClick={() => onFullscreen(index)}
+          className="text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Maximize2 className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** LinkedIn document-carousel: dark header (title + page count), full-width
+ * paged viewer, and a footer with a seekable scrubber + fullscreen. */
+function DocumentCarousel({
+  images,
+  title,
+  onFullscreen,
+}: {
+  images: string[];
+  title?: string;
   onFullscreen: (index: number) => void;
 }) {
   const [index, setIndex] = useState(0);
@@ -122,68 +260,78 @@ function Carousel({
   const progress = total > 1 ? (index / (total - 1)) * 100 : 0;
 
   return (
-    <div className="group relative aspect-square w-full select-none overflow-hidden rounded-lg bg-neutral-900">
-      <div
-        className="flex h-full w-full transition-transform duration-300 ease-out"
-        style={{ transform: `translateX(-${index * 100}%)` }}
-        onTouchStart={(event) => {
-          touchStartX.current = event.touches[0]?.clientX ?? null;
-        }}
-        onTouchEnd={(event) => {
-          if (touchStartX.current == null) return;
-          const dx = (event.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
-          if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
-          touchStartX.current = null;
-        }}
-      >
-        {images.map((src, i) => (
-          <button
-            key={i}
-            type="button"
-            aria-label={`Open image ${i + 1}`}
-            onClick={() => onFullscreen(index)}
-            className="relative h-full w-full shrink-0"
-          >
-            <Image
-              src={src}
-              alt={`Image ${i + 1} of ${total}`}
-              fill
-              unoptimized={isStorageUrl(src)}
-              sizes="(max-width: 768px) 100vw, 600px"
-              className="object-contain"
-            />
-          </button>
-        ))}
+    <div className="select-none overflow-hidden rounded-lg border bg-neutral-100 dark:bg-neutral-900">
+      <div className="flex items-center justify-between gap-3 bg-neutral-700 px-4 py-2.5 text-white">
+        <p className="truncate text-sm font-semibold">{title || "Document"}</p>
+        <span className="shrink-0 text-sm tabular-nums text-white/90">
+          {total} pages
+        </span>
       </div>
 
-      {index > 0 ? (
-        <button
-          type="button"
-          aria-label="Previous image"
-          onClick={() => go(-1)}
-          className="absolute left-2 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100"
+      <div className="relative aspect-[3/4] overflow-hidden">
+        <div
+          className="flex h-full transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(-${index * 100}%)` }}
+          onTouchStart={(event) => {
+            touchStartX.current = event.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(event) => {
+            if (touchStartX.current == null) return;
+            const dx =
+              (event.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+            if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+            touchStartX.current = null;
+          }}
         >
-          <ChevronLeft className="size-5" />
-        </button>
-      ) : null}
-      {index < total - 1 ? (
-        <button
-          type="button"
-          aria-label="Next image"
-          onClick={() => go(1)}
-          className="absolute right-2 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100"
-        >
-          <ChevronRight className="size-5" />
-        </button>
-      ) : null}
+          {images.map((src, i) => (
+            <button
+              key={i}
+              type="button"
+              aria-label={`Open page ${i + 1}`}
+              onClick={() => onFullscreen(i)}
+              className="relative h-full w-full shrink-0"
+            >
+              <Image
+                src={src}
+                alt={`Page ${i + 1} of ${total}`}
+                fill
+                unoptimized={isStorageUrl(src)}
+                sizes="(max-width: 768px) 100vw, 600px"
+                className="object-contain"
+              />
+            </button>
+          ))}
+        </div>
 
-      <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-8 text-white">
-        <span className="shrink-0 text-xs font-semibold tabular-nums">
+        {index > 0 ? (
+          <button
+            type="button"
+            aria-label="Previous page"
+            onClick={() => go(-1)}
+            className="absolute left-3 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-neutral-800/85 text-white transition-colors hover:bg-neutral-800"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+        ) : null}
+        {index < total - 1 ? (
+          <button
+            type="button"
+            aria-label="Next page"
+            onClick={() => go(1)}
+            className="absolute right-3 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-neutral-800/85 text-white transition-colors hover:bg-neutral-800"
+          >
+            <ChevronRight className="size-5" />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-3 bg-neutral-700 px-4 py-2.5 text-white">
+        <span className="shrink-0 text-sm font-medium tabular-nums">
           {index + 1} / {total}
         </span>
         <div
           role="slider"
-          aria-label="Image position"
+          aria-label="Page position"
           aria-valuemin={1}
           aria-valuemax={total}
           aria-valuenow={index + 1}
@@ -212,7 +360,7 @@ function Carousel({
           type="button"
           aria-label="View fullscreen"
           onClick={() => onFullscreen(index)}
-          className="shrink-0 rounded-full p-1 text-white/90 transition-colors hover:text-white"
+          className="shrink-0 text-white/90 transition-colors hover:text-white"
         >
           <Maximize2 className="size-4" />
         </button>
@@ -259,10 +407,14 @@ function Tile({
  */
 export function PostMediaGallery({
   images,
+  captions,
+  title,
   layout = "grid",
 }: {
   images: string[];
-  layout?: "grid" | "slider";
+  captions?: string[];
+  title?: string;
+  layout?: "grid" | "slider" | "document";
 }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
   const count = images.length;
@@ -272,12 +424,14 @@ export function PostMediaGallery({
 
   return (
     <>
-      {count === 1 ? (
+      {layout === "document" && count > 1 ? (
+        <DocumentCarousel images={images} title={title} onFullscreen={open} />
+      ) : count === 1 ? (
         <div className="relative aspect-video w-full overflow-hidden rounded-lg">
           <Tile src={images[0]} onClick={() => open(0)} />
         </div>
       ) : layout === "slider" ? (
-        <Carousel images={images} onFullscreen={open} />
+        <Carousel images={images} captions={captions} onFullscreen={open} />
       ) : count === 2 ? (
         <div className="grid aspect-[16/10] grid-cols-2 gap-0.5 overflow-hidden rounded-lg">
           {images.map((src, index) => (
