@@ -2,8 +2,12 @@
   "name": "feed-app",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "^20 || ^22"
+  },
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS=--max-old-space-size=4096 next dev",
+    "dev:webpack": "NODE_OPTIONS=--max-old-space-size=4096 next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
