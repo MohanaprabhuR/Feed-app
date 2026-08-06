@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import { MentionTextarea } from "@/components/mention-text-field";
-import { CELEBRATION_OCCASIONS } from "@/lib/celebrations";
+import { CELEBRATION_OCCASIONS, getCelebrationMeta } from "@/lib/celebrations";
 import { getErrorMessage } from "@/lib/errors";
 import {
   getAttachmentType,
@@ -69,13 +69,6 @@ import { cn } from "@/lib/utils";
 import { Alert, AlertTitle, AlertDescription, AlertContent } from "./ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -86,6 +79,7 @@ import { PostEventCard } from "@/components/post-event-card";
 import { PostCelebrationCard } from "@/components/post-celebration-card";
 import { DateTimePickerPopover } from "@/components/datetime-picker-popover";
 import { ArticleEditorDialog } from "@/components/article-editor-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 function toDatetimeLocalValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -601,7 +595,10 @@ export function CreatePostComposer({
       <Card padding="none" className={feedCardClass}>
         <CardContent className={feedCardSectionClass}>
           <div className="flex items-center gap-2">
-            <CurrentUserAvatar size="sm" />
+            <Avatar size="2xl">
+              <AvatarImage src={user?.avatar} />
+              <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+            </Avatar>
             <Button
               type="button"
               variant="outline"
@@ -793,15 +790,29 @@ export function CreatePostComposer({
             ) : null}
 
             {showCelebrationForm && (
-              <Card padding="none" className="overflow-hidden border shadow-sm">
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium">Celebrate an occasion</p>
+              <Card
+                padding="none"
+                className="overflow-hidden border bg-gradient-to-br from-amber-50/60 to-rose-50/60 shadow-sm dark:from-amber-950/20 dark:to-rose-950/20"
+              >
+                <CardContent className="space-y-4 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-background text-lg shadow-sm">
+                      {getCelebrationMeta(celebrationDraft.occasion).emoji}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium leading-tight">
+                        Celebrate an occasion
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Pick what you&apos;re celebrating.
+                      </p>
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       iconOnly
+                      className="-mr-1 -mt-1 shrink-0"
                       onClick={clearCelebration}
                       disabled={loading}
                       aria-label="Remove celebration"
@@ -809,30 +820,41 @@ export function CreatePostComposer({
                       <X />
                     </Button>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="celebration-occasion">Occasion</Label>
-                    <Select
-                      value={celebrationDraft.occasion}
-                      onValueChange={(value) =>
-                        setCelebrationDraft((d) => ({
-                          ...d,
-                          occasion: value as CelebrationOccasion,
-                        }))
-                      }
-                      disabled={loading}
-                    >
-                      <SelectTrigger id="celebration-occasion">
-                        <SelectValue placeholder="Choose an occasion" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CELEBRATION_OCCASIONS.map((item) => (
-                          <SelectItem key={item.value} value={item.value}>
-                            {item.emoji} {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+
+                  <div
+                    role="radiogroup"
+                    aria-label="Occasion"
+                    className="flex flex-wrap gap-2"
+                  >
+                    {CELEBRATION_OCCASIONS.map((item) => {
+                      const selected = celebrationDraft.occasion === item.value;
+                      return (
+                        <button
+                          key={item.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          disabled={loading}
+                          onClick={() =>
+                            setCelebrationDraft((d) => ({
+                              ...d,
+                              occasion: item.value,
+                            }))
+                          }
+                          className={cn(
+                            "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                            selected
+                              ? "border-primary bg-primary/10 font-medium text-foreground"
+                              : "border-border bg-background/60 text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          <span aria-hidden>{item.emoji}</span>
+                          {item.label}
+                        </button>
+                      );
+                    })}
                   </div>
+
                   <div className="space-y-1.5">
                     <Label htmlFor="celebration-message">
                       Message (optional)
@@ -849,6 +871,7 @@ export function CreatePostComposer({
                       }
                       disabled={loading}
                       size="sm"
+                      className="bg-background/70"
                     />
                   </div>
                 </CardContent>
