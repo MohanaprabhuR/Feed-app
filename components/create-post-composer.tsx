@@ -220,7 +220,6 @@ export function CreatePostComposer({
   function openEventForm() {
     openModal();
     setShowEventForm(true);
-    setShowCelebrationForm(false);
     setEventDraft((current) => ({
       ...current,
       startsAt: current.startsAt || defaultEventStart(),
@@ -230,7 +229,6 @@ export function CreatePostComposer({
   function openCelebrationForm() {
     openModal();
     setShowCelebrationForm(true);
-    setShowEventForm(false);
   }
 
   function openArticleEditor() {
@@ -380,6 +378,8 @@ export function CreatePostComposer({
     const attachmentType = getAttachmentType(file);
     if (!attachmentType) return;
 
+    // A post holds one media kind — a video/file replaces any staged photos.
+    clearImages();
     clearAttachment();
     setAttachment({
       file,

@@ -14,11 +14,11 @@ import {
   ChevronLeft,
   Download,
   MessageCircle,
-  MoreHorizontal,
   Paperclip,
   Search,
   Send,
   SquarePen,
+  X,
 } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { useNotifications } from "@/components/notifications-provider";
@@ -145,7 +145,10 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const [threadNotFound, setThreadNotFound] = useState(false);
   const [threadError, setThreadError] = useState<string | null>(null);
   const [threadRetry, setThreadRetry] = useState(0);
-  const [uploading, setUploading] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<{
+    file: File;
+    previewUrl: string;
+  } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const draftInputRef = useRef<HTMLInputElement>(null);
   const attachInputRef = useRef<HTMLInputElement>(null);
@@ -492,43 +495,68 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversationId, expanded, chatMessages.length]);
 
+  function appendSentMessage(saved: Message) {
+    if (!conversationId) return;
+    setThreadMessages((current) => ({
+      ...current,
+      [conversationId]: [...(current[conversationId] ?? []), saved],
+    }));
+    setConversationList((current) =>
+      current.map((conv) =>
+        conv.id === conversationId
+          ? {
+              ...conv,
+              lastMessage: saved.content,
+              lastMessageAt: saved.createdAt,
+              unread: 0,
+            }
+          : conv,
+      ),
+    );
+  }
+
   async function handleSend() {
     if (!conversationId || !userId || sending) return;
     const content = draft.trim();
-    if (!content) return;
+    const attachment = pendingAttachment;
+    if (!content && !attachment) return;
 
     setSending(true);
     setDraft("");
+    setPendingAttachment(null);
 
+    let remainingAttachment = attachment;
     try {
       const supabase = createClient();
-      const saved = await sendMessage(
-        supabase,
-        conversationId,
-        userId,
-        content,
-      );
-      setThreadMessages((current) => ({
-        ...current,
-        [conversationId]: [...(current[conversationId] ?? []), saved],
-      }));
-      setConversationList((current) =>
-        current.map((conv) =>
-          conv.id === conversationId
-            ? {
-                ...conv,
-                lastMessage: saved.content,
-                lastMessageAt: saved.createdAt,
-                unread: 0,
-              }
-            : conv,
-        ),
-      );
+      // Send the staged image first (uploads on Send, not on pick), then text.
+      if (attachment) {
+        const { url } = await uploadPostAttachment(attachment.file);
+        const savedImage = await sendMessage(
+          supabase,
+          conversationId,
+          userId,
+          url,
+        );
+        appendSentMessage(savedImage);
+        URL.revokeObjectURL(attachment.previewUrl);
+        remainingAttachment = null;
+      }
+      if (content) {
+        const savedText = await sendMessage(
+          supabase,
+          conversationId,
+          userId,
+          content,
+        );
+        appendSentMessage(savedText);
+      }
     } catch (err) {
+      // Restore whatever didn't send so nothing is lost.
       setDraft(content);
+      setPendingAttachment(remainingAttachment);
       appToast.error(
         "Message not sent",
-        getErrorMessage(err, "Could not save your message."),
+        getErrorMessage(err, "Could not send your message."),
       );
     } finally {
       setSending(false);
@@ -540,48 +568,31 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
     requestAnimationFrame(() => draftInputRef.current?.focus());
   }
 
-  async function handleAttach(file: File | undefined) {
-    if (!file || !conversationId || !userId || uploading || sending) return;
-
+  /** Stage an image in the composer — it's uploaded + sent on the Send button. */
+  function handleAttach(file: File | undefined) {
+    if (!file) return;
     const validationError = validatePostAttachment(file);
     if (validationError) {
       appToast.error("Can't attach file", validationError);
       return;
     }
+    setPendingAttachment((current) => {
+      if (current) URL.revokeObjectURL(current.previewUrl);
+      return { file, previewUrl: URL.createObjectURL(file) };
+    });
+    requestAnimationFrame(() => draftInputRef.current?.focus());
+  }
 
-    setUploading(true);
-    try {
-      const { url } = await uploadPostAttachment(file);
-      const supabase = createClient();
-      const saved = await sendMessage(supabase, conversationId, userId, url);
-      setThreadMessages((current) => ({
-        ...current,
-        [conversationId]: [...(current[conversationId] ?? []), saved],
-      }));
-      setConversationList((current) =>
-        current.map((conv) =>
-          conv.id === conversationId
-            ? {
-                ...conv,
-                lastMessage: saved.content,
-                lastMessageAt: saved.createdAt,
-                unread: 0,
-              }
-            : conv,
-        ),
-      );
-    } catch (err) {
-      appToast.error(
-        "Attachment not sent",
-        getErrorMessage(err, "Could not upload your file."),
-      );
-    } finally {
-      setUploading(false);
-    }
+  function clearPendingAttachment() {
+    setPendingAttachment((current) => {
+      if (current) URL.revokeObjectURL(current.previewUrl);
+      return null;
+    });
   }
 
   function selectConversation(id: string) {
     setDraft("");
+    clearPendingAttachment();
     setComposeOpen(false);
     clearUnread(id);
     openConversation(id);
@@ -644,6 +655,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
 
   function closeThreadView() {
     setDraft("");
+    clearPendingAttachment();
     closeConversation();
     if (mode === "page") {
       router.push("/messages");
@@ -717,15 +729,6 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
             <UnreadBadge count={totalUnread} />
           </div>
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          iconOnly
-          aria-label="More"
-        >
-          <MoreHorizontal />
-        </Button>
         <Button
           type="button"
           variant="ghost"
@@ -882,15 +885,6 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                 @{conversation.user.username}
               </p>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              iconOnly
-              aria-label="More"
-            >
-              <MoreHorizontal />
-            </Button>
             {mode === "dock" ? (
               <Button
                 type="button"
@@ -1031,6 +1025,37 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
           </div>
 
           <div className="shrink-0 border-t border-black/5 bg-background/95 px-2 py-2 backdrop-blur">
+            {pendingAttachment ? (
+              <div className="mb-2 flex items-center gap-2 rounded-lg border bg-muted/40 p-1.5">
+                {pendingAttachment.file.type.startsWith("image/") ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- local blob preview of the file about to be sent
+                  <img
+                    src={pendingAttachment.previewUrl}
+                    alt="Attachment preview"
+                    className="size-12 shrink-0 rounded-md object-cover"
+                  />
+                ) : (
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-md bg-background">
+                    <Paperclip className="size-5 text-muted-foreground" />
+                  </div>
+                )}
+                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                  {pendingAttachment.file.name}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  className="shrink-0"
+                  aria-label="Remove attachment"
+                  onClick={clearPendingAttachment}
+                  disabled={sending}
+                >
+                  <X />
+                </Button>
+              </div>
+            ) : null}
             <form
               className="flex items-end gap-1.5"
               onSubmit={(e) => {
@@ -1040,7 +1065,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
             >
               <EmojiPickerButton
                 onSelect={handleEmojiSelect}
-                disabled={sending || uploading}
+                disabled={sending}
                 side="top"
                 align="start"
                 buttonClassName="mb-0.5 shrink-0"
@@ -1051,19 +1076,21 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                 accept="image/*,video/*,.pdf"
                 className="hidden"
                 onChange={(e) => {
-                  void handleAttach(e.target.files?.[0]);
+                  handleAttach(e.target.files?.[0]);
                   e.target.value = "";
                 }}
               />
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Input
                   ref={draftInputRef}
-                  placeholder="Type a message"
+                  placeholder={
+                    pendingAttachment ? "Add a caption…" : "Type a message"
+                  }
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   size="sm"
                   autoComplete="off"
-                  disabled={sending || uploading}
+                  disabled={sending}
                 />
                 <Button
                   type="button"
@@ -1072,7 +1099,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                   iconOnly
                   className="shrink-0 text-muted-foreground"
                   aria-label="Attach file"
-                  disabled={uploading || sending}
+                  disabled={sending}
                   onClick={() => attachInputRef.current?.click()}
                 >
                   <Paperclip />
@@ -1083,7 +1110,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                 size="sm"
                 iconOnly
                 aria-label="Send"
-                disabled={!draft.trim() || sending || uploading}
+                disabled={(!draft.trim() && !pendingAttachment) || sending}
                 loading={sending}
                 className="mb-0.5 size-10 shrink-0 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40"
               >
