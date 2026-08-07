@@ -30,6 +30,7 @@ import { PageBlockSkeleton } from "@/components/skeletons";
 import { appToast } from "@/lib/app-toast";
 import { api, ApiClientError } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
+import { richTextToPlain } from "@/lib/rich-text";
 import type { Post } from "@/lib/types";
 
 export default function DeletePostPage({
@@ -180,7 +181,7 @@ export default function DeletePostPage({
           </p>
         </div>
         <blockquote className="w-full max-w-md rounded-lg border bg-muted/50 p-4 text-left text-sm">
-          {post.content}
+          {richTextToPlain(post.content)}
         </blockquote>
 
         <AlertDialog>

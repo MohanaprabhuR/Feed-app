@@ -5,8 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import {
   Award,
   Calendar,
+  Files,
   FileText,
+  GalleryHorizontalEnd,
   ImageIcon,
+  LayoutGrid,
   Paperclip,
   Plus,
   Video,
@@ -44,7 +47,8 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-import { MentionTextarea } from "@/components/mention-text-field";
+import { RichTextEditor } from "@/components/rich-text-editor";
+import { isRichTextEmpty } from "@/lib/rich-text";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PostEventCard } from "@/components/post-event-card";
@@ -174,6 +178,9 @@ export function EditPostDialog({
   const [editImages, setEditImages] = useState<EditImage[]>(() =>
     existingImagesFromPost(post),
   );
+  const [editLayout, setEditLayout] = useState<"grid" | "slider" | "document">(
+    post.mediaLayout ?? "grid",
+  );
   const [showEventForm, setShowEventForm] = useState(Boolean(post.event));
   const [eventDraft, setEventDraft] = useState<EventDraft>(() =>
     eventDraftFromPost(post),
@@ -196,6 +203,7 @@ export function EditPostDialog({
       });
       return existingImagesFromPost(post);
     });
+    setEditLayout(post.mediaLayout ?? "grid");
     setShowEventForm(Boolean(post.event));
     setEventDraft(eventDraftFromPost(post));
     setError(null);
@@ -337,7 +345,8 @@ export function EditPostDialog({
   async function handleSave() {
     if (!user || !isOwner || saving) return;
 
-    const trimmed = draft.trim();
+    const bodyHtml = isRichTextEmpty(draft) ? "" : draft;
+    const hasBody = bodyHtml.length > 0;
     const trimmedTitle = titleDraft.trim();
 
     if (isArticle) {
@@ -345,7 +354,7 @@ export function EditPostDialog({
         setError("Article title is required.");
         return;
       }
-      if (!trimmed) {
+      if (!hasBody) {
         setError("Article body is required.");
         return;
       }
@@ -362,7 +371,7 @@ export function EditPostDialog({
         setError("Add an event title and start date/time.");
         return;
       }
-      if (!trimmed && !attachment && editImages.length === 0 && !showEventForm) {
+      if (!hasBody && !attachment && editImages.length === 0 && !showEventForm) {
         setError("Post must include text or an attachment.");
         return;
       }
@@ -410,9 +419,12 @@ export function EditPostDialog({
           : undefined;
 
       const { post: updated } = await api.posts.update(post.id, {
-        content: trimmed,
+        content: bodyHtml,
         media,
         ...(images !== undefined ? { images } : {}),
+        ...(!isArticle && editImages.length > 1
+          ? { mediaLayout: editLayout }
+          : {}),
         ...(isArticle
           ? { title: trimmedTitle }
           : { event: eventForSave }),
@@ -607,12 +619,10 @@ export function EditPostDialog({
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="edit-article-body">Body</Label>
-                    <MentionTextarea
-                      id="edit-article-body"
+                    <RichTextEditor
                       value={draft}
                       onValueChange={setDraft}
                       disabled={busy}
-                      size="lg"
                       placeholder="Write your article..."
                     />
                   </div>
@@ -625,11 +635,10 @@ export function EditPostDialog({
                     size="sm"
                   />
                   <div className="min-w-0 flex-1">
-                    <MentionTextarea
+                    <RichTextEditor
                       value={draft}
                       onValueChange={setDraft}
                       disabled={busy}
-                      size="md"
                       placeholder="What do you want to talk about?"
                       autoFocus
                     />
@@ -743,6 +752,46 @@ export function EditPostDialog({
                   }}
                 />
               ) : null}
+
+              {!isArticle && editImages.length > 1 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="mr-1 text-xs font-medium text-muted-foreground">
+                    Layout
+                  </span>
+                  {(
+                    [
+                      { value: "grid", label: "Grid", icon: LayoutGrid },
+                      {
+                        value: "slider",
+                        label: "Slider",
+                        icon: GalleryHorizontalEnd,
+                      },
+                      { value: "document", label: "Document", icon: Files },
+                    ] as const
+                  ).map((opt) => {
+                    const active = editLayout === opt.value;
+                    const Icon = opt.icon;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        disabled={saving}
+                        onClick={() => setEditLayout(opt.value)}
+                        aria-pressed={active}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors",
+                          active
+                            ? "border-primary bg-primary/10 font-medium text-foreground"
+                            : "border-border text-muted-foreground hover:bg-muted",
+                        )}
+                      >
+                        <Icon className="size-3.5" />
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {!isArticle && editImages.length > 0 && (
                 <div

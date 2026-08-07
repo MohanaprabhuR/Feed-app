@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import type { Post } from "@/lib/types";
+import { RichContent } from "@/components/rich-content";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 import { cn } from "@/lib/utils";
 
@@ -79,17 +80,10 @@ export function ArticleView({ article }: ArticleViewProps) {
           </div>
         )}
 
-        <div className="mt-8 space-y-4">
-          {article.content.split("\n").map((paragraph, index) =>
-            paragraph.trim() ? (
-              <p key={index} className="text-base leading-8 text-foreground">
-                {paragraph}
-              </p>
-            ) : (
-              <div key={index} className="h-4" />
-            ),
-          )}
-        </div>
+        <RichContent
+          content={article.content}
+          className="mt-8 text-base leading-8 text-foreground"
+        />
 
         <Separator className="my-10" />
 

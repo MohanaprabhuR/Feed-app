@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isRichTextEmpty } from "@/lib/rich-text";
+import {
+  RichTextEditor,
+  type RichTextEditorHandle,
+} from "@/components/rich-text-editor";
 import Image from "next/image";
 import {
   Award,
@@ -20,10 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/components/current-user-provider";
-import {
-  EmojiPickerButton,
-  insertEmojiAtCaret,
-} from "@/components/emoji-picker-button";
+import { EmojiPickerButton } from "@/components/emoji-picker-button";
 import { CurrentUserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,7 +50,6 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
-import { MentionTextarea } from "@/components/mention-text-field";
 import { CELEBRATION_OCCASIONS, getCelebrationMeta } from "@/lib/celebrations";
 import { getErrorMessage } from "@/lib/errors";
 import {
@@ -175,7 +176,7 @@ export function CreatePostComposer({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<RichTextEditorHandle>(null);
   const [open, setOpen] = useState(false);
   const [articleOpen, setArticleOpen] = useState(false);
   const isArticleDialogOpen = articleOpen || initialArticleOpen;
@@ -203,18 +204,7 @@ export function CreatePostComposer({
   });
 
   function insertEmoji(emoji: string) {
-    const el = textareaRef.current;
-    const { value, caret } = insertEmojiAtCaret(
-      content,
-      emoji,
-      el?.selectionStart,
-      el?.selectionEnd,
-    );
-    setContent(value);
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(caret, caret);
-    });
+    editorRef.current?.insertText(emoji);
   }
 
   function openEventForm() {
@@ -459,8 +449,11 @@ export function CreatePostComposer({
 
     const celebration = buildCelebrationPayload();
 
+    // Empty editors serialize to "<p></p>"; store nothing rather than markup.
+    const bodyHtml = isRichTextEmpty(content) ? "" : content;
+
     if (
-      !content.trim() &&
+      !bodyHtml &&
       !attachment &&
       images.length === 0 &&
       !event &&
@@ -490,7 +483,7 @@ export function CreatePostComposer({
 
       const multiImage = (imageUrls?.length ?? 0) > 1;
       const { post: created } = await api.posts.create({
-        content,
+        content: bodyHtml,
         media: { image, video, file },
         images: imageUrls,
         imageCaptions:
@@ -551,7 +544,7 @@ export function CreatePostComposer({
   const canPost = Boolean(
     user &&
     !loading &&
-    (content.trim() ||
+    (!isRichTextEmpty(content) ||
       images.length > 0 ||
       attachment ||
       (showEventForm && eventDraft.title.trim() && eventDraft.startsAt) ||
@@ -670,11 +663,9 @@ export function CreatePostComposer({
             className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 pt-4 pb-2"
             data-scroll-lock-scrollable=""
           >
-            <MentionTextarea
-              ref={textareaRef}
+            <RichTextEditor
+              ref={editorRef}
               autoFocus
-              variant="outline"
-              size="md"
               placeholder={
                 showEventForm
                   ? "What is this event about?"

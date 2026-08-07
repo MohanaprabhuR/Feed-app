@@ -26,6 +26,7 @@ import {
 } from "@/lib/feed-layout";
 import { searchProfiles } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
+import { richTextToPlain } from "@/lib/rich-text";
 import type { Post, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +49,7 @@ async function searchFeedPosts(query: string): Promise<Post[]> {
   if (!trimmed) return posts;
 
   return posts.filter((post) => {
-    const content = post.content?.toLowerCase() ?? "";
+    const content = richTextToPlain(post.content ?? "").toLowerCase();
     const authorName = post.author?.name?.toLowerCase() ?? "";
     const authorUsername = post.author?.username?.toLowerCase() ?? "";
     const eventTitle = post.event?.title?.toLowerCase() ?? "";

@@ -1000,6 +1000,7 @@ export async function updatePost(
     title?: string;
     event?: PostEvent | null;
     images?: string[] | null;
+    mediaLayout?: "grid" | "slider" | "document";
   },
 ) {
   const trimmed = content.trim();
@@ -1068,11 +1069,19 @@ export async function updatePost(
     content: string;
     image?: string | null;
     images?: string[] | null;
+    media_layout?: string | null;
     title?: string | null;
     event?: PostEvent | null;
   } = {
     content: trimmed,
   };
+
+  if (options?.mediaLayout !== undefined && includeMediaLayout) {
+    payload.media_layout =
+      options.mediaLayout === "slider" || options.mediaLayout === "document"
+        ? options.mediaLayout
+        : null;
+  }
 
   if (title !== undefined) {
     payload.title = title;

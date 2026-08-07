@@ -14,6 +14,8 @@ import { PostComments } from "@/components/post-comments";
 import { PostEventCard } from "@/components/post-event-card";
 import { PostMediaGallery } from "@/components/post-media-gallery";
 import { PostCelebrationCard } from "@/components/post-celebration-card";
+import { RichContent } from "@/components/rich-content";
+import { richTextToPlain } from "@/lib/rich-text";
 import { getCelebrationMeta } from "@/lib/celebrations";
 import { PostLikeButton } from "@/components/post-like-button";
 import { ScrollReveal } from "@/components/scroll-reveal";
@@ -275,15 +277,17 @@ export function PostCard({
         )}
       </CardHeader>
       <CardContent className={feedCardContentClass}>
-        {content.trim() &&
-        !(post.event && content.trim() === post.event.title) &&
-        !(
-          post.celebration &&
-          content.trim() ===
-            getCelebrationMeta(post.celebration.occasion).label
-        ) ? (
-          <p className="text-base leading-relaxed">{content}</p>
-        ) : null}
+        {(() => {
+          const plain = richTextToPlain(content).trim();
+          const isJustEventTitle = post.event && plain === post.event.title;
+          const isJustCelebration =
+            post.celebration &&
+            plain === getCelebrationMeta(post.celebration.occasion).label;
+          if (!plain || isJustEventTitle || isJustCelebration) return null;
+          return (
+            <RichContent content={content} className="text-base leading-relaxed" />
+          );
+        })()}
         {post.event ? <PostEventCard event={post.event} /> : null}
         {post.celebration ? (
           <PostCelebrationCard celebration={post.celebration} />

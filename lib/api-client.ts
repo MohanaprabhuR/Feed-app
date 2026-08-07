@@ -85,6 +85,7 @@ export const api = {
         content: string;
         media?: { image?: string; video?: string; file?: string } | null;
         images?: string[] | null;
+        mediaLayout?: "grid" | "slider" | "document";
         title?: string;
         event?: PostEvent | null;
       },

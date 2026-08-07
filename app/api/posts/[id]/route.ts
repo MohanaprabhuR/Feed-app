@@ -90,6 +90,16 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         ...(body.title !== undefined ? { title: String(body.title) } : {}),
         ...("event" in body ? { event: parseEvent(body.event) } : {}),
         ...("images" in body ? { images: parseImages(body.images) } : {}),
+        ...("mediaLayout" in body
+          ? {
+              mediaLayout:
+                body.mediaLayout === "slider"
+                  ? ("slider" as const)
+                  : body.mediaLayout === "document"
+                    ? ("document" as const)
+                    : ("grid" as const),
+            }
+          : {}),
       },
     );
     return { post };

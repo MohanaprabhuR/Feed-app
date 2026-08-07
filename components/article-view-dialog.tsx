@@ -14,6 +14,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import type { Post } from "@/lib/types";
+import { RichContent } from "@/components/rich-content";
 
 type ArticleViewDialogProps = {
   article: Post;
@@ -87,20 +88,10 @@ export function ArticleViewDialog({
             </div>
           )}
 
-          <div className="mt-8 space-y-5">
-            {article.content.split("\n").map((paragraph, index) =>
-              paragraph.trim() ? (
-                <p
-                  key={index}
-                  className="text-base leading-8 text-foreground sm:text-[17px]"
-                >
-                  {paragraph}
-                </p>
-              ) : (
-                <div key={index} className="h-4" />
-              ),
-            )}
-          </div>
+          <RichContent
+            content={article.content}
+            className="mt-8 text-base leading-8 text-foreground sm:text-[17px]"
+          />
         </div>
       </DialogContent>
     </Dialog>
