@@ -4,7 +4,13 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import gsap from "gsap";
 import { ArticleCard } from "@/components/article-card";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 import { CreatePostComposer } from "@/components/create-post-composer";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { PostCard } from "@/components/post-card";
@@ -153,6 +159,15 @@ export function FeedPosts({
     };
   }, [user?.id, loadPosts]);
 
+  // Keep scroll triggers in sync when the feed list size changes.
+  useEffect(() => {
+    if (loading || posts.length === 0) return;
+    const id = window.requestAnimationFrame(() => {
+      ScrollTrigger.refresh();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [loading, posts.length]);
+
   return (
     <div className="min-w-0 space-y-3">
       {user ? (
@@ -203,7 +218,8 @@ export function FeedPosts({
       {!loading &&
         posts.map((post, index) => {
         const isOwnPost = Boolean(user?.id && user.id === post.author.id);
-        const revealDelay = Math.min(index * 60, 300);
+        // Stagger entrance so the first few posts cascade as you scroll.
+        const revealDelay = Math.min(index * 70, 420);
         const removePost = (postId: string) => {
           setPosts((current) => current.filter((p) => p.id !== postId));
         };
@@ -213,21 +229,26 @@ export function FeedPosts({
           );
         };
 
-        const card = isArticle(post) ? (
-          <ArticleCard
-            key={post.id}
-            post={post}
-            showActions
-            canManage={isOwnPost}
-            initialEditOpen={isOwnPost && editPostId === post.id}
-            onEditClose={clearEditParam}
-            onUpdated={updatePostInList}
-            onDeleted={(postId) => {
-              removePost(postId);
-              clearEditParam();
-            }}
-          />
-        ) : (
+        if (isArticle(post)) {
+          return (
+            <ArticleCard
+              key={post.id}
+              post={post}
+              showActions
+              canManage={isOwnPost}
+              revealDelay={revealDelay}
+              initialEditOpen={isOwnPost && editPostId === post.id}
+              onEditClose={clearEditParam}
+              onUpdated={updatePostInList}
+              onDeleted={(postId) => {
+                removePost(postId);
+                clearEditParam();
+              }}
+            />
+          );
+        }
+
+        return (
           <PostCard
             key={post.id}
             post={post}
@@ -243,8 +264,6 @@ export function FeedPosts({
             }}
           />
         );
-
-        return card;
       })}
     </div>
   );

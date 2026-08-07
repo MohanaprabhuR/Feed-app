@@ -13,9 +13,14 @@ if (typeof window !== "undefined") {
 type ScrollRevealProps = {
   children: React.ReactNode;
   className?: string;
+  /** Stagger delay in milliseconds. */
   delay?: number;
 };
 
+/**
+ * Fade + rise entrance when a feed card enters the viewport.
+ * Only animates opacity/y so CSS hover scale on the same node can work.
+ */
 export function ScrollReveal({
   children,
   className,
@@ -29,31 +34,43 @@ export function ScrollReveal({
       if (!element) return;
 
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.set(element, { clearProps: "all" });
         return;
       }
 
-      gsap.fromTo(
-        element,
-        { autoAlpha: 0, y: 16 },
-        {
-          autoAlpha: 1,
-          y: 0,
-          duration: 0.55,
-          delay: delay / 1000,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: element,
-            start: "top 92%",
-            once: true,
-          },
+      gsap.set(element, { autoAlpha: 0, y: 28 });
+
+      const tween = gsap.to(element, {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.7,
+        delay: delay / 1000,
+        ease: "power3.out",
+        // Clear only the entrance translate so CSS hover:scale can take over.
+        onComplete: () => {
+          gsap.set(element, { clearProps: "transform" });
         },
-      );
+        scrollTrigger: {
+          trigger: element,
+          start: "top 88%",
+          once: true,
+        },
+      });
+
+      requestAnimationFrame(() => {
+        ScrollTrigger.refresh();
+      });
+
+      return () => {
+        tween.scrollTrigger?.kill();
+        tween.kill();
+      };
     },
     { scope: ref, dependencies: [delay] },
   );
 
   return (
-    <div ref={ref} className={cn(className)}>
+    <div ref={ref} className={cn("origin-center", className)}>
       {children}
     </div>
   );

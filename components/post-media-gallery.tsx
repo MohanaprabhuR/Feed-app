@@ -390,7 +390,7 @@ function Tile({
         fill
         unoptimized={isStorageUrl(src)}
         sizes="(max-width: 768px) 100vw, 600px"
-        className="object-cover transition-transform duration-200 group-hover:scale-105"
+        className="object-cover"
       />
       {extra ? (
         <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-3xl font-semibold text-white">

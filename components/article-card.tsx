@@ -22,6 +22,7 @@ import {
 import { ProfileTrigger } from "@/components/profile-trigger";
 import { SharePostDialog } from "@/components/share-post-dialog";
 import { EditPostDialog } from "@/components/edit-post-dialog";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { UserAvatar } from "@/components/user-avatar";
 import { usePostReactionsRealtime } from "@/hooks/use-post-reactions-realtime";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,7 @@ type ArticleCardProps = {
   showActions?: boolean;
   canManage?: boolean;
   initialEditOpen?: boolean;
+  revealDelay?: number;
   onUnsaved?: (postId: string) => void;
   onUpdated?: (post: Post) => void;
   onDeleted?: (postId: string) => void;
@@ -67,6 +69,7 @@ export function ArticleCard({
   showActions = true,
   canManage,
   initialEditOpen = false,
+  revealDelay = 0,
   onUnsaved,
   onUpdated,
   onDeleted,
@@ -136,7 +139,8 @@ export function ArticleCard({
   }
 
   return (
-    <Card padding="none" className={feedCardClass}>
+    <ScrollReveal delay={revealDelay}>
+      <Card padding="none" className={feedCardClass}>
       <CardHeader className={feedCardHeaderClass}>
         <UserAvatar
           src={post.author.avatar}
@@ -208,7 +212,7 @@ export function ArticleCard({
                 alt={post.title ?? "Article cover"}
                 fill
                 unoptimized={post.image.includes("/storage/v1/object/public/")}
-                className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                className="object-cover"
                 sizes="(max-width: 768px) 100vw, 600px"
               />
               <div className="absolute inset-0 bg-linear-to-t from-black/45 via-black/10 to-transparent" />
@@ -357,6 +361,7 @@ export function ArticleCard({
           }}
         />
       )}
-    </Card>
+      </Card>
+    </ScrollReveal>
   );
 }
