@@ -10,6 +10,7 @@ import {
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Bold, Italic, List, ListOrdered, Quote, Strikethrough } from "lucide-react";
+import { toEditorHtml } from "@/lib/rich-text";
 import { cn } from "@/lib/utils";
 
 export interface RichTextEditorHandle {
@@ -42,7 +43,7 @@ export const RichTextEditor = forwardRef<
         placeholder: placeholder ?? "Write something…",
       }),
     ],
-    content: value,
+    content: toEditorHtml(value),
     editable: !disabled,
     autofocus: autoFocus ? "end" : false,
     // Required in Next.js: skip the immediate render so SSR and the first
@@ -73,8 +74,9 @@ export const RichTextEditor = forwardRef<
   // during normal input the value already equals the editor's HTML, so this no-ops.
   useEffect(() => {
     if (!editor) return;
-    if (value !== editor.getHTML()) {
-      editor.commands.setContent(value || "", { emitUpdate: false });
+    const html = toEditorHtml(value);
+    if (html !== editor.getHTML()) {
+      editor.commands.setContent(html, { emitUpdate: false });
     }
   }, [editor, value]);
 

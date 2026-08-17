@@ -39,6 +39,29 @@ export function isHtmlContent(content: string): boolean {
   return /<\/?[a-z][\s\S]*>/i.test(content);
 }
 
+/**
+ * Convert a legacy plain-text value into safe HTML paragraphs, preserving line
+ * breaks. Without this, feeding "a\nb" straight into TipTap collapses the
+ * newline (HTML whitespace) and the break is lost when the post is re-saved.
+ */
+export function plainTextToHtml(text: string): string {
+  if (!text) return "";
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return escaped
+    .split(/\n{2,}/)
+    .map((block) => `<p>${block.replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+/** Normalize any stored value (HTML or legacy plain text) to editor HTML. */
+export function toEditorHtml(value: string): string {
+  if (!value) return "";
+  return isHtmlContent(value) ? value : plainTextToHtml(value);
+}
+
 /** Strip a rich-text post down to plain text (for search, previews, counts). */
 export function richTextToPlain(content: string): string {
   if (!content) return "";
