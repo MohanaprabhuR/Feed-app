@@ -34,9 +34,14 @@ export function sanitizeRichText(html: string): string {
   });
 }
 
-/** True when a string contains HTML markup (vs. a legacy plain-text post). */
+/**
+ * True when a value is editor-produced HTML (vs. a legacy plain-text post).
+ * TipTap always wraps content in a top-level block element, so we anchor on a
+ * leading block tag. A loose "contains any <tag>" check would false-positive on
+ * plain text like "I love <coding>" and skip escaping it.
+ */
 export function isHtmlContent(content: string): boolean {
-  return /<\/?[a-z][\s\S]*>/i.test(content);
+  return /^\s*<(p|h[1-6]|ul|ol|blockquote|pre|div)[\s/>]/i.test(content);
 }
 
 /**
@@ -45,13 +50,16 @@ export function isHtmlContent(content: string): boolean {
  * newline (HTML whitespace) and the break is lost when the post is re-saved.
  */
 export function plainTextToHtml(text: string): string {
-  if (!text) return "";
-  const escaped = text
+  const normalized = text.replace(/\r\n?/g, "\n").trim();
+  if (!normalized) return "";
+  const escaped = normalized
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
   return escaped
     .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
     .map((block) => `<p>${block.replace(/\n/g, "<br>")}</p>`)
     .join("");
 }
