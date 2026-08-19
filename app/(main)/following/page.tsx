@@ -16,7 +16,7 @@ import {
   EmptyDescription,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePageLoad } from "@/hooks/use-page-load";
 import {
   networkPageClass,
@@ -239,7 +239,7 @@ function FollowingPageContent() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="following" className="mt-0">
+          {activeTab === "following" ? (
             <NetworkListPanel
               users={following}
               loading={userLoading || loadingFollowing}
@@ -260,9 +260,7 @@ function FollowingPageContent() {
                 }
               }}
             />
-          </TabsContent>
-
-          <TabsContent value="followers" className="mt-0">
+          ) : (
             <NetworkListPanel
               users={followers}
               loading={userLoading || loadingFollowers}
@@ -283,7 +281,7 @@ function FollowingPageContent() {
                 );
               }}
             />
-          </TabsContent>
+          )}
         </Tabs>
       )}
     </div>

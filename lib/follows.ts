@@ -98,6 +98,30 @@ export async function toggleFollow(
   return true;
 }
 
+const PROFILE_COLUMNS =
+  "id, name, username, avatar, bio, followers_count, following_count, posts_count";
+
+async function fetchProfilesInOrder(
+  supabase: SupabaseClient,
+  ids: string[],
+): Promise<Map<string, User>> {
+  if (ids.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(PROFILE_COLUMNS)
+    .in("id", ids);
+
+  if (error) throw error;
+
+  const users = new Map<string, User>();
+  for (const row of data ?? []) {
+    users.set(row.id as string, profileToUser(row as ProfileRow));
+  }
+  return users;
+}
+
+/** People `userId` follows — not the full user directory. */
 export async function fetchFollowing(
   supabase: SupabaseClient,
   userId: string,
@@ -108,21 +132,7 @@ export async function fetchFollowing(
 
   const { data, error } = await supabase
     .from("follows")
-    .select(
-      `
-      created_at,
-      following:profiles!following_id (
-        id,
-        name,
-        username,
-        avatar,
-        bio,
-        followers_count,
-        following_count,
-        posts_count
-      )
-    `,
-    )
+    .select("following_id, created_at")
     .eq("follower_id", userId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -132,20 +142,18 @@ export async function fetchFollowing(
     throw error;
   }
 
-  const users: User[] = [];
-  for (const row of data ?? []) {
-    const profile = Array.isArray(row.following)
-      ? row.following[0]
-      : row.following;
-    if (!profile) continue;
-    users.push({
-      ...profileToUser(profile as ProfileRow),
-      isFollowing: true,
-    });
-  }
-  return users;
+  const ids = (data ?? [])
+    .map((row) => row.following_id as string)
+    .filter((id) => id && id !== userId);
+
+  const profiles = await fetchProfilesInOrder(supabase, ids);
+  return ids.flatMap((id) => {
+    const profile = profiles.get(id);
+    return profile ? [{ ...profile, isFollowing: true }] : [];
+  });
 }
 
+/** People who follow `userId` — not the full user directory. */
 export async function fetchFollowers(
   supabase: SupabaseClient,
   userId: string,
@@ -156,21 +164,7 @@ export async function fetchFollowers(
 
   const { data, error } = await supabase
     .from("follows")
-    .select(
-      `
-      created_at,
-      follower:profiles!follower_id (
-        id,
-        name,
-        username,
-        avatar,
-        bio,
-        followers_count,
-        following_count,
-        posts_count
-      )
-    `,
-    )
+    .select("follower_id, created_at")
     .eq("following_id", userId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -180,28 +174,31 @@ export async function fetchFollowers(
     throw error;
   }
 
+  const ids = (data ?? [])
+    .map((row) => row.follower_id as string)
+    .filter((id) => id && id !== userId);
+
+  const profiles = await fetchProfilesInOrder(supabase, ids);
+
   let viewerFollowing = new Set<string>();
   if (viewerId) {
     viewerFollowing = await fetchFollowingIds(supabase, viewerId);
   }
 
-  const users: User[] = [];
-  for (const row of data ?? []) {
-    const profile = Array.isArray(row.follower)
-      ? row.follower[0]
-      : row.follower;
-    if (!profile) continue;
-    const mapped = profileToUser(profile as ProfileRow);
-    users.push({
-      ...mapped,
-      isFollowing: viewerId
-        ? viewerId === mapped.id
-          ? undefined
-          : viewerFollowing.has(mapped.id)
-        : false,
-    });
-  }
-  return users;
+  return ids.flatMap((id) => {
+    const profile = profiles.get(id);
+    if (!profile) return [];
+    return [
+      {
+        ...profile,
+        isFollowing: viewerId
+          ? viewerId === profile.id
+            ? undefined
+            : viewerFollowing.has(profile.id)
+          : false,
+      },
+    ];
+  });
 }
 
 /** Users the viewer follows, filtered for @mention suggestions. */
