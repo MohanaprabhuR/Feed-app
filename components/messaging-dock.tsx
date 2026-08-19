@@ -1073,7 +1073,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
               <input
                 ref={attachInputRef}
                 type="file"
-                accept="image/*,video/*,.pdf"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,video/mp4,video/webm,video/quicktime,.pdf,.doc,.docx,.txt,.csv,.zip,.ppt,.pptx,.xls,.xlsx"
                 className="hidden"
                 onChange={(e) => {
                   handleAttach(e.target.files?.[0]);

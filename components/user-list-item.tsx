@@ -16,11 +16,13 @@ import { appToast } from "@/lib/app-toast";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
 import type { User } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type UserListItemProps = {
   user: User;
   action?: React.ReactNode;
   subtitle?: string;
+  className?: string;
   onFollowChange?: (userId: string, isFollowing: boolean) => void;
 };
 
@@ -28,6 +30,7 @@ export function UserListItem({
   user,
   action,
   subtitle,
+  className,
   onFollowChange,
 }: UserListItemProps) {
   const router = useRouter();
@@ -75,17 +78,26 @@ export function UserListItem({
   }
 
   return (
-    <Item size="sm" className="items-center gap-3 py-3">
-      <UserAvatar src={user.avatar} name={user.name} userId={user.id} />
-      <ItemContent className="min-w-0">
-        <ItemTitle className="truncate">
+    <Item
+      size="sm"
+      className={cn(
+        "items-center gap-3 px-4 py-3.5 sm:px-5 sm:py-4",
+        className,
+      )}
+    >
+      <UserAvatar src={user.avatar} name={user.name} userId={user.id} size="md" />
+      <ItemContent className="min-w-0 gap-0.5">
+        <ItemTitle className="truncate text-base font-semibold">
           <ProfileTrigger userId={user.id} className="hover:underline">
             {user.name}
           </ProfileTrigger>
         </ItemTitle>
-        <ItemDescription className="truncate">
+        <ItemDescription className="truncate text-sm">
           {subtitle ?? `@${user.username}`}
         </ItemDescription>
+        {user.bio ? (
+          <p className="truncate text-xs text-muted-foreground">{user.bio}</p>
+        ) : null}
       </ItemContent>
       {action ?? (
         <Button

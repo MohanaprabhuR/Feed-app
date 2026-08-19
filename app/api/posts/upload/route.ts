@@ -5,6 +5,7 @@ import {
   BUCKET,
   buildPostMediaPath,
   getAttachmentType,
+  resolveAttachmentContentType,
   validatePostAttachment,
 } from "@/lib/post-media";
 
@@ -42,7 +43,7 @@ async function uploadWithClient(
   return supabase.storage.from(BUCKET).upload(filePath, fileBuffer, {
     cacheControl: "3600",
     upsert: false,
-    contentType: file.type || "application/octet-stream",
+    contentType: resolveAttachmentContentType(file),
   });
 }
 
