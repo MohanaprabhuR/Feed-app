@@ -34,6 +34,13 @@ export const pageListClass = "divide-y overflow-hidden rounded-xl border bg-card
 export const pagePanelClass =
   "overflow-hidden rounded-xl border bg-card shadow-sm";
 
+/** Network / people list pages — centered column with room for list panels. */
+export const networkPageClass =
+  "mx-auto w-full max-w-2xl px-4 pb-10 pt-5 sm:px-5 sm:pt-6";
+
+/** Divided rows inside a card panel (no extra outer padding). */
+export const pageListRowsClass = "divide-y divide-border/70";
+
 /** Compact error retry block. */
 export const pageErrorClass =
   "space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-6 text-center";

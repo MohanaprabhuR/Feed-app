@@ -358,7 +358,7 @@ export function CreatePostComposer({
         <Alert variant="error">
           <AlertContent>
             <AlertTitle>Invalid file.</AlertTitle>
-            <AlertDescription>You must select a valid file.</AlertDescription>
+            <AlertDescription>{validationError}</AlertDescription>
           </AlertContent>
         </Alert>
       ));
@@ -556,7 +556,7 @@ export function CreatePostComposer({
       <input
         ref={imageInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
+        accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
         multiple
         className="hidden"
         onChange={(e) => {
@@ -577,7 +577,7 @@ export function CreatePostComposer({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx,.txt,.zip,.ppt,.pptx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/zip"
+        accept=".pdf,.doc,.docx,.txt,.csv,.md,.zip,.ppt,.pptx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,application/zip"
         className="hidden"
         onChange={(e) => {
           handleFileSelect(e.target.files?.[0]);
