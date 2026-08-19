@@ -24,14 +24,12 @@ import { useCurrentUser } from "@/components/current-user-provider";
 import { useNotifications } from "@/components/notifications-provider";
 import { markConversationNotificationsRead } from "@/lib/notifications";
 import { useMessaging } from "@/components/messaging-provider";
+import { usePresence } from "@/components/presence-provider";
 import { EmojiPickerButton } from "@/components/emoji-picker-button";
 import { CurrentUserAvatar, UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  ConversationListSkeleton,
-  MessageThreadSkeleton,
-} from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 import { appToast } from "@/lib/app-toast";
 import { fetchFollowing } from "@/lib/follows";
 import { getErrorMessage } from "@/lib/errors";
@@ -52,6 +50,8 @@ import {
   type DirectMessageRow,
 } from "@/lib/messages";
 import {
+  CHAT_ATTACHMENT_ACCEPT,
+  getAttachmentType,
   uploadPostAttachment,
   validatePostAttachment,
 } from "@/lib/post-media";
@@ -117,6 +117,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const shouldSubscribe =
     mode === "page" ? true : mode === "dock" && !isMessagesRoute;
   const { user } = useCurrentUser();
+  const { isOnline } = usePresence();
   const { refreshUnreadCount: refreshNotifications } = useNotifications();
   const userId = user?.id;
   const {
@@ -486,6 +487,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const conversation = conversationId
     ? conversationList.find((c) => c.id === conversationId)
     : undefined;
+  const peerOnline = conversation ? isOnline(conversation.user.id) : false;
   const chatMessages = conversationId
     ? (threadMessages[conversationId] ?? [])
     : [];
@@ -718,7 +720,6 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
           >
             <span className="relative shrink-0">
               <CurrentUserAvatar size="sm" />
-              <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background bg-emerald-500" />
             </span>
             <span className="truncate text-sm font-semibold">Messaging</span>
             <UnreadBadge count={totalUnread} />
@@ -784,6 +785,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                     src={person.avatar}
                     name={person.name}
                     size="sm"
+                    status={isOnline(person.id) ? "active" : "null"}
                   />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">
@@ -882,7 +884,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                 {conversation.user.name}
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                @{conversation.user.username}
+                {peerOnline ? "Active now" : `@${conversation.user.username}`}
               </p>
             </div>
             {mode === "dock" ? (
@@ -908,7 +910,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
             }}
           >
             {loadingThread && chatMessages.length === 0 && (
-              <MessageThreadSkeleton className="px-1" />
+              <Loader variant="thread" className="px-1" />
             )}
             {chatMessages.map((msg, index) => {
               const isMe =
@@ -941,7 +943,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                     )}
                   >
                   {!isMe && (
-                    <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center">
+                    <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center overflow-visible">
                       {showAvatar ? (
                         <UserAvatar
                           src={conversation.user.avatar}
@@ -969,7 +971,12 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                         <img
                           src={attachment.url}
                           alt="Attachment"
-                          className="max-h-64 max-w-full rounded-lg object-cover"
+                          className={cn(
+                            "max-h-64 max-w-full rounded-lg",
+                            /\.svg(\?|#|$)/i.test(attachment.url)
+                              ? "object-contain"
+                              : "object-cover",
+                          )}
                         />
                       ) : attachment.type === "video" ? (
                         <video
@@ -1011,7 +1018,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                     </p>
                   </div>
                   {isMe && (
-                    <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center">
+                    <span className="mb-0.5 flex size-7 shrink-0 items-end justify-center overflow-visible">
                       {showAvatar ? (
                         <CurrentUserAvatar size="sm" className="size-7!" />
                       ) : null}
@@ -1027,7 +1034,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
           <div className="shrink-0 border-t border-black/5 bg-background/95 px-2 py-2 backdrop-blur">
             {pendingAttachment ? (
               <div className="mb-2 flex items-center gap-2 rounded-lg border bg-muted/40 p-1.5">
-                {pendingAttachment.file.type.startsWith("image/") ? (
+                {getAttachmentType(pendingAttachment.file) === "image" ? (
                   // eslint-disable-next-line @next/next/no-img-element -- local blob preview of the file about to be sent
                   <img
                     src={pendingAttachment.previewUrl}
@@ -1073,7 +1080,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
               <input
                 ref={attachInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,video/mp4,video/webm,video/quicktime,.pdf,.doc,.docx,.txt,.csv,.zip,.ppt,.pptx,.xls,.xlsx"
+                accept={CHAT_ATTACHMENT_ACCEPT}
                 className="hidden"
                 onChange={(e) => {
                   handleAttach(e.target.files?.[0]);
@@ -1137,7 +1144,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
         </div>
       ) : conversationId && (loadingThread || loadingList) && !conversation ? (
         <div className="flex min-h-0 flex-1 flex-col p-3">
-          <MessageThreadSkeleton />
+          <Loader variant="thread" />
         </div>
       ) : conversationId && !conversation ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
@@ -1211,8 +1218,10 @@ function ConversationList({
   activeId?: string | null;
   onSelect: (id: string) => void;
 }) {
+  const { isOnline } = usePresence();
+
   if (loading) {
-    return <ConversationListSkeleton count={5} />;
+    return <Loader variant="conversation" count={5} />;
   }
 
   if (items.length === 0) {
@@ -1241,14 +1250,12 @@ function ConversationList({
             {active ? (
               <span className="absolute inset-y-0 left-0 w-0.5 bg-emerald-600" />
             ) : null}
-            <span className="relative shrink-0">
-              <UserAvatar
-                src={conv.user.avatar}
-                name={conv.user.name}
-                size="sm"
-              />
-              <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background bg-emerald-500" />
-            </span>
+            <UserAvatar
+              src={conv.user.avatar}
+              name={conv.user.name}
+              size="sm"
+              status={isOnline(conv.user.id) ? "active" : "null"}
+            />
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <p

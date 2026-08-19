@@ -8,7 +8,7 @@ import { UserListItem } from "@/components/user-list-item";
 import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 import {
   Empty,
   EmptyContent,
@@ -128,7 +128,7 @@ export default function LikesPage({
       )}
 
       <div className="divide-y px-4">
-        {loading && <UserListSkeleton count={4} className="px-0" />}
+        {loading && <Loader variant="people" count={4} className="px-0" />}
 
         {error && (
           <Alert variant="error" className="my-4 w-full max-w-none">

@@ -607,7 +607,8 @@ async function loadAllPostRows(reader: SupabaseClient) {
           includeMediaLayout,
         ),
       )
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(80);
 
     if (!result.error) {
       return normalizeRows(

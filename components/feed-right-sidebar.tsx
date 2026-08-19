@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { UserListItem } from "@/components/user-list-item";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
+import { usePageLoad } from "@/hooks/use-page-load";
 import { feedCardClass, feedCardTitleClass } from "@/lib/feed-layout";
 import { fetchSuggestedProfiles } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
@@ -19,38 +19,26 @@ export function FeedRightSidebar({
 }: FeedRightSidebarProps) {
   const { user } = useCurrentUser();
   const userId = user?.id;
-  const [suggestedUsers, setSuggestedUsers] = useState<User[]>(
-    initialSuggestedUsers,
+  const {
+    data: suggestedUsers,
+    setData: setSuggestedUsers,
+    loading: loadingUsers,
+  } = usePageLoad(
+    async () => {
+      const supabase = createClient();
+      return fetchSuggestedProfiles(supabase, {
+        excludeUserId: userId,
+        limit: 3,
+      });
+    },
+    [userId],
+    {
+      initialData: initialSuggestedUsers,
+      fallbackError: "Could not load suggestions.",
+      minDelayMs: 0,
+      initialLoading: initialSuggestedUsers.length === 0,
+    },
   );
-  const [loadingUsers, setLoadingUsers] = useState(
-    initialSuggestedUsers.length === 0,
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadSuggestedUsers() {
-      setLoadingUsers(true);
-      try {
-        const supabase = createClient();
-        const profiles = await fetchSuggestedProfiles(supabase, {
-          excludeUserId: userId,
-          limit: 3,
-        });
-        if (!cancelled) setSuggestedUsers(profiles);
-      } catch {
-        if (!cancelled) setSuggestedUsers([]);
-      } finally {
-        if (!cancelled) setLoadingUsers(false);
-      }
-    }
-
-    void loadSuggestedUsers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
 
   return (
     <aside className="space-y-4">
@@ -60,7 +48,7 @@ export function FeedRightSidebar({
         </CardHeader>
         <CardContent className="pt-0">
           {loadingUsers ? (
-            <UserListSkeleton count={3} />
+            <Loader variant="people" count={3} />
           ) : suggestedUsers.length > 0 ? (
             <div className="divide-y">
               {suggestedUsers.map((suggestedUser) => (

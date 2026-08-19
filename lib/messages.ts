@@ -98,7 +98,8 @@ export type MessageAttachment = {
   name?: string;
 };
 
-const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|svg)(\?|#|$)/i;
+const IMAGE_EXT =
+  /\.(png|jpe?g|jfif|gif|webp|avif|svg|bmp|ico|tiff?|heic|heif|apng)(\?|#|$)/i;
 const VIDEO_EXT = /\.(mp4|webm|mov|m4v)(\?|#|$)/i;
 // Our uploads are stored as `<userId>/<timestamp>-<uuid>-<originalName>`, so the
 // original filename can be recovered by stripping that prefix off the last path

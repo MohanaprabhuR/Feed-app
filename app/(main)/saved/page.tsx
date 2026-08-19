@@ -1,8 +1,6 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { AppShell } from "@/components/app-shell";
 import { ArticleCard } from "@/components/article-card";
@@ -15,13 +13,9 @@ import {
   EmptyDescription,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { FeedListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 import { isArticle } from "@/lib/articles";
-import { getErrorMessage } from "@/lib/errors";
-import {
-  PAGE_LOAD_MIN_DELAY_MS,
-  withMinimumDelay,
-} from "@/lib/minimum-delay";
+import { usePageLoad } from "@/hooks/use-page-load";
 import {
   pageColumnClass,
   pageErrorClass,
@@ -32,40 +26,29 @@ import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const EMPTY_POSTS: Post[] = [];
+
 export default function SavedPostsPage() {
   const { user, loading: userLoading } = useCurrentUser();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadSaved = useCallback(async () => {
-    if (!user) {
-      setPosts([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
+  const signedIn = Boolean(user);
+  const {
+    data: posts,
+    setData: setPosts,
+    loading,
+    error,
+    reload: loadSaved,
+  } = usePageLoad(
+    async () => {
       const supabase = createClient();
-      const data = await withMinimumDelay(
-        fetchSavedPosts(supabase, user.id),
-        PAGE_LOAD_MIN_DELAY_MS,
-      );
-      setPosts(data);
-    } catch (err) {
-      setPosts([]);
-      setError(getErrorMessage(err, "Could not load saved posts."));
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    void loadSaved();
-  }, [loadSaved]);
+      return fetchSavedPosts(supabase, user!.id);
+    },
+    [user?.id],
+    {
+      enabled: signedIn,
+      initialData: EMPTY_POSTS,
+      fallbackError: "Could not load saved posts.",
+    },
+  );
 
   const showLoading = userLoading || loading;
 
@@ -73,7 +56,7 @@ export default function SavedPostsPage() {
     <AppShell noPadding feedLayout>
       <PageHeader title="Saved Posts" backHref="/feed" />
       <div className={cn(pageColumnClass, pageStackClass)}>
-        {showLoading && <FeedListSkeleton count={3} />}
+        {showLoading && <Loader variant="posts" count={3} />}
 
         {!showLoading && !user && (
           <Empty className="border bg-card py-16">

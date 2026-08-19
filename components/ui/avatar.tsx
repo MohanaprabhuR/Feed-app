@@ -54,7 +54,7 @@ const iconSizeMap: Record<string, number> = {
   "3xl": 20,
 };
 
-type Status =
+export type AvatarStatus =
   | "active"
   | "away"
   | "sleep"
@@ -65,7 +65,7 @@ type Status =
   | "pin"
   | "null";
 
-const statusIconMap: Record<Status, React.ReactNode> = {
+const statusIconMap: Record<AvatarStatus, React.ReactNode> = {
   active: (
     <svg
       width="17"
@@ -191,7 +191,7 @@ interface AvatarProps
     React.ComponentProps<typeof AvatarPrimitive.Root>,
     VariantProps<typeof avatarVariants> {
   shape?: Shape;
-  status?: Status;
+  status?: AvatarStatus;
 }
 
 function Avatar({
@@ -220,7 +220,7 @@ function Avatar({
         {status && status !== "null" && (
           <span
             className={cn(
-              "absolute bottom-0 right-0 flex items-center justify-center rounded-full bg-background ring-2 ring-[var(--background)]",
+              "absolute bottom-0 right-0 flex items-center justify-center overflow-hidden rounded-full bg-background ring-2 ring-[var(--background)] [&>svg]:size-full",
               {
                 "bg-[var(--color-green-600)]  p-0.5": status === "checked",
                 "bg-[var(--color-red-500)] p-0.5": status === "close",

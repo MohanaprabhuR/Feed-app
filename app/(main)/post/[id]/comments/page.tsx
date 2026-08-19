@@ -18,7 +18,7 @@ import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CommentListSkeleton, FeedListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 import {
   Empty,
   EmptyContent,
@@ -316,8 +316,8 @@ export default function CommentsPage({
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {loading && (
           <>
-            <FeedListSkeleton count={1} />
-            <CommentListSkeleton count={3} />
+            <Loader variant="posts" count={1} />
+            <Loader variant="comments" count={3} />
           </>
         )}
 

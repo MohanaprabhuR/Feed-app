@@ -15,10 +15,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
-import {
-  SidebarProfileSkeleton,
-  SidebarStatsSkeleton,
-} from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
 
 const quickLinks = [
@@ -36,7 +33,7 @@ export function FeedLeftSidebar() {
         <CardContent className={feedCardSectionClass}>
           <div className="-mt-9 flex flex-col items-center text-center">
             {loading || !user ? (
-              <SidebarProfileSkeleton />
+              <Loader variant="sidebar-profile" />
             ) : (
               <>
                 <UserAvatar
@@ -62,7 +59,7 @@ export function FeedLeftSidebar() {
           <Separator className="my-4" />
 
           {loading || !user ? (
-            <SidebarStatsSkeleton />
+            <Loader variant="sidebar-stats" />
           ) : (
             <ItemGroup className="gap-1 text-sm">
               <Item size="sm" className="justify-between p-0">

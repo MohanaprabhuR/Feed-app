@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserListItem } from "@/components/user-list-item";
-import { UserListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 import { Alert, AlertContent, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getErrorMessage } from "@/lib/errors";
@@ -145,7 +145,7 @@ export function ReactionsDialog({
         </div>
 
         <div className="min-h-0 flex-1 divide-y overflow-y-auto px-4">
-          {loading && <UserListSkeleton count={3} className="px-0" />}
+          {loading && <Loader variant="people" count={3} className="px-0" />}
 
           {error && (
             <Alert variant="error" className="my-4 w-full max-w-none">

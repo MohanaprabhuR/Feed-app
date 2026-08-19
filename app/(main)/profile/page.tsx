@@ -4,7 +4,7 @@ import { useCurrentUser } from "@/components/current-user-provider";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { ProfileView } from "@/components/profile-view";
-import { ProfileSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 import { pageColumnClass } from "@/lib/feed-layout";
 
 export default function ProfilePage() {
@@ -18,7 +18,7 @@ export default function ProfilePage() {
       />
       <div className={pageColumnClass}>
         {loading || !user ? (
-          <ProfileSkeleton />
+          <Loader variant="profile" />
         ) : (
           <ProfileView userId={user.id} initialMode="view" />
         )}

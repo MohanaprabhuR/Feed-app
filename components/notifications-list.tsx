@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarClock,
   Heart,
@@ -20,7 +20,8 @@ import {
   EmptyDescription,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { NotificationListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
+import { usePageLoad } from "@/hooks/use-page-load";
 import { getErrorMessage } from "@/lib/errors";
 import {
   fetchNotifications,
@@ -40,46 +41,34 @@ const iconMap = {
   event: CalendarClock,
 } as const;
 
+const EMPTY_NOTIFICATIONS: Notification[] = [];
+
 export function NotificationsList() {
   const { user, loading: userLoading } = useCurrentUser();
   const { markRead, markAllRead, refreshUnreadCount } = useNotifications();
-  const [items, setItems] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [markingAll, setMarkingAll] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!user) {
-      setItems([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
+  const {
+    data: items,
+    setData: setItems,
+    loading,
+    error,
+    setError,
+    reload: load,
+  } = usePageLoad(
+    async () => {
       const supabase = createClient();
-      const data = await fetchNotifications(supabase, user.id);
-      setItems(data);
+      const data = await fetchNotifications(supabase, user!.id);
       await refreshUnreadCount();
-    } catch (err) {
-      setItems([]);
-      setError(
-        getErrorMessage(
-          err,
-          "Could not load notifications. Run supabase/migrate-notifications.sql in Supabase.",
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [user, refreshUnreadCount]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load on mount
-    void load();
-  }, [load]);
+      return data;
+    },
+    [user?.id],
+    {
+      enabled: Boolean(user),
+      initialData: EMPTY_NOTIFICATIONS,
+      fallbackError:
+        "Could not load notifications. Run supabase/migrate-notifications.sql in Supabase.",
+    },
+  );
+  const [markingAll, setMarkingAll] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -98,7 +87,7 @@ export function NotificationsList() {
           filter: `recipient_id=eq.${user.id}`,
         },
         () => {
-          void load();
+          void load({ silent: true });
         },
       )
       .subscribe();
@@ -138,7 +127,7 @@ export function NotificationsList() {
   if (userLoading || loading) {
     return (
       <div className="overflow-hidden rounded-xl border bg-card px-4">
-        <NotificationListSkeleton count={6} />
+        <Loader variant="notifications" count={6} />
       </div>
     );
   }
