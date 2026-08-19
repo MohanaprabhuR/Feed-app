@@ -1,14 +1,5 @@
-import { AppShell } from "@/components/app-shell";
-import { PageHeader } from "@/components/page-header";
-import { UserListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 
 export default function LikesLoading() {
-  return (
-    <AppShell noPadding>
-      <PageHeader title="Reactions" backHref="/feed" />
-      <div className="px-4">
-        <UserListSkeleton count={5} />
-      </div>
-    </AppShell>
-  );
+  return <Loader variant="people" count={5} shell />;
 }

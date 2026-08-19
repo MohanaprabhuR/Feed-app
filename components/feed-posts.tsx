@@ -1,7 +1,6 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -23,13 +22,11 @@ import {
   EmptyDescription,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { FeedListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
+import { usePageLoad } from "@/hooks/use-page-load";
 import { isArticle } from "@/lib/articles";
-import { getErrorMessage } from "@/lib/errors";
-import {
-  PAGE_LOAD_MIN_DELAY_MS,
-  withMinimumDelay,
-} from "@/lib/minimum-delay";
+import { api } from "@/lib/api-client";
+import { PAGE_LOAD_MIN_DELAY_MS } from "@/lib/minimum-delay";
 import { createClient } from "@/lib/supabase/client";
 import type { Post } from "@/lib/types";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
@@ -42,23 +39,6 @@ type FeedPostsProps = {
   initialArticleOpen?: boolean;
 };
 
-async function loadFeedPosts(): Promise<Post[]> {
-  const response = await fetch("/api/posts", {
-    method: "GET",
-    cache: "no-store",
-  });
-  const payload = (await response.json()) as {
-    posts?: Post[];
-    error?: string;
-  };
-
-  if (!response.ok) {
-    throw new Error(payload.error || "Could not load posts.");
-  }
-
-  return payload.posts ?? [];
-}
-
 export function FeedPosts({
   initialPosts = [],
   serverLoaded = false,
@@ -68,9 +48,32 @@ export function FeedPosts({
   const { user } = useCurrentUser();
   const router = useRouter();
   const pathname = usePathname();
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
-  const [loading, setLoading] = useState(!serverLoaded);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: posts,
+    setData: setPosts,
+    loading,
+    error,
+    reload,
+  } = usePageLoad(
+    async () => {
+      const payload = await api.posts.list();
+      return payload.posts ?? [];
+    },
+    [],
+    {
+      initialData: initialPosts,
+      fallbackError: "Could not load posts.",
+      minDelayMs: serverLoaded ? 0 : PAGE_LOAD_MIN_DELAY_MS,
+      initialLoading: !serverLoaded,
+    },
+  );
+
+  const loadPosts = useCallback(
+    async (options?: { showLoading?: boolean }) => {
+      await reload({ silent: !options?.showLoading });
+    },
+    [reload],
+  );
 
   const clearEditParam = useCallback(() => {
     if (!editPostId) return;
@@ -81,23 +84,6 @@ export function FeedPosts({
     if (!initialArticleOpen) return;
     router.replace(pathname);
   }, [initialArticleOpen, pathname, router]);
-
-  const loadPosts = useCallback(async (options?: { showLoading?: boolean }) => {
-    const showLoading = options?.showLoading ?? false;
-    if (showLoading) setLoading(true);
-
-    try {
-      const data = showLoading
-        ? await withMinimumDelay(loadFeedPosts(), PAGE_LOAD_MIN_DELAY_MS)
-        : await loadFeedPosts();
-      setPosts(data);
-      setError(null);
-    } catch (err) {
-      setError(getErrorMessage(err, "Could not load posts."));
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  }, []);
 
   const handlePosted = useCallback(
     (newPost?: Post) => {
@@ -111,14 +97,8 @@ export function FeedPosts({
       }
       void loadPosts();
     },
-    [loadPosts],
+    [loadPosts, setPosts],
   );
-
-  useEffect(() => {
-    // Always revalidate against the shared Supabase DB so posts created on
-    // production (or another device) show up in local/dev without a hard reload.
-    void loadPosts({ showLoading: !serverLoaded });
-  }, [serverLoaded, loadPosts]);
 
   useEffect(() => {
     function refreshIfVisible() {
@@ -194,7 +174,7 @@ export function FeedPosts({
         </Card>
       )}
 
-      {loading && <FeedListSkeleton count={3} />}
+      {loading && <Loader variant="posts" count={3} />}
 
       {error && (
         <Alert variant="error" className="w-full max-w-none">

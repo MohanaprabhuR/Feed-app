@@ -1,6 +1,11 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  type AvatarStatus,
+} from "@/components/ui/avatar";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { ProfileTrigger } from "@/components/profile-trigger";
 import { cn } from "@/lib/utils";
@@ -11,6 +16,7 @@ type UserAvatarProps = {
   size?: "sm" | "md" | "lg";
   userId?: string;
   className?: string;
+  status?: AvatarStatus;
 };
 
 const sizeMap = {
@@ -31,6 +37,7 @@ export function UserAvatar({
   size = "md",
   userId,
   className,
+  status = "null",
 }: UserAvatarProps) {
   const initials = name
     .split(" ")
@@ -42,6 +49,7 @@ export function UserAvatar({
   const avatar = (
     <Avatar
       size={sizeMap[size]}
+      status={status}
       className={cn(sizeClassOverrides[size], className)}
     >
       <AvatarImage src={src} alt={name} />
@@ -51,7 +59,7 @@ export function UserAvatar({
 
   if (userId) {
     return (
-      <ProfileTrigger userId={userId} className="rounded-full">
+      <ProfileTrigger userId={userId} className="inline-flex overflow-visible rounded-full">
         {avatar}
       </ProfileTrigger>
     );
@@ -63,9 +71,11 @@ export function UserAvatar({
 export function CurrentUserAvatar({
   size = "md",
   className,
+  status = "active",
 }: {
   size?: "sm" | "md" | "lg";
   className?: string;
+  status?: AvatarStatus;
 }) {
   const { user } = useCurrentUser();
 
@@ -89,6 +99,7 @@ export function CurrentUserAvatar({
       name={user.name}
       size={size}
       userId={user.id}
+      status={status}
       className={className}
     />
   );

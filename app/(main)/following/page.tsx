@@ -1,14 +1,13 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect */
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { UserListItem } from "@/components/user-list-item";
-import { UserListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -18,7 +17,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getErrorMessage } from "@/lib/errors";
+import { usePageLoad } from "@/hooks/use-page-load";
 import {
   networkPageClass,
   pageErrorClass,
@@ -31,6 +30,8 @@ import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type NetworkTab = "following" | "followers";
+
+const EMPTY_USERS: User[] = [];
 
 function parseTab(value: string | null): NetworkTab {
   return value === "followers" ? "followers" : "following";
@@ -58,8 +59,8 @@ function NetworkListPanel({
   if (loading) {
     return (
       <Card padding="none" className={cn(pagePanelClass, "min-h-[min(60vh,520px)]")}>
-        <CardContent className="px-4 py-2 sm:px-5">
-          <UserListSkeleton count={5} />
+        <CardContent className="p-0">
+          <Loader variant="people" count={5} />
         </CardContent>
       </Card>
     );
@@ -117,65 +118,45 @@ function FollowingPageContent() {
   const searchParams = useSearchParams();
   const activeTab = parseTab(searchParams.get("tab"));
 
-  const [following, setFollowing] = useState<User[]>([]);
-  const [followers, setFollowers] = useState<User[]>([]);
-  const [loadingFollowing, setLoadingFollowing] = useState(true);
-  const [loadingFollowers, setLoadingFollowers] = useState(true);
-  const [followingError, setFollowingError] = useState<string | null>(null);
-  const [followersError, setFollowersError] = useState<string | null>(null);
+  const signedIn = Boolean(user);
 
-  const loadFollowing = useCallback(async () => {
-    if (!user) {
-      setFollowing([]);
-      setLoadingFollowing(false);
-      return;
-    }
-
-    setLoadingFollowing(true);
-    setFollowingError(null);
-
-    try {
+  const {
+    data: following,
+    setData: setFollowing,
+    loading: loadingFollowing,
+    error: followingError,
+    reload: loadFollowing,
+  } = usePageLoad(
+    async () => {
       const supabase = createClient();
-      const data = await fetchFollowing(supabase, user.id);
-      setFollowing(data);
-    } catch (err) {
-      setFollowing([]);
-      setFollowingError(
-        getErrorMessage(err, "Could not load people you follow."),
-      );
-    } finally {
-      setLoadingFollowing(false);
-    }
-  }, [user]);
+      return fetchFollowing(supabase, user!.id);
+    },
+    [user?.id],
+    {
+      enabled: signedIn,
+      initialData: EMPTY_USERS,
+      fallbackError: "Could not load people you follow.",
+    },
+  );
 
-  const loadFollowers = useCallback(async () => {
-    if (!user) {
-      setFollowers([]);
-      setLoadingFollowers(false);
-      return;
-    }
-
-    setLoadingFollowers(true);
-    setFollowersError(null);
-
-    try {
+  const {
+    data: followers,
+    setData: setFollowers,
+    loading: loadingFollowers,
+    error: followersError,
+    reload: loadFollowers,
+  } = usePageLoad(
+    async () => {
       const supabase = createClient();
-      const data = await fetchFollowers(supabase, user.id, {
-        viewerId: user.id,
-      });
-      setFollowers(data);
-    } catch (err) {
-      setFollowers([]);
-      setFollowersError(getErrorMessage(err, "Could not load followers."));
-    } finally {
-      setLoadingFollowers(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    void loadFollowing();
-    void loadFollowers();
-  }, [loadFollowing, loadFollowers]);
+      return fetchFollowers(supabase, user!.id, { viewerId: user!.id });
+    },
+    [user?.id],
+    {
+      enabled: signedIn,
+      initialData: EMPTY_USERS,
+      fallbackError: "Could not load followers.",
+    },
+  );
 
   function handleTabChange(value: string) {
     const tab = parseTab(value);

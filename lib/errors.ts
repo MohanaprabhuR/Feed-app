@@ -1,5 +1,6 @@
 const VIDEO_URL_PATTERN = /\.(mp4|webm|mov)(\?.*)?$/i;
-const IMAGE_URL_PATTERN = /\.(jpe?g|png|gif|webp)(\?.*)?$/i;
+const IMAGE_URL_PATTERN =
+  /\.(jpe?g|jfif|png|gif|webp|avif|svg|bmp|ico|tiff?|heic|heif|apng)(\?.*)?$/i;
 const FILE_URL_PATTERN =
   /\.(pdf|doc|docx|txt|zip|ppt|pptx|xls|xlsx)(\?.*)?$/i;
 

@@ -17,7 +17,8 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FeedListSkeleton, UserListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
+import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
 import {
   pageColumnClass,
@@ -31,19 +32,7 @@ import type { Post, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 async function searchFeedPosts(query: string): Promise<Post[]> {
-  const response = await fetch("/api/posts", {
-    method: "GET",
-    cache: "no-store",
-  });
-  const payload = (await response.json()) as {
-    posts?: Post[];
-    error?: string;
-  };
-
-  if (!response.ok) {
-    throw new Error(payload.error || "Could not load posts.");
-  }
-
+  const payload = await api.posts.list();
   const posts = payload.posts ?? [];
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) return posts;
@@ -168,7 +157,7 @@ function SearchPageContent() {
                 </h3>
                 {showUsersLoading ? (
                   <div className={cn(pageListClass, "px-4")}>
-                    <UserListSkeleton count={3} />
+                    <Loader variant="people" count={3} />
                   </div>
                 ) : users.length > 0 ? (
                   <div className={cn(pageListClass, "px-4")}>
@@ -187,7 +176,7 @@ function SearchPageContent() {
                   Posts
                 </h3>
                 {showPostsLoading ? (
-                  <FeedListSkeleton count={2} />
+                  <Loader variant="posts" count={2} />
                 ) : posts.length > 0 ? (
                   <div className={pageStackClass}>
                     {posts.map((post, index) => (
@@ -211,7 +200,7 @@ function SearchPageContent() {
         <TabsContent value="users" className="mt-4">
           {showUsersLoading ? (
             <div className={cn(pageListClass, "px-4")}>
-              <UserListSkeleton count={5} />
+              <Loader variant="people" count={5} />
             </div>
           ) : users.length > 0 ? (
             <div className={cn(pageListClass, "px-4")}>
@@ -235,7 +224,7 @@ function SearchPageContent() {
 
         <TabsContent value="posts" className="mt-4 space-y-4">
           {showPostsLoading ? (
-            <FeedListSkeleton count={3} />
+            <Loader variant="posts" count={3} />
           ) : posts.length > 0 ? (
             posts.map((post, index) => (
               <PostCard
@@ -269,7 +258,7 @@ export default function SearchPage() {
       <Suspense
         fallback={
           <div className={cn(pageColumnClass, pageStackClass)}>
-            <FeedListSkeleton count={2} />
+            <Loader variant="posts" count={2} />
           </div>
         }
       >

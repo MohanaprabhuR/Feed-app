@@ -1,15 +1,5 @@
-import { AppShell } from "@/components/app-shell";
-import { PageHeader } from "@/components/page-header";
-import { SettingsListSkeleton } from "@/components/skeletons";
-import { pageColumnClass } from "@/lib/feed-layout";
+import { Loader } from "@/components/loader";
 
 export default function ThemeLoading() {
-  return (
-    <AppShell noPadding feedLayout>
-      <PageHeader title="Theme" backHref="/settings" />
-      <div className={pageColumnClass}>
-        <SettingsListSkeleton rows={3} />
-      </div>
-    </AppShell>
-  );
+  return <Loader variant="settings-list" count={3} shell />;
 }

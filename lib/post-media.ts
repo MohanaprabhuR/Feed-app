@@ -20,6 +20,13 @@ const IMAGE_TYPES = new Set([
   "image/heic",
   "image/heif",
   "image/avif",
+  "image/svg+xml",
+  "image/bmp",
+  "image/x-ms-bmp",
+  "image/vnd.microsoft.icon",
+  "image/x-icon",
+  "image/tiff",
+  "image/apng",
 ]);
 
 const VIDEO_TYPES = new Set([
@@ -50,12 +57,19 @@ const FILE_TYPES = new Set([
 const EXTENSION_ATTACHMENT_TYPES: Record<string, PostAttachmentType> = {
   jpg: "image",
   jpeg: "image",
+  jfif: "image",
   png: "image",
   gif: "image",
   webp: "image",
   heic: "image",
   heif: "image",
   avif: "image",
+  svg: "image",
+  bmp: "image",
+  ico: "image",
+  tif: "image",
+  tiff: "image",
+  apng: "image",
   mp4: "video",
   webm: "video",
   mov: "video",
@@ -80,12 +94,19 @@ const EXTENSION_ATTACHMENT_TYPES: Record<string, PostAttachmentType> = {
 const EXTENSION_CONTENT_TYPES: Record<string, string> = {
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
+  jfif: "image/jpeg",
   png: "image/png",
   gif: "image/gif",
   webp: "image/webp",
   heic: "image/heic",
   heif: "image/heif",
   avif: "image/avif",
+  svg: "image/svg+xml",
+  bmp: "image/bmp",
+  ico: "image/x-icon",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+  apng: "image/apng",
   mp4: "video/mp4",
   webm: "video/webm",
   mov: "video/quicktime",
@@ -138,6 +159,10 @@ export function getAttachmentType(file: File): PostAttachmentType | null {
   const extension = getFileExtension(file.name);
   return EXTENSION_ATTACHMENT_TYPES[extension] ?? null;
 }
+
+/** File picker accept list for chat — any image format plus video/docs. */
+export const CHAT_ATTACHMENT_ACCEPT =
+  "image/*,.svg,.png,.avif,.jpg,.jpeg,.jfif,.gif,.webp,.bmp,.ico,.tif,.tiff,.heic,.heif,.apng,video/*,.pdf,.doc,.docx,.txt,.csv,.zip,.ppt,.pptx,.xls,.xlsx";
 
 export function validatePostAttachment(file: File): string | null {
   const attachmentType = getAttachmentType(file);

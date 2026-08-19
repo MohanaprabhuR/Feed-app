@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { AppShell } from "@/components/app-shell";
 import { ProfileEditForm } from "@/components/profile-edit-form";
-import { ProfileEditSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function ProfileEditPage() {
       className="max-w-5xl px-4 py-8 sm:px-8 sm:py-10"
     >
       {loading || !user ? (
-        <ProfileEditSkeleton />
+        <Loader variant="profile-edit" />
       ) : (
         <ProfileEditForm
           user={user}

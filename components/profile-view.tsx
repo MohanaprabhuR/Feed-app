@@ -21,7 +21,7 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@/components/ui/item";
-import { ProfileSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 import { appToast } from "@/lib/app-toast";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
@@ -106,7 +106,7 @@ export function ProfileView({
   }, [userId, initialMode]);
 
   if (userLoading) {
-    return <ProfileSkeleton />;
+    return <Loader variant="profile" />;
   }
 
   if (!user) {

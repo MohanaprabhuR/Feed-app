@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { UserListSkeleton } from "@/components/skeletons";
+import { Loader } from "@/components/loader";
 import {
   Empty,
   EmptyContent,
@@ -205,7 +205,7 @@ export function SharePostDialog({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6">
-          {loading && <UserListSkeleton count={4} className="py-2" />}
+          {loading && <Loader variant="people" count={4} className="py-2" />}
 
           {error && (
             <Alert variant="error" className="my-2 w-full max-w-none">
