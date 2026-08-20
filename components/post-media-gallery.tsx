@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
+import { DownloadPngButton } from "@/components/download-png-button";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
@@ -80,6 +81,10 @@ function Lightbox({
           src={images[index]}
           alt={`Image ${index + 1} of ${total}`}
           className="max-h-[min(94vh,960px)] w-full rounded-xl object-contain shadow-2xl"
+        />
+        <DownloadPngButton
+          src={images[index]}
+          className="absolute bottom-3 right-3"
         />
 
         {total > 1 ? (

@@ -86,7 +86,16 @@ export function CurrentUserProvider({
     const supabase = createClient();
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
+    } = supabase.auth.onAuthStateChange((event) => {
+      // Only sign-out clears the user. TOKEN_REFRESHED fires periodically (and
+      // on tab focus) without changing identity — reloading there would briefly
+      // flip the user to null and wipe downstream state (e.g. the chat list).
+      if (event === "SIGNED_OUT") {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      if (event === "TOKEN_REFRESHED") return;
       refresh();
     });
 

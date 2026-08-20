@@ -43,6 +43,7 @@ import {
 import { appToast } from "@/lib/app-toast";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/errors";
+import { notifySavedPostsChanged } from "@/lib/saves";
 import type { Post, ReactionType } from "@/lib/types";
 import {
   feedCardClass,
@@ -121,11 +122,13 @@ export function ArticleCard({
       if (isSaved) {
         await api.posts.unsave(post.id);
         setIsSaved(false);
+        notifySavedPostsChanged(-1);
         appToast.success("Article removed", "Removed from your saved posts.");
         onUnsaved?.(post.id);
       } else {
         await api.posts.save(post.id);
         setIsSaved(true);
+        notifySavedPostsChanged(1);
         appToast.success("Article saved", "Find it anytime on Saved Posts.");
       }
     } catch (err) {
