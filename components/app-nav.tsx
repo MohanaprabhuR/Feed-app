@@ -28,7 +28,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/ui/header";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
@@ -81,8 +80,10 @@ function NavItem({
       asChild
       variant="ghost"
       className={cn(
-        "relative flex min-w-18 h-auto flex-col items-center gap-1 px-1.5 py-1.5 text-2xs font-medium",
-        active ? "text-foreground" : "text-muted-foreground",
+        "relative flex min-w-18 h-auto flex-col items-center gap-1 rounded-lg px-2 py-1.5 text-2xs font-medium transition-colors hover:bg-muted",
+        active
+          ? "text-foreground"
+          : "text-muted-foreground hover:text-foreground",
       )}
     >
       <Link href={href}>
@@ -97,9 +98,14 @@ function NavItem({
           </Badge>
         ) : null}
         <span className="max-w-18 truncate">{label}</span>
-        {active && (
-          <Separator className="h-0.5 w-full max-w-14 bg-foreground" />
-        )}
+        {/* Always rendered (transparent when inactive) so the row height never
+            shifts as the active item changes. */}
+        <span
+          className={cn(
+            "h-0.5 w-6 rounded-full transition-colors",
+            active ? "bg-foreground" : "bg-transparent",
+          )}
+        />
       </Link>
     </Button>
   );
@@ -358,6 +364,7 @@ export function AppHeader() {
             type="search"
             size="sm"
             placeholder="Search"
+            className="rounded-full border-transparent bg-muted/60 transition-colors focus-visible:border-border focus-visible:bg-background"
             prefix={<Search className="size-4 text-muted-foreground" />}
             onKeyDown={(e) => {
               if (e.key !== "Enter") return;

@@ -53,6 +53,35 @@ export async function fetchSavedPostIds(
   return new Set((data ?? []).map((row) => row.post_id as string));
 }
 
+export async function fetchSavedPostCount(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<number> {
+  if (!userId) return 0;
+
+  const { count, error } = await supabase
+    .from("post_saves")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (error) {
+    if (isMissingSavesTableError(error.message)) return 0;
+    throw error;
+  }
+
+  return count ?? 0;
+}
+
+export const SAVED_POSTS_CHANGED_EVENT = "feedapp:saved-posts-changed";
+
+/** Tell the sidebar (and any listeners) that a save/unsave succeeded. */
+export function notifySavedPostsChanged(delta: 1 | -1) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(SAVED_POSTS_CHANGED_EVENT, { detail: { delta } }),
+  );
+}
+
 export async function savePost(
   supabase: SupabaseClient,
   userId: string,

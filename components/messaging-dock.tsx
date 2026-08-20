@@ -30,6 +30,7 @@ import { CurrentUserAvatar, UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/loader";
+import { DownloadPngButton } from "@/components/download-png-button";
 import { appToast } from "@/lib/app-toast";
 import { fetchFollowing } from "@/lib/follows";
 import { getErrorMessage } from "@/lib/errors";
@@ -116,7 +117,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   // subscriptions must only run on the active surface.
   const shouldSubscribe =
     mode === "page" ? true : mode === "dock" && !isMessagesRoute;
-  const { user } = useCurrentUser();
+  const { user, loading: userLoading } = useCurrentUser();
   const { isOnline } = usePresence();
   const { refreshUnreadCount: refreshNotifications } = useNotifications();
   const userId = user?.id;
@@ -167,7 +168,8 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
       setConversationList(data);
       setSetupError(null);
     } catch (err) {
-      setConversationList([]);
+      // Keep whatever is already shown; wiping to [] on a transient failure is
+      // what makes the list intermittently flash "No conversations yet".
       setSetupError(getErrorMessage(err, "Could not load conversations."));
     } finally {
       setLoadingList(false);
@@ -228,6 +230,12 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   /* eslint-disable react-hooks/set-state-in-effect -- refresh inbox when panel opens or dock mounts */
   useEffect(() => {
     if (!userId) {
+      // While the current user is still resolving, userId is transiently
+      // undefined — do NOT tear down here. Collapsing the surface (closeMessaging)
+      // would set expanded=false, and once the user resolves nothing re-opens it,
+      // so loadConversations never runs and the list shows "No conversations yet".
+      // Only reset on an actual logged-out state.
+      if (userLoading) return;
       setConversationList([]);
       setThreadMessages({});
       setComposeOpen(false);
@@ -243,7 +251,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
     if (mode === "dock" || expanded) {
       void loadConversations();
     }
-  }, [expanded, userId, loadConversations, mode, closeMessaging]);
+  }, [expanded, userId, userLoading, loadConversations, mode, closeMessaging]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
@@ -967,17 +975,24 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                   >
                     {attachment ? (
                       attachment.type === "image" ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- user chat upload of unknown dimensions
-                        <img
-                          src={attachment.url}
-                          alt="Attachment"
-                          className={cn(
-                            "max-h-64 max-w-full rounded-lg",
-                            /\.svg(\?|#|$)/i.test(attachment.url)
-                              ? "object-contain"
-                              : "object-cover",
-                          )}
-                        />
+                        <div className="relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- user chat upload of unknown dimensions */}
+                          <img
+                            src={attachment.url}
+                            alt="Attachment"
+                            className={cn(
+                              "max-h-64 max-w-full rounded-lg",
+                              /\.svg(\?|#|$)/i.test(attachment.url)
+                                ? "object-contain"
+                                : "object-cover",
+                            )}
+                          />
+                          <DownloadPngButton
+                            src={attachment.url}
+                            filename={attachment.name}
+                            className="absolute bottom-1.5 right-1.5 size-8"
+                          />
+                        </div>
                       ) : attachment.type === "video" ? (
                         <video
                           src={attachment.url}

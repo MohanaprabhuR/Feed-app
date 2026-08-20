@@ -2,10 +2,14 @@
 
 import { useCurrentUser } from "@/components/current-user-provider";
 import { UserListItem } from "@/components/user-list-item";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Loader } from "@/components/loader";
 import { usePageLoad } from "@/hooks/use-page-load";
-import { feedCardClass, feedCardTitleClass } from "@/lib/feed-layout";
 import { fetchSuggestedProfiles } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
@@ -42,11 +46,11 @@ export function FeedRightSidebar({
 
   return (
     <aside className="space-y-4">
-      <Card padding="none" className={feedCardClass}>
-        <CardHeader className={feedCardTitleClass}>
+      <Card size="md" padding="none" className="overflow-hidden shadow-sm">
+        <CardHeader className="px-4 pb-2 pt-4 sm:px-5">
           <CardTitle className="text-lg">Add to your feed</CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className="px-0 pb-2 pt-0">
           {loadingUsers ? (
             <Loader variant="people" count={3} />
           ) : suggestedUsers.length > 0 ? (
@@ -66,7 +70,7 @@ export function FeedRightSidebar({
               ))}
             </div>
           ) : (
-            <p className="py-2 text-sm text-muted-foreground">
+            <p className="px-4 py-2 text-sm text-muted-foreground sm:px-5">
               No other members yet. Invite friends to join the feed.
             </p>
           )}
