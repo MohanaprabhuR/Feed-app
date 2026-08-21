@@ -34,6 +34,7 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset online set on sign-out
       setOnlineIds(new Set());
       return;
     }

@@ -68,11 +68,7 @@ export function PostEngagementBar({
   // Never show more type badges than total reactions (fixes 2 icons with count 1).
   const maxTypes = Math.min(3, Math.max(likesCount, 0));
   const shown = (
-    types.length > 0
-      ? types
-      : hasLikes
-        ? (["like"] as ReactionType[])
-        : []
+    types.length > 0 ? types : hasLikes ? (["like"] as ReactionType[]) : []
   ).slice(0, maxTypes);
 
   return (

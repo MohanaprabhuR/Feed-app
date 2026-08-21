@@ -11,7 +11,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 type MeMenuProps = {
@@ -59,7 +58,14 @@ export function MeMenu({
         >
           <UserAvatar src={user.avatar} name={user.name} size="sm" />
           <span>Me</span>
-          {open && <Separator className="h-0.5 w-full max-w-14 bg-foreground" />}
+          {/* Match the NavItem indicator so the active/open line looks identical
+              across the whole nav (rounded pill, stable height). */}
+          <span
+            className={cn(
+              "h-0.5 w-6 rounded-full transition-colors",
+              open ? "bg-foreground" : "bg-transparent",
+            )}
+          />
         </Button>
       </PopoverTrigger>
       <PopoverContent
