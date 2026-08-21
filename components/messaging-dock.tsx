@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronDown,
@@ -146,6 +147,17 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const [people, setPeople] = useState<User[]>([]);
   const [threadNotFound, setThreadNotFound] = useState(false);
   const [threadError, setThreadError] = useState<string | null>(null);
+  // Fullscreen viewer for a tapped chat image.
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!lightboxUrl) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxUrl(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxUrl]);
   const [threadRetry, setThreadRetry] = useState(0);
   const [pendingAttachment, setPendingAttachment] = useState<{
     file: File;
@@ -980,8 +992,17 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                           <img
                             src={attachment.url}
                             alt="Attachment"
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setLightboxUrl(attachment.url)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setLightboxUrl(attachment.url);
+                              }
+                            }}
                             className={cn(
-                              "max-h-64 max-w-full rounded-lg",
+                              "max-h-64 max-w-full cursor-zoom-in rounded-lg",
                               /\.svg(\?|#|$)/i.test(attachment.url)
                                 ? "object-contain"
                                 : "object-cover",
@@ -1218,6 +1239,34 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
           {showChatPane ? chatPane : null}
         </>
       )}
+      {lightboxUrl
+        ? createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Image preview"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+              onClick={() => setLightboxUrl(null)}
+            >
+              <button
+                type="button"
+                aria-label="Close image"
+                onClick={() => setLightboxUrl(null)}
+                className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+              >
+                <X className="size-5" />
+              </button>
+              {/* eslint-disable-next-line @next/next/no-img-element -- chat image preview */}
+              <img
+                src={lightboxUrl}
+                alt="Attachment preview"
+                onClick={(e) => e.stopPropagation()}
+                className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain shadow-2xl"
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

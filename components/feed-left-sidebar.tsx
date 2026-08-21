@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Bookmark, ChevronRight, Users } from "lucide-react";
 import { useCurrentUser } from "@/components/current-user-provider";
 import { ProfileTrigger } from "@/components/profile-trigger";
-import { UserAvatar } from "@/components/user-avatar";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader } from "@/components/loader";
 import { fetchSavedPostCount, SAVED_POSTS_CHANGED_EVENT } from "@/lib/saves";
 import { createClient } from "@/lib/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const quickLinks = [
   { href: "/saved", label: "Saved items", icon: Bookmark },
@@ -34,6 +35,15 @@ const quickLinks = [
 
 function formatCount(value: number) {
   return value.toLocaleString();
+}
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 export function FeedLeftSidebar() {
@@ -71,18 +81,20 @@ export function FeedLeftSidebar() {
     <aside className="space-y-4">
       <Card size="md" padding="none" className="overflow-hidden shadow-sm">
         <div className="h-16 bg-linear-to-r from-sky-700 to-sky-500" />
-        <CardHeader className="-mt-9 items-center px-4 pb-0 pt-0 text-center sm:px-5">
+        <CardHeader className="-mt-6 justify-items-center px-4 pb-0 pt-0 text-center sm:px-5">
           {loading || !user ? (
             <Loader variant="sidebar-profile" />
           ) : (
             <>
-              <UserAvatar
-                src={user.avatar}
-                name={user.name}
-                size="md"
+              <ProfileTrigger
                 userId={user.id}
-                className="ring-4 ring-card"
-              />
+                className="inline-flex overflow-visible rounded-full"
+              >
+                <Avatar size="3xl" className="ring-2 ring-card">
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback>{initials(user.name)}</AvatarFallback>
+                </Avatar>
+              </ProfileTrigger>
               <CardTitle className="mt-2 truncate text-base font-semibold tracking-normal">
                 <ProfileTrigger userId={user.id} className="hover:underline">
                   {user.name}

@@ -40,11 +40,16 @@ export function usePageLoad<T>(
   const [loading, setLoading] = useState(initialLoading ?? enabled);
   const [error, setError] = useState<string | null>(null);
 
+  // Latest-value refs so the async `reload` reads current values without being
+  // re-created. Intentional render-time sync (see react-hooks/refs).
   const loaderRef = useRef(loader);
+  // eslint-disable-next-line react-hooks/refs -- keep latest loader for async reload
   loaderRef.current = loader;
   const initialDataRef = useRef(initialData);
+  // eslint-disable-next-line react-hooks/refs -- keep latest initialData for async reload
   initialDataRef.current = initialData;
   const dataRef = useRef(data);
+  // eslint-disable-next-line react-hooks/refs -- keep latest data for abort-return
   dataRef.current = data;
   const abortRef = useRef<AbortController | null>(null);
 
@@ -90,7 +95,7 @@ export function usePageLoad<T>(
         }
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- extra keys are passed in `deps`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/use-memo -- caller-provided dynamic deps can't be a static array literal.
     [enabled, fallbackError, minDelayMs, ...deps],
   );
 
