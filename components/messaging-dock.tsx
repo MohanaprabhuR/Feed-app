@@ -13,6 +13,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   ChevronLeft,
+  Check,
+  CheckCheck,
   Download,
   MessageCircle,
   Paperclip,
@@ -38,10 +40,12 @@ import { getErrorMessage } from "@/lib/errors";
 import {
   fetchConversations,
   fetchMessages,
+  fetchPeerLastReadAt,
   formatMessageDay,
   formatMessageTime,
   getMessageAttachment,
   getOrCreateDirectConversation,
+  isMessageReadByPeer,
   isSameDay,
   markConversationRead,
   messagePreview,
@@ -49,6 +53,7 @@ import {
   sendMessage,
   subscribeToConversationMessages,
   subscribeToInboxMessages,
+  subscribeToPeerReadReceipts,
   type DirectMessageRow,
 } from "@/lib/messages";
 import {
@@ -109,6 +114,26 @@ function UnreadBadge({ count }: { count: number }) {
   );
 }
 
+/** WhatsApp-style ticks: single = sent, double blue = read by peer. */
+function MessageReadTicks({ read }: { read: boolean }) {
+  if (read) {
+    return (
+      <CheckCheck
+        className="size-3.5 shrink-0 text-sky-400"
+        aria-label="Read"
+        strokeWidth={2.5}
+      />
+    );
+  }
+  return (
+    <Check
+      className="size-3.5 shrink-0 opacity-70"
+      aria-label="Sent"
+      strokeWidth={2.5}
+    />
+  );
+}
+
 function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -159,6 +184,7 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [lightboxUrl]);
   const [threadRetry, setThreadRetry] = useState(0);
+  const [peerLastReadAt, setPeerLastReadAt] = useState<string | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<{
     file: File;
     previewUrl: string;
@@ -511,6 +537,41 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
   const chatMessages = conversationId
     ? (threadMessages[conversationId] ?? [])
     : [];
+
+  useEffect(() => {
+    if (!shouldSubscribe || !conversationId || !conversation?.user.id) {
+      return;
+    }
+
+    const peerId = conversation.user.id;
+    let cancelled = false;
+    const supabase = createClient();
+
+    void fetchPeerLastReadAt(supabase, conversationId, peerId)
+      .then((value) => {
+        if (!cancelled) setPeerLastReadAt(value);
+      })
+      .catch(() => {
+        if (!cancelled) setPeerLastReadAt(null);
+      });
+
+    const unsubscribe = subscribeToPeerReadReceipts(
+      supabase,
+      conversationId,
+      peerId,
+      (lastReadAt) => {
+        setPeerLastReadAt((current) => {
+          if (!current) return lastReadAt;
+          return new Date(lastReadAt) > new Date(current) ? lastReadAt : current;
+        });
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [shouldSubscribe, conversationId, conversation?.user.id]);
 
   useEffect(() => {
     if (!conversationId || !expanded) return;
@@ -1043,14 +1104,22 @@ function MessagingSurface({ mode }: { mode: "dock" | "page" }) {
                     )}
                     <p
                       className={cn(
-                        "mt-1 text-right text-2xs leading-none",
+                        "mt-1 flex items-center justify-end gap-1 text-2xs leading-none",
                         attachment &&
                           attachment.type !== "file" &&
                           "px-1 pb-0.5",
                         isMe ? "text-background/60" : "text-muted-foreground",
                       )}
                     >
-                      {formatMessageTime(msg.createdAtRaw)}
+                      <span>{formatMessageTime(msg.createdAtRaw)}</span>
+                      {isMe ? (
+                        <MessageReadTicks
+                          read={isMessageReadByPeer(
+                            msg.createdAtRaw,
+                            peerLastReadAt,
+                          )}
+                        />
+                      ) : null}
                     </p>
                   </div>
                   {isMe && (

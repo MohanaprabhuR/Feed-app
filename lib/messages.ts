@@ -467,3 +467,70 @@ export function subscribeToInboxMessages(
     void supabase.removeChannel(channel);
   };
 }
+
+/** Peer’s last_read_at for WhatsApp-style read receipts on own messages. */
+export async function fetchPeerLastReadAt(
+  supabase: SupabaseClient,
+  conversationId: string,
+  peerUserId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("conversation_members")
+    .select("last_read_at")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", peerUserId)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingMessagingSchemaError(error.message)) return null;
+    throw error;
+  }
+
+  return (data?.last_read_at as string | undefined) ?? null;
+}
+
+/** Live updates when the peer opens the chat (last_read_at changes). */
+export function subscribeToPeerReadReceipts(
+  supabase: SupabaseClient,
+  conversationId: string,
+  peerUserId: string,
+  onReadAt: (lastReadAt: string) => void,
+) {
+  const channelName = `conversation-read:${conversationId}:${peerUserId}:${Date.now()}:${Math.random()
+    .toString(16)
+    .slice(2)}`;
+
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "conversation_members",
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        const row = payload.new as {
+          user_id?: string;
+          last_read_at?: string;
+        };
+        if (row.user_id !== peerUserId || !row.last_read_at) return;
+        onReadAt(row.last_read_at);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
+/** True when the peer has read through this message timestamp. */
+export function isMessageReadByPeer(
+  createdAtRaw: string,
+  peerLastReadAt: string | null,
+) {
+  if (!peerLastReadAt) return false;
+  return new Date(createdAtRaw).getTime() <= new Date(peerLastReadAt).getTime();
+}

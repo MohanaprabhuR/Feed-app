@@ -1189,6 +1189,7 @@ alter table public.comment_likes replica identity full;
 alter table public.follows replica identity full;
 alter table public.post_shares replica identity full;
 alter table public.direct_messages replica identity full;
+alter table public.conversation_members replica identity full;
 alter table public.notifications replica identity full;
 
 do $$
@@ -1196,7 +1197,7 @@ declare
   t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['posts', 'post_likes', 'direct_messages', 'notifications'] loop
+    foreach t in array array['posts', 'post_likes', 'direct_messages', 'conversation_members', 'notifications'] loop
       if not exists (
         select 1
         from pg_publication_tables
