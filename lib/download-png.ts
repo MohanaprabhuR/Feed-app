@@ -31,8 +31,12 @@ function saveBlob(blob: Blob, filename: string) {
   const link = document.createElement("a");
   link.href = href;
   link.download = filename;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(href);
+  link.remove();
+  // Defer revoke: Firefox/Safari start the download asynchronously, so revoking
+  // synchronously can cancel it before it begins.
+  setTimeout(() => URL.revokeObjectURL(href), 10_000);
 }
 
 export async function downloadImageAsPng(src: string, filename?: string) {

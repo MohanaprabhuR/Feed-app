@@ -25,8 +25,23 @@ const ALLOWED_TAGS = [
 ];
 const ALLOWED_ATTR = ["href", "target", "rel"];
 
+// Force every rendered link to open in a new tab with a safe rel, no matter how
+// it was authored (editor, autolink, or legacy). Registered once at module load.
+let linkHookRegistered = false;
+function ensureLinkHook() {
+  if (linkHookRegistered) return;
+  DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+    if (node.tagName === "A") {
+      node.setAttribute("target", "_blank");
+      node.setAttribute("rel", "noopener noreferrer nofollow");
+    }
+  });
+  linkHookRegistered = true;
+}
+
 /** Sanitize stored post HTML before it is ever rendered (defends against XSS). */
 export function sanitizeRichText(html: string): string {
+  ensureLinkHook();
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,

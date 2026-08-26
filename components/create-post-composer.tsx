@@ -669,18 +669,22 @@ export function CreatePostComposer({
               placeholder={
                 showEventForm
                   ? "What is this event about?"
-                  : "What do you want to talk about?"
+                  : "What do you want to talk about? Use @ to mention people you follow"
               }
               value={content}
               onValueChange={setContent}
               disabled={loading}
+              mentionUserId={user?.id}
             />
 
             {showEventForm && (
               <Card padding="none" className="overflow-hidden border shadow-sm">
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium">Event details</p>
+                <CardContent className="space-y-4 p-4">
+                  <div className="-mx-4 -mt-4 flex items-center justify-between gap-2 border-b bg-muted/40 px-4 py-3">
+                    <p className="flex items-center gap-2 font-medium">
+                      <Calendar className="size-4 text-muted-foreground" />
+                      Event details
+                    </p>
                     <Button
                       type="button"
                       variant="ghost"

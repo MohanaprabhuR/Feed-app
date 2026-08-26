@@ -12,7 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { MentionTextarea } from "@/components/mention-text-field";
+import { RichTextEditor } from "@/components/rich-text-editor";
+import { isRichTextEmpty } from "@/lib/rich-text";
 import { uploadPostAttachment } from "@/lib/post-media";
 import { api } from "@/lib/api-client";
 import { feedCardClass, feedCardSectionClass } from "@/lib/feed-layout";
@@ -90,8 +91,8 @@ export function ArticleEditor({ onPublished, onCancel }: ArticleEditorProps = {}
       }
 
       const { post: article } = await api.posts.createArticle({
-        title,
-        content,
+        title: title.trim(),
+        content: isRichTextEmpty(content) ? "" : content,
         coverImage,
       });
 
@@ -129,7 +130,7 @@ export function ArticleEditor({ onPublished, onCancel }: ArticleEditorProps = {}
   }
 
   const canPublish = Boolean(
-    user && title.trim() && content.trim() && !loading,
+    user && title.trim() && !isRichTextEmpty(content) && !loading,
   );
 
   return (
@@ -138,20 +139,25 @@ export function ArticleEditor({ onPublished, onCancel }: ArticleEditorProps = {}
       className={cn(feedCardClass, "mx-auto max-w-3xl border-0 shadow-none")}
     >
       <CardContent className={cn(feedCardSectionClass, "space-y-6 pb-10")}>
-        <div className="space-y-2">
-          <Label>Name</Label>
-          <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5">
-            <CurrentUserAvatar size="sm" />
-            <span className="font-medium">{user?.name ?? "Your profile"}</span>
+        <div className="flex items-center gap-2.5">
+          <CurrentUserAvatar size="sm" />
+          <div className="min-w-0">
+            <p className="truncate font-medium leading-tight">
+              {user?.name ?? "Your profile"}
+            </p>
+            <p className="text-xs text-muted-foreground">Author</p>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="article-title">Title</Label>
+          <Label htmlFor="article-title" className="text-muted-foreground">
+            Title
+          </Label>
           <Input
             id="article-title"
             size="lg"
             placeholder="Article title"
+            className="h-auto border-0 bg-transparent px-0 font-serif text-2xl font-semibold shadow-none focus-visible:ring-0"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={loading}
@@ -212,14 +218,13 @@ export function ArticleEditor({ onPublished, onCancel }: ArticleEditorProps = {}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="article-body">Body</Label>
-          <MentionTextarea
-            id="article-body"
-            size="lg"
-            placeholder="Write your article..."
+          <Label>Body</Label>
+          <RichTextEditor
             value={content}
             onValueChange={setContent}
             disabled={loading}
+            placeholder="Write your article…"
+            editorClassName="min-h-80"
           />
         </div>
 
