@@ -1016,10 +1016,22 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    color-mix(in oklab, var(--background) 70%, transparent) 50%,
+    color-mix(in oklab, var(--background) 85%, transparent) 50%,
     transparent 100%
   );
   animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  will-change: transform;
+}
+/* In dark mode --background is near-black, so a light-foreground sweep keeps the
+   shimmer visible against the dark skeleton base. */
+:root[data-theme="dark"] .skeleton-shimmer::after,
+.dark .skeleton-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--foreground) 10%, transparent) 50%,
+    transparent 100%
+  );
 }
 
 .skeleton-stagger > * {
@@ -1140,6 +1152,15 @@ html {
   color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+/* @mention chip inside the editor */
+.rich-content .mention {
+  color: var(--primary);
+  font-weight: 500;
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  border-radius: 0.3rem;
+  padding: 0 0.2rem;
+  white-space: nowrap;
 }
 /* TipTap placeholder (shown when the editor is empty) */
 .rich-content.ProseMirror p.is-editor-empty:first-child::before {
